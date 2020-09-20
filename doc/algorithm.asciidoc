@@ -1,0 +1,138 @@
+:last-update-label!:
+
+= Algorithm
+LE GARREC Vincent <github85@le-garrec.fr>
+
+:toc:
+:icons: font
+
+This document describe the principe of various algorithms that are used to restore orientation and to separate double page images.
+
+== Global concept
+
+Algorithm have these steps :
+
+  * In case of double page images, found the line that separate the two pages,
+  * Rotate pages to restore vertical and horizontal lines,
+  * Crop page to data and restore border
+
+== Separate double page images
+
+=== Curve presence at top and bottom of folding
+
+  * Exemple
+
+image::separate-1-input.png[]
+
+  * Pretreatment
+
+Apply a blur then a threshold to work with a B/W image with less noise.
+
+Image 0_2.png in debug mode :
+
+image::separate-1-pretreatment.png[]
+
+  * Main algorithm
+
+Found the biggest contour and the polyline with the fewest lines.
+
+The line that separate the two pages in the top of the two "waves".
+
+Image 0_4.png in debug mode :
+
+image::separate-1-mainalgo.png[]
+
+  * Posttreatment
+
+Apply a mask with an inclined line to separe pages.
+
+Image 0_5.png and 0_6.png in debug mode :
+
+image::separate-1-posttreatment.png[]
+
+You can see that the right is a few inclined.
+
+== Rotate images
+
+=== Found horizontal lines based on text
+
+  * Exemple
+
+image::rotate-1-input.png[]
+
+  * Pretreatment
+
+Apply a blur to thicken letter to have just a big black mass to have less noise and to ease detect of liner.
+
+Image 1_0a.png in debug mode :
+
+image::rotate-1-pretreatment.png[]
+
+  * Main algorithm
+
+Found all lines then keep only them who have a angle less than 20°. Then keep them who have a angle closed to the mean.
+
+Image 1_0b.png in debug mode :
+
+image::rotate-1-mainalgo.png[]
+
+  * Posttreatment
+
+Rotate image.
+
+Image 1_0c.png in debug mode :
+
+image::rotate-1-posttreatment.png[]
+
+You can see that the text in more horizontal.
+
+== Remove border and keep interesting text
+
+=== Found text with contour not to big, not to small
+
+  * Exemple
+
+image::removeborder-1-input.png[]
+
+  * Pretreatment
+
+Apply a blur to reduce noise.
+
+Image 1-1b.png in debug mode :
+
+image::removeborder-1-pretreatment.png[]
+
+  * Main algorithm
+
+Found the biggest (red) contour and the associated (blue) rectangle. With this action, you have isolated the border of the page.
+
+Image 1_1d.png in debug mode :
+
+image::removeborder-1-mainalgo1.png[]
+
+Then crop.
+
+Found all (not to big and not to small) contours to find all interesting data (1_1h.png in debug mode).
+
+image::removeborder-1-mainalgo2.png[]
+
+  * Posttreatment
+
+Then found the rectangle that catch all contours and crop again.
+
+Image 1_1i.png in debug mode :
+
+image::removeborder-1-posttreatment.png[]
+
+== Restore border
+
+=== Keep proportional border
+
+The idea is to detect the dpi, found the missing width and height to match the desired paper size. Then add border by keeping the proportion of removed pixels during the previous algo.
+
+Suppose you removed 100 pixels at the top and 200 pixels at the bottom when keeping interesting text. To match the desired paper, you need to add 200 pixels. Then this algo will add 66 pixels at the top and 133 pixels at the bottom.
+
+image::restoreborder-1-input.png[]
+
+image::restoreborder-1-mainalgo.png[]
+

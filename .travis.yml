@@ -1,0 +1,17 @@
+dist: bionic
+
+# services:
+#   - docker
+
+jobs:
+  include:
+    - language: ruby
+      # in travis, default ruby is 2.6 with bionic.
+      rvm: 2.7
+      before_install:
+        - gem install bundler
+        - eval "$(ssh-agent -s)"
+        - bash ./travis/register_ssh_key.sh
+      script:
+        - bash ./travis/generate-doc.sh
+

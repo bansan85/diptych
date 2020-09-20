@@ -70,7 +70,7 @@ class SeparatePage():
         #cnt = cv2.approxPolyDP(c, 0.001*cv2.arcLength(c,True),True)
         # Il faut au minimum 10 points pour détecter le décroché qui indique la séparation entre deux pages.
 
-        n = 8
+        n = 10
         nloop = 0
         while nloop < 10:
             cnt = self.get_rectangle_from_contour(c, n)
@@ -136,18 +136,18 @@ class SeparatePage():
     def remets_droit_la_page(self, image, n):
         img_gauche = self.convertion_en_niveau_de_gris(image)
         # On grossit les images pour former un boudin et mieux détecter les lignes.
-        eroded = cv2.erode(img_gauche, np.ones((3, 3)), iterations=1)
+        eroded = cv2.erode(img_gauche, np.ones((2, 2)), iterations=7)
         if DEBUG:
             cv2.imwrite(str(n) + "_0a.png", eroded)
 
         # Aide à la détection des contours
-        img_gauche2 = cv2.Canny(eroded, 50, 150, apertureSize=3)
+        img_gauche2 = cv2.Canny(eroded, 25, 225, apertureSize=5)
         if DEBUG:
             cv2.imwrite(str(n) + "_0a2.png", img_gauche2)
 
         # Détection des lignes.
         list_lines = cv2.HoughLinesP(img_gauche2, 1, np.pi/180,
-                                    50, minLineLength=300, maxLineGap=60)
+                                    70, minLineLength=300, maxLineGap=90)
 
         # lines contient une liste de liste de lignes.
         # Le deuxième niveau de liste ne contient toujours qu'une ligne.
@@ -160,11 +160,10 @@ class SeparatePage():
             return -limit_angle < angl and angl < limit_angle
         valid_lines = list(filter(constrait_angle, lines))
 
-        image_with_lines = image.copy()
-        for line_x1, line_y1, line_x2, line_y2 in valid_lines:
-            cv2.line(image_with_lines, (line_x1, line_y1), (line_x2, line_y2), (0, 0, 255), 1)
-
         if DEBUG:
+            image_with_lines = image.copy()
+            for line_x1, line_y1, line_x2, line_y2 in valid_lines:
+                cv2.line(image_with_lines, (line_x1, line_y1), (line_x2, line_y2), (0, 0, 255), 1)
             cv2.imwrite(str(n) + "_0b.png", image_with_lines)
 
         # On converti les lignes en angles
@@ -172,7 +171,7 @@ class SeparatePage():
             line[3] - line[1], line[2] - line[0])/np.pi*180, valid_lines))
 
         # On enlève les valeurs extrêmes
-        ecarttype = np.std(angles)
+        ecarttype = np.std(angles)/2
         moyenne = np.mean(angles)
         angle_dans_ecarttype = list(
             filter(lambda x: moyenne-ecarttype < x and x < moyenne+ecarttype, angles))
@@ -264,7 +263,6 @@ class SeparatePage():
     def recadre(self, image, n, width_paper, height_paper, min_x, max_x, min_y, max_y, imgw, imgh):
         h, w, _ = image.shape
 
-        # Test DPI=200
         dpi = self.find_dpi(imgw, imgh, width_paper, height_paper)
         self.OUTPUT.print("image " + str(n) + " dpi", dpi)
 
