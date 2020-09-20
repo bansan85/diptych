@@ -11,6 +11,4 @@ def run_cpu_tasks_in_parallel(tasks):
         running_task.join()
 
 
-run_cpu_tasks_in_parallel([
-    lambda: script.SeparatePage().treat_file("tests/0001.png")
-])
+run_cpu_tasks_in_parallel([lambda: script.SeparatePage().treat_file("tests/0001.png")])
