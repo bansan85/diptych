@@ -1,0 +1,3 @@
+[submodule "tests"]
+	path = tests
+	url = https://github.com/bansan85/ocr-book-tests.git
