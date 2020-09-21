@@ -34,13 +34,29 @@ image::separate-1-pretreatment.png[]
 
   * Main algorithm
 
-Found the biggest contour and the polyline with the fewest lines.
+    ** Ideal case
 
-The line that separate the two pages in the top of the two "waves".
+Found the biggest contour to match the two pages.
+
+Found the polyline with the fewest lines but that have 3 points in the two interessing areas (wave).
+
+The line that separate the two pages is the top (in blue) of the two "waves".
 
 Image 0_4.png in debug mode :
 
 image::separate-1-mainalgo.png[]
+
+    ** Contour match only page per page
+
+Instead of having one big contour, you have two contours, one per page.
+
+Then found the polyline with the fewest lines but that have 2 points in the two interessing areas (wave).
+
+The line that separate the two pages is the mean of the top (in blue) of the two "waves" of the two contours.
+
+image::separate-1-algo2_1.png[]
+
+image::separate-1-algo2_2.png[]
 
   * Posttreatment
 
@@ -115,6 +131,8 @@ Then crop.
 Found all (not to big and not to small) contours to find all interesting data (1_1h.png in debug mode).
 
 image::removeborder-1-mainalgo2.png[]
+
+NOTE: It's possible that no contour is found after the filter of all contours (blank image). Then return the pixel at the center of the image.
 
   * Posttreatment
 

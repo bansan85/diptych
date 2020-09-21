@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import print_release
 import print_test
-
 import sys
 
 DEBUG = True
@@ -60,46 +59,78 @@ class SeparatePage:
         )
         # pour ne garder que le plus grand. Normalement, cela doit être celui qui fait le contour des pages
         # et non le tour du bord de l'image.
-        c = max(contours, key=cv2.contourArea)
+        # On tri les contours du plus grand au plus petit.
+        # L'intérêt est de comparer la taille du premier et du deuxième contour.
+        # Si le bord de la page est trop en haut et en bas, plutôt que d'avoir
+        # un contour qui fait les deux pages, on peut avoir deux contours qui
+        # font chaque page.
+        cs = sorted(contours, key=lambda x: 1.0 / (np.maximum(cv2.contourArea(x), 1)))
+        size_cs1 = cv2.contourArea(cs[0])
+        size_cs2 = cv2.contourArea(cs[1])
+
+        nb_rectangle = int(size_cs1 / size_cs2 < 1.05) + 1
+        self.OUTPUT.print("separation contour double", nb_rectangle - 1)
         if DEBUG:
-            test = cv2.drawContours(np.copy(image), [c], 0, (0, 0, 255), 10)
-            cv2.imwrite("0_3.png", test)
+            img_tmp = np.copy(image)
+            for i in range(nb_rectangle):
+                cv2.drawContours(img_tmp, cs, i, (0, 0, 255), 10)
+            cv2.imwrite("0_3.png", img_tmp)
 
         # cnt = cv2.approxPolyDP(c, 0.001*cv2.arcLength(c,True),True)
         # Il faut au minimum 10 points pour détecter le décroché qui indique la séparation entre deux pages.
+        if nb_rectangle == 1:
+            cslist = [cs[0]]
+            # Si on a un seul contour pour la double page, la vague peut être caractérisée par 3 points.
+            nb_point_in_wave = 3
+        else:
+            cslist = [cs[0], cs[1]]
+            # Si on a deux contours pour la double page, la vague ne peut être caractérisée que par 2 points.
+            nb_point_in_wave = 2
+        toppoints = []
+        bottompoints = []
+        for c in cslist:
+            if nb_rectangle == 1:
+                n = 10
+            else:
+                n = 6
+            nloop = 0
+            while nloop < 10:
+                cnt = self.get_rectangle_from_contour(c, n)
+                if DEBUG:
+                    test = cv2.drawContours(np.copy(image), [cnt], 0, (0, 0, 255), 10)
+                    cv2.imwrite("0_4.png", test)
+                h, w, _ = image.shape
+                toppointsi = []
+                bottompointsi = []
+                # On filtre les points qui sont à peu près au centre (x/2) de l'image
+                for ci in cnt:
+                    x, y = ci[0]
+                    if 0.4 * w < x and x < 0.6 * w:
+                        if y < 0.2 * h:
+                            toppointsi.append((x, y))
+                        elif y > 0.8 * h:
+                            bottompointsi.append((x, y))
+                # Est-ce qu'on a suffisamment de points ?
+                if len(toppointsi) >= nb_point_in_wave and len(bottompointsi) >= nb_point_in_wave:
+                    toppoints.append(toppointsi)
+                    bottompoints.append(bottompointsi)
+                    break
+                n = len(cnt) + 1
+                nloop = nloop + 1
 
-        n = 10
-        nloop = 0
-        while nloop < 10:
-            cnt = self.get_rectangle_from_contour(c, n)
-            if DEBUG:
-                test = cv2.drawContours(np.copy(image), [cnt], 0, (0, 0, 255), 10)
-                cv2.imwrite("0_4.png", test)
-            h, w, _ = image.shape
-            toppoints = dict()
-            bottompoints = dict()
-            # On filtre les points qui sont à peu près au centre (x/2) de l'image
-            for ci in cnt:
-                x, y = ci[0]
-                if 0.4 * w < x and x < 0.6 * w:
-                    if y < 0.2 * h:
-                        toppoints[y] = x
-                    elif y > 0.8 * h:
-                        bottompoints[y] = x
-            # Est-ce qu'on a suffisamment de points ?
-            if len(toppoints) > 0 and len(bottompoints) > 0:
-                break
-            n = len(cnt) + 1
-            nloop = nloop + 1
-
-        if nloop == 10:
-            raise Exception("Failed to found contour of the page.", "10 iterations")
+            if nloop == 10:
+                raise Exception("Failed to found contour of the page.", "10 iterations")
 
         # Le point de séparation des deux pages en haut et bas
-        toppoint = [toppoints[max(toppoints, key=int)], max(toppoints, key=int)]
+        maxtoppoints = list(map(lambda x: max(x, key=lambda x: x[1]), toppoints))
+        minbottompoints = list(map(lambda x: min(x, key=lambda x: x[1]), bottompoints))
+        toppoint = [
+            int(sum(x for x, y in maxtoppoints) / len(maxtoppoints)),
+            int(sum(y for x, y in maxtoppoints) / len(maxtoppoints)),
+        ]
         bottompoint = [
-            bottompoints[min(bottompoints, key=int)],
-            min(bottompoints, key=int),
+            int(sum(x for x, y in minbottompoints) / len(minbottompoints)),
+            int(sum(y for x, y in minbottompoints) / len(minbottompoints)),
         ]
         if bottompoint[1] == toppoint[1]:
             raise Exception("separation double page y=0", "Impossible")
@@ -265,6 +296,7 @@ class SeparatePage:
             threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
         image2222 = page_gauche_0.copy()
+        ncontour_good_size = 0
         for _, cnt in enumerate(contours):
             if (
                 0.001 * 0.001 * imgh * imgw < cv2.contourArea(cnt)
@@ -274,6 +306,7 @@ class SeparatePage:
                 cv2.drawContours(image2222, [cnt], -1, (0, 0, 255), 3)
                 min_x, max_x = min(x, min_x), max(x + w, max_x)
                 min_y, max_y = min(y, min_y), max(y + h, max_y)
+                ncontour_good_size = ncontour_good_size + 1
         if DEBUG:
             cv2.imwrite(str(n) + "_1h.png", image2222)
 
@@ -281,6 +314,18 @@ class SeparatePage:
         self.OUTPUT.print("image " + str(n) + " crop y1", y_crop1[1] + min_y)
         self.OUTPUT.print("image " + str(n) + " crop x2", x_crop1[1] + max_x)
         self.OUTPUT.print("image " + str(n) + " crop y2", y_crop1[1] + max_y)
+
+        # Aucun contour, on renvoit une image
+        if ncontour_good_size == 0:
+            return (
+                page_gauche_0,
+                int(imgw / 2) - 1,
+                int(imgw / 2),
+                int(imgh / 2) - 1,
+                int(imgh / 2),
+                imgw,
+                imgh,
+            )
 
         return (
             page_gauche_0,
@@ -355,6 +400,8 @@ class SeparatePage:
 
     def treat_file(self, filename, dict_test=None):
         img = self.charge_image(filename)
+        if img is None:
+            raise Exception("Failed to load image.", filename)
 
         if dict_test is None:
             self.OUTPUT = print_release.PrintRelease()
