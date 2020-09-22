@@ -191,8 +191,9 @@ class SeparatePage:
             cv2.imwrite(str(n) + "_0a2.png", img_gauche2)
 
         # Détection des lignes.
+        # La précision doit être de l'ordre de 0.05°
         list_lines = cv2.HoughLinesP(
-            img_gauche2, 1, np.pi / 180, 70, minLineLength=300, maxLineGap=90
+            img_gauche2, 1, np.pi / (180*20), 70, minLineLength=300, maxLineGap=90
         )
 
         # lines contient une liste de liste de lignes.
@@ -299,7 +300,7 @@ class SeparatePage:
         ncontour_good_size = 0
         for _, cnt in enumerate(contours):
             if (
-                0.001 * 0.001 * imgh * imgw < cv2.contourArea(cnt)
+                0.002 * 0.002 * imgh * imgw < cv2.contourArea(cnt)
                 and cv2.contourArea(cnt) < 0.5 * imgh * 0.5 * imgw
             ):
                 (x, y, w, h) = cv2.boundingRect(cnt)
@@ -310,22 +311,27 @@ class SeparatePage:
         if DEBUG:
             cv2.imwrite(str(n) + "_1h.png", image2222)
 
-        self.OUTPUT.print("image " + str(n) + " crop x1", x_crop1[1] + min_x)
-        self.OUTPUT.print("image " + str(n) + " crop y1", y_crop1[1] + min_y)
-        self.OUTPUT.print("image " + str(n) + " crop x2", x_crop1[1] + max_x)
-        self.OUTPUT.print("image " + str(n) + " crop y2", y_crop1[1] + max_y)
-
         # Aucun contour, on renvoit une image
         if ncontour_good_size == 0:
+            self.OUTPUT.print("image " + str(n) + " crop x1", int(imgw / 2) - 1)
+            self.OUTPUT.print("image " + str(n) + " crop y1", int(imgh / 2) - 1)
+            self.OUTPUT.print("image " + str(n) + " crop x2", int(imgw / 2))
+            self.OUTPUT.print("image " + str(n) + " crop y2", int(imgh / 2))
+
             return (
                 page_gauche_0,
                 int(imgw / 2) - 1,
-                int(imgw / 2),
                 int(imgh / 2) - 1,
+                int(imgw / 2),
                 int(imgh / 2),
                 imgw,
                 imgh,
             )
+
+        self.OUTPUT.print("image " + str(n) + " crop x1", x_crop1[1] + min_x)
+        self.OUTPUT.print("image " + str(n) + " crop y1", y_crop1[1] + min_y)
+        self.OUTPUT.print("image " + str(n) + " crop x2", x_crop1[1] + max_x)
+        self.OUTPUT.print("image " + str(n) + " crop y2", y_crop1[1] + max_y)
 
         return (
             page_gauche_0,

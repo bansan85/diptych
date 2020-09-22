@@ -146,7 +146,7 @@ image::removeborder-1-posttreatment.png[]
 
 === Keep proportional border
 
-The idea is to detect the dpi, found the missing width and height to match the desired paper size. Then add border by keeping the proportion of removed pixels during the previous algo.
+The idea is to detect the dpi, found the missing width and height to match the desired paper size. Then add border at the top and the bottom by keeping the proportion of removed pixels during the previous algo. For the left and the right, the image is centered and the two borders will be the same.
 
 Suppose you removed 100 pixels at the top and 200 pixels at the bottom when keeping interesting text. To match the desired paper, you need to add 200 pixels. Then this algo will add 66 pixels at the top and 133 pixels at the bottom.
 
