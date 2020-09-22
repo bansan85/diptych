@@ -21,6 +21,7 @@ class SeparatePage:
         edicho = e
         nn = 0
         cntmax = []
+        lastcnt = []
         while True:
             cnt = cv2.approxPolyDP(c, e * cv2.arcLength(c, True), True)
             if len(cnt) == n:
@@ -43,7 +44,10 @@ class SeparatePage:
                     nn = -1
             if np.abs(nn) > 10:
                 return cntmax
-
+            # Si la taille du contour change, on réinitialise le compteur.
+            if len(lastcnt) != len(cnt):
+                nn = 0
+            lastcnt = cnt
     def separe_double_page_en_deux(self, image):
         gray = self.convertion_en_niveau_de_gris(image)
         eroded = cv2.erode(gray, np.ones((4, 4)), iterations=1)
