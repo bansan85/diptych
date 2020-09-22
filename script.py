@@ -250,7 +250,7 @@ class SeparatePage:
     def isole_partie_interessante(self, image, n):
         # On force le noir et blanc
         gray = self.convertion_en_niveau_de_gris(image)
-        eroded = cv2.erode(gray, np.ones((4, 4)), iterations=1)
+        eroded = cv2.erode(gray, np.ones((9, 9)), iterations=1)
         if DEBUG:
             cv2.imwrite(str(n) + "_1a.png", eroded)
         _, threshold = cv2.threshold(eroded, 240, 255, cv2.THRESH_BINARY)
