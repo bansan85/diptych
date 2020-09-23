@@ -62,7 +62,7 @@ class TraitementImage:
         return result
 
     def crop_rectangle(image, min_x, max_x, min_y, max_y):
-        return image[min_y - 10 : max_y + 10, min_x - 10 : max_x + 10]
+        return image[min_y : max_y, min_x : max_x]
 
 
 class SeparatePage:
