@@ -1,14 +1,12 @@
 import script
 
-from multiprocessing import Process
+import multiprocessing
 
+def f(filename):
+    script.SeparatePage().treat_file(filename)
 
-def run_cpu_tasks_in_parallel(tasks):
-    running_tasks = [Process(target=task) for task in tasks]
-    for running_task in running_tasks:
-        running_task.start()
-    for running_task in running_tasks:
-        running_task.join()
-
-
-run_cpu_tasks_in_parallel([lambda: script.SeparatePage().treat_file("tests/0001.png")])
+#script.SeparatePage().treat_file("tests/0001.png")
+if __name__ == '__main__':
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        multiple_results = [pool.apply_async(f, args=["tests/0001.png"])]
+        [res.get(timeout=10000) for res in multiple_results]
