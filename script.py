@@ -384,8 +384,8 @@ class SeparatePage:
             return (
                 page_gauche_0,
                 int(imgw / 2) - 1,
-                int(imgh / 2) - 1,
                 int(imgw / 2),
+                int(imgh / 2) - 1,
                 int(imgh / 2),
                 imgw,
                 imgh,
