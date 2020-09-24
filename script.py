@@ -62,7 +62,7 @@ class TraitementImage:
         return result
 
     def crop_rectangle(image, min_x, max_x, min_y, max_y):
-        return image[min_y : max_y, min_x : max_x]
+        return image[min_y:max_y, min_x:max_x]
 
 
 class SeparatePage:
@@ -72,21 +72,24 @@ class SeparatePage:
         parameters,
     ):
         gray = TraitementImage.convertion_en_niveau_de_gris(image)
-        eroded = cv2.erode(
-            gray, np.ones(parameters.ErodeSize), iterations=parameters.ErodeIterations
-        )
+        blurimg = cv2.blur(gray, parameters.BlurSize)
         if DEBUG:
-            cv2.imwrite("0_1.png", eroded)
+            cv2.imwrite("0_0.png", blurimg)
         # Pour l'instant, l'image de base est déjà en noir et blanc.
         _, threshold = cv2.threshold(
-            eroded, parameters.ThresholdMin, parameters.ThresholdMax, cv2.THRESH_BINARY
+            blurimg, parameters.ThresholdMin, parameters.ThresholdMax, cv2.THRESH_BINARY
         )
         if DEBUG:
-            cv2.imwrite("0_2.png", threshold)
-        # On cherche tous les contours
-        contours, _ = cv2.findContours(
-            threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            cv2.imwrite("0_1.png", threshold)
+        eroded = cv2.erode(
+            threshold,
+            np.ones(parameters.ErodeSize),
+            iterations=parameters.ErodeIterations,
         )
+        if DEBUG:
+            cv2.imwrite("0_2.png", eroded)
+        # On cherche tous les contours
+        contours, _ = cv2.findContours(eroded, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # pour ne garder que le plus grand. Normalement, cela doit être celui qui fait le contour des pages
         # et non le tour du bord de l'image.
         # On tri les contours du plus grand au plus petit.
@@ -99,7 +102,6 @@ class SeparatePage:
         size_cs2 = cv2.contourArea(cs[1])
 
         nb_rectangle = int(size_cs1 / size_cs2 < parameters.RapportRect1Rect2) + 1
-        LOG.OUTPUT.print("separation contour double", nb_rectangle - 1)
         if DEBUG:
             img_tmp = np.copy(image)
             for i in range(nb_rectangle):

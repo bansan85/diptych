@@ -35,7 +35,8 @@ class SplitTwoWavesParameters:
     def __init__(self):
         self.__erode_size = (4, 4)
         self.__erode_iterations = 1
-        self.__threshold_min = 125
+        self.__blur_size = (10, 10)
+        self.__threshold_min = 210
         self.__threshold_max = 255
         self.__rapport_rect1_rect2 = 1.05
         self.__wave_top = 0.2
@@ -62,6 +63,14 @@ class SplitTwoWavesParameters:
     @ErodeIterations.setter
     def ErodeIterations(self, val):
         self.__erode_iterations = val
+
+    @property
+    def BlurSize(self):
+        return self.__blur_size
+
+    @BlurSize.setter
+    def BlurSize(self, val):
+        self.__blur_size = val
 
     @property
     def ThresholdMin(self):
@@ -376,6 +385,8 @@ class Parameters:
                 parameters.split_two_waves.ErodeSize = value
             elif param == "SplitTwoWavesErodeIterations":
                 parameters.split_two_waves.ErodeIterations = value
+            elif param == "SplitTwoWavesBlurSize":
+                parameters.split_two_waves.BlurSize = value
             elif param == "SplitTwoWavesThresholdMin":
                 parameters.split_two_waves.ThresholdMin = value
             elif param == "SplitTwoWavesThresholdMax":
