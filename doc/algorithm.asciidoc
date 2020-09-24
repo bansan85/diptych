@@ -16,7 +16,7 @@ Algorithm have these steps :
   * Rotate pages to restore vertical and horizontal lines,
   * Crop page to data and restore border
 
-== Separate double page images
+== Split double page images
 
 === Curve presence at top and bottom of folding
 
@@ -26,7 +26,11 @@ image::separate-1-input.png[]
 
   * Pretreatment
 
-Apply a blur then a threshold to work with a B/W image with less noise.
+Apply :
+
+  ** a blur : for black and white only
+  ** a threshold : to remove small noise and to convert gray to black / white
+  ** a erode : to work with a B/W image with big dot instead of lots of small data.
 
 Image 0_2.png in debug mode :
 

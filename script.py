@@ -63,6 +63,10 @@ class TraitementImage:
 
     def crop_rectangle(image, min_x, max_x, min_y, max_y):
         return image[min_y:max_y, min_x:max_x]
+    
+    def is_black_white(image):
+        hist = cv2.calcHist([image], [0], None, [256], [0, 256])
+        return sum(hist[1:255]) < 1
 
 
 class SeparatePage:
@@ -72,10 +76,12 @@ class SeparatePage:
         parameters,
     ):
         gray = TraitementImage.convertion_en_niveau_de_gris(image)
-        blurimg = cv2.blur(gray, parameters.BlurSize)
+        blurimg = gray
+        if TraitementImage.is_black_white(gray):
+            blurimg = cv2.blur(gray, parameters.BlurSize)
         if DEBUG:
             cv2.imwrite("0_0.png", blurimg)
-        # Pour l'instant, l'image de base est déjà en noir et blanc.
+        # On repasse l'image en noir et blanc.
         _, threshold = cv2.threshold(
             blurimg, parameters.ThresholdMin, parameters.ThresholdMax, cv2.THRESH_BINARY
         )
