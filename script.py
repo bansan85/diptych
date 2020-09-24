@@ -3,7 +3,8 @@ import numpy as np
 import print_release
 import print_test
 import sys
-import parameters
+import parameters as par
+import functools
 
 DEBUG = True
 
@@ -11,6 +12,35 @@ DEBUG = True
 class LOG:
     def __init__(self):
         self.t = 0
+
+
+class Compute:
+    def get_alpha_posx(point1, point2):
+        if point1[1] == point2[1]:
+            return None, None
+        angle = np.arctan2(point1[1] - point2[1], point1[0] - point2[0]) / np.pi * 180
+        if angle < 0:
+            angle = angle + 180
+        posx = (point1[0] * point2[1] - point2[0] * point1[1]) / (point2[1] - point1[1])
+        return angle, posx
+
+    # On filtre les lignes plutôt horizontales
+    def constrait_angle(
+        data, limit_angle=20, objectif_ang=90, objectif_posx=2485, limit_posx=30
+    ):
+        ang, posx = data
+        if ang is None or posx is None:
+            return False
+        angle_ok = (
+            -limit_angle < ang + objectif_ang and ang + objectif_ang < limit_angle
+        ) or (
+            -limit_angle < ang + objectif_ang - 180
+            and ang + objectif_ang - 180 < limit_angle
+        )
+        posx_ok = (
+            objectif_posx - limit_posx <= posx and posx <= objectif_posx + limit_posx
+        )
+        return angle_ok and posx_ok
 
 
 class TraitementImage:
@@ -63,37 +93,139 @@ class TraitementImage:
 
     def crop_rectangle(image, min_x, max_x, min_y, max_y):
         return image[min_y:max_y, min_x:max_x]
-    
+
     def is_black_white(image):
         hist = cv2.calcHist([image], [0], None, [256], [0, 256])
         return sum(hist[1:255]) < 1
 
 
 class SeparatePage:
-    # Sépare une page en deux en détectant la vague dans le papier en haut et en bas de la reliure.
-    def split_two_waves(
-        image,
-        parameters,
-    ):
+    def found_split_line_with_line(image, parameters):
+        if DEBUG:
+            cv2.imwrite("1_1.png", image)
+        gray = TraitementImage.convertion_en_niveau_de_gris(image)
+        if TraitementImage.is_black_white(gray):
+            blurimg = cv2.blur(gray, parameters.BlurSize)
+        else:
+            blurimg = gray
+        if DEBUG:
+            cv2.imwrite("1_2.png", blurimg)
+        # On repasse l'image en noir et blanc.
+        _, threshold = cv2.threshold(
+            blurimg,
+            parameters.Threshold.Min,
+            parameters.Threshold.Max,
+            cv2.THRESH_BINARY,
+        )
+        if DEBUG:
+            cv2.imwrite("1_3.png", threshold)
+        eroded = cv2.erode(
+            threshold,
+            np.ones(parameters.Erode.Size),
+            iterations=parameters.Erode.Iterations,
+        )
+        if DEBUG:
+            cv2.imwrite("1_4.png", eroded)
+        canny = cv2.Canny(
+            eroded,
+            parameters.Canny.Min,
+            parameters.Canny.Max,
+            apertureSize=parameters.Canny.ApertureSize,
+        )
+        if DEBUG:
+            cv2.imwrite("1_5.png", canny)
+        list_lines = cv2.HoughLinesP(
+            canny,
+            parameters.HoughLines.DeltaRho,
+            parameters.HoughLines.DeltaTetha,
+            parameters.HoughLines.Threshold,
+            minLineLength=parameters.HoughLines.MinLineLength,
+            maxLineGap=parameters.HoughLines.MaxLineGap,
+        )
+        lines = map(lambda list_line: list_line[0], list_lines)
+        lines_angle_posx = list(map(
+            lambda p: Compute.get_alpha_posx((p[0], p[1]), (p[2], p[3])), lines
+        ))
+        if DEBUG:
+            image_with_lines = image.copy()
+            for a, b, c, d in lines:
+                cv2.line(
+                    image_with_lines,
+                    (a, b),
+                    (c, d),
+                    (0, 0, 255),
+                    1,
+                )
+            cv2.imwrite("1_6.png", image_with_lines)
+
+        h, w, _ = image.shape
+
+        valid_lines = list(
+            filter(
+                lambda x: Compute.constrait_angle(
+                    x, parameters.Limit.Tetha, 90, w / 2, parameters.Limit.Rho
+                ),
+                lines_angle_posx,
+            )
+        )
+
+        def sum_tmp(x1, x2):
+            return x1[0] + x2[0], x1[1] + x2[1]
+
+        angle, posx = functools.reduce(sum_tmp, valid_lines)
+        angle_1 = angle / len(valid_lines)
+        posx_1 = posx / len(valid_lines)
+        point_1a = (int(posx_1), 0)
+        point_1b = (
+            int(posx_1 - np.tan((angle_1 - 90.0) / 180.0 * np.pi) * h),
+            h - 1,
+        )
+
+        if DEBUG:
+            image_with_lines = image.copy()
+            for angle_1, posx_1 in valid_lines:
+                point_1a = (int(posx_1), 0)
+                point_1b = (
+                    int(posx_1 - np.tan((angle_1 - 90.0) / 180.0 * np.pi) * h),
+                    h - 1,
+                )
+                cv2.line(
+                    image_with_lines,
+                    (point_1a[0], point_1a[1]),
+                    (point_1b[0], point_1b[1]),
+                    (0, 0, 255),
+                    1,
+                )
+            cv2.imwrite("1_7.png", image_with_lines)
+
+        return angle_1, posx_1
+
+    def found_split_line_with_wave(image, parameters):
+        if DEBUG:
+            cv2.imwrite("2_1.png", image)
         gray = TraitementImage.convertion_en_niveau_de_gris(image)
         blurimg = gray
         if TraitementImage.is_black_white(gray):
             blurimg = cv2.blur(gray, parameters.BlurSize)
         if DEBUG:
-            cv2.imwrite("0_0.png", blurimg)
+            cv2.imwrite("2_2.png", blurimg)
         # On repasse l'image en noir et blanc.
         _, threshold = cv2.threshold(
-            blurimg, parameters.ThresholdMin, parameters.ThresholdMax, cv2.THRESH_BINARY
+            blurimg,
+            parameters.Threshold.Min,
+            parameters.Threshold.Max,
+            cv2.THRESH_BINARY,
         )
         if DEBUG:
-            cv2.imwrite("0_1.png", threshold)
+            cv2.imwrite("2_3.png", threshold)
         eroded = cv2.erode(
             threshold,
-            np.ones(parameters.ErodeSize),
-            iterations=parameters.ErodeIterations,
+            np.ones(parameters.Erode.Size),
+            iterations=parameters.Erode.Iterations,
         )
         if DEBUG:
-            cv2.imwrite("0_2.png", eroded)
+            cv2.imwrite("2_4.png", eroded)
+
         # On cherche tous les contours
         contours, _ = cv2.findContours(eroded, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # pour ne garder que le plus grand. Normalement, cela doit être celui qui fait le contour des pages
@@ -112,7 +244,7 @@ class SeparatePage:
             img_tmp = np.copy(image)
             for i in range(nb_rectangle):
                 cv2.drawContours(img_tmp, cs, i, (0, 0, 255), 10)
-            cv2.imwrite("0_3.png", img_tmp)
+            cv2.imwrite("2_5.png", img_tmp)
 
         # cnt = cv2.approxPolyDP(c, 0.001*cv2.arcLength(c,True),True)
         # Il faut au minimum 10 points pour détecter le décroché qui indique la séparation entre deux pages.
@@ -136,13 +268,13 @@ class SeparatePage:
                 cnt = TraitementImage.get_rectangle_from_contour(
                     c,
                     n,
-                    parameters.get_rectangle_from_contour.MinE,
-                    parameters.get_rectangle_from_contour.MaxE,
-                    parameters.get_rectangle_from_contour.MaxIterations,
+                    parameters.RectangleContour.MinE,
+                    parameters.RectangleContour.MaxE,
+                    parameters.RectangleContour.MaxIterations,
                 )
                 if DEBUG:
                     test = cv2.drawContours(np.copy(image), [cnt], 0, (0, 0, 255), 10)
-                    cv2.imwrite("0_4.png", test)
+                    cv2.imwrite("2_6_" + str(nloop) + ".png", test)
                 h, w, _ = image.shape
                 toppointsi = []
                 bottompointsi = []
@@ -174,27 +306,70 @@ class SeparatePage:
         # Le point de séparation des deux pages en haut et bas
         maxtoppoints = list(map(lambda x: max(x, key=lambda x: x[1]), toppoints))
         minbottompoints = list(map(lambda x: min(x, key=lambda x: x[1]), bottompoints))
-        toppoint = [
+        toppoint = (
             int(sum(x for x, y in maxtoppoints) / len(maxtoppoints)),
             int(sum(y for x, y in maxtoppoints) / len(maxtoppoints)),
-        ]
-        bottompoint = [
+        )
+        bottompoint = (
             int(sum(x for x, y in minbottompoints) / len(minbottompoints)),
             int(sum(y for x, y in minbottompoints) / len(minbottompoints)),
-        ]
-        if bottompoint[1] == toppoint[1]:
-            raise Exception("separation double page y=0", "Impossible")
-        LOG.OUTPUT.print(
-            "separation double page angle",
-            np.arctan2(bottompoint[1] - toppoint[1], bottompoint[0] - toppoint[0])
-            / np.pi
-            * 180,
         )
-        LOG.OUTPUT.print(
-            "separation double page y=0",
-            (bottompoint[0] * toppoint[1] - toppoint[0] * bottompoint[1])
-            / (toppoint[1] - bottompoint[1]),
+        if DEBUG:
+            image_with_lines = image.copy()
+            cv2.line(
+                image_with_lines,
+                toppoint,
+                bottompoint,
+                (0, 0, 255),
+                1,
+            )
+            cv2.imwrite("2_7.png", image_with_lines)
+        return Compute.get_alpha_posx(bottompoint, toppoint)
+
+    # Sépare une page en deux en détectant la vague dans le papier en haut et en bas de la reliure.
+    def split_two_waves(
+        image,
+        parameters,
+    ):
+        param1 = par.FoundSplitLineWithLineParameters(
+            parameters.BlurSize,
+            parameters.Threshold,
+            parameters.Erode,
+            parameters.Canny,
+            parameters.HoughLines,
+            parameters.DeltaRhoTetha,
         )
+        angle1, pos1 = SeparatePage.found_split_line_with_line(image, param1)
+
+        param2 = par.FoundSplitLineWithWave(
+            parameters.BlurSize,
+            parameters.Threshold,
+            parameters.Erode,
+            parameters.RapportRect1Rect2,
+            parameters.Npoints2pages,
+            parameters.Npoints1page,
+            parameters.FoundContourIterations,
+            parameters.RectangleContour,
+            parameters.WaveTop,
+            parameters.WaveBottom,
+            parameters.WaveLeft,
+            parameters.WaveRight,
+        )
+        angle2, pos2 = SeparatePage.found_split_line_with_wave(image, param2)
+
+        pos_moy = (pos1 + pos2) / 2
+        angle_moy = (angle1 + angle2)/2
+
+        h, w, _ = image.shape
+
+        toppoint = (int(pos_moy), 0)
+        bottompoint = (
+            int(pos_moy - np.tan((angle_moy - 90.0) / 180.0 * np.pi) * h),
+            h - 1,
+        )
+
+        LOG.OUTPUT.print("separation double page angle", (angle1 + angle2) / 2)
+        LOG.OUTPUT.print("separation double page y=0", (pos1 + pos2) / 2)
 
         # On défini le masque pour séparer la page droite et gauche
         mask = np.zeros((h, w), np.uint8)
@@ -217,39 +392,45 @@ class SeparatePage:
         # On crop les images.
         page_gauche_0 = page_gauche[:, 0 : np.maximum(toppoint[0], bottompoint[0]) - 1]
         page_droite_0 = page_droite[:, np.minimum(toppoint[0], bottompoint[0]) :]
+        if DEBUG:
+            cv2.imwrite("3_1.png", page_gauche_0)
+            cv2.imwrite("3_2.png", page_droite_0)
+
         # On renvoie les images cropées.
         return page_gauche_0, page_droite_0
 
     def unskew_page(image, n, parameters):
+        if DEBUG:
+            cv2.imwrite("4_" + str(n) + "_1.png", image)
         img_gauche = TraitementImage.convertion_en_niveau_de_gris(image)
         # On grossit les images pour former un boudin et mieux détecter les lignes.
         eroded = cv2.erode(
             img_gauche,
-            np.ones(parameters.ErodeSize),
-            iterations=parameters.ErodeIterations,
+            np.ones(parameters.Erode.Size),
+            iterations=parameters.Erode.Iterations,
         )
         if DEBUG:
-            cv2.imwrite(str(n) + "_0a.png", eroded)
+            cv2.imwrite("4_" + str(n) + "_2.png", eroded)
 
         # Aide à la détection des contours
-        img_gauche2 = cv2.Canny(
+        canny = cv2.Canny(
             eroded,
-            parameters.CannyMin,
-            parameters.CannyMax,
-            apertureSize=parameters.CannyApertureSize,
+            parameters.Canny.Min,
+            parameters.Canny.Max,
+            apertureSize=parameters.Canny.ApertureSize,
         )
         if DEBUG:
-            cv2.imwrite(str(n) + "_0a2.png", img_gauche2)
+            cv2.imwrite("4_" + str(n) + "_3.png", canny)
 
         # Détection des lignes.
         # La précision doit être de l'ordre de 0.05°
         list_lines = cv2.HoughLinesP(
-            img_gauche2,
-            parameters.HoughLinesDeltaRho,
-            parameters.HoughLinesDeltaTetha,
-            parameters.HoughLinesThreshold,
-            minLineLength=parameters.HoughLinesMinLineLength,
-            maxLineGap=parameters.HoughLinesMaxLineGap,
+            canny,
+            parameters.HoughLines.DeltaRho,
+            parameters.HoughLines.DeltaTetha,
+            parameters.HoughLines.Threshold,
+            minLineLength=parameters.HoughLines.MinLineLength,
+            maxLineGap=parameters.HoughLines.MaxLineGap,
         )
 
         # lines contient une liste de liste de lignes.
@@ -274,7 +455,7 @@ class SeparatePage:
                     (0, 0, 255),
                     1,
                 )
-            cv2.imwrite(str(n) + "_0b.png", image_with_lines)
+            cv2.imwrite("4_" + str(n) + "_4.png", image_with_lines)
 
         # On converti les lignes en angles
         angles = list(
@@ -298,24 +479,29 @@ class SeparatePage:
         rotate_angle = np.mean(angle_dans_ecarttype)
         LOG.OUTPUT.print("page rotation " + str(n), rotate_angle)
         # Enfin, on tourne.
-        return TraitementImage.rotate_image(image, rotate_angle)
+        img_rotated = TraitementImage.rotate_image(image, rotate_angle)
+        if DEBUG:
+            cv2.imwrite("4_" + str(n) + "_5.png", img_rotated)
+        return img_rotated
 
     def crop_around_data_in_page(image, n, parameters):
         # On force le noir et blanc
+        if DEBUG:
+            cv2.imwrite("5_" + str(n) + "_1.png", image)
         gray = TraitementImage.convertion_en_niveau_de_gris(image)
         eroded = cv2.erode(
-            gray, np.ones(parameters.ErodeSize), iterations=parameters.ErodeIterations
+            gray, np.ones(parameters.Erode.Size), iterations=parameters.Erode.Iterations
         )
         if DEBUG:
-            cv2.imwrite(str(n) + "_1a.png", eroded)
+            cv2.imwrite("5_" + str(n) + "_2.png", eroded)
         _, threshold = cv2.threshold(
             eroded,
-            parameters.Threshold1Min,
-            parameters.Threshold1Max,
+            parameters.Threshold1.Min,
+            parameters.Threshold1.Max,
             cv2.THRESH_BINARY,
         )
         if DEBUG:
-            cv2.imwrite(str(n) + "_1b.png", threshold)
+            cv2.imwrite("5_" + str(n) + "_3.png", threshold)
         # On récupère le contour le plus grand.
         contours, _ = cv2.findContours(
             threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -323,19 +509,19 @@ class SeparatePage:
         c = max(contours, key=cv2.contourArea)
         image2222 = cv2.drawContours(image.copy(), [c], -1, (0, 0, 255), 3)
         if DEBUG:
-            cv2.imwrite(str(n) + "_1c.png", image2222)
+            cv2.imwrite("5_" + str(n) + "_4.png", image2222)
 
         # On garde le rectangle le plus grand.
         rect = TraitementImage.get_rectangle_from_contour(
             c,
             4,
-            parameters.get_rectangle_from_contour.MinE,
-            parameters.get_rectangle_from_contour.MaxE,
-            parameters.get_rectangle_from_contour.MaxIterations,
+            parameters.RectangleContour.MinE,
+            parameters.RectangleContour.MaxE,
+            parameters.RectangleContour.MaxIterations,
         )
         image22223 = cv2.drawContours(image2222, [rect], -1, (255, 0, 0), 3)
         if DEBUG:
-            cv2.imwrite(str(n) + "_1d.png", image22223)
+            cv2.imwrite("5_" + str(n) + "_5.png", image22223)
 
         x_crop1 = [rect[0, 0, 0], rect[1, 0, 0], rect[2, 0, 0], rect[3, 0, 0]]
         y_crop1 = [rect[0, 0, 1], rect[1, 0, 1], rect[2, 0, 1], rect[3, 0, 1]]
@@ -344,7 +530,7 @@ class SeparatePage:
 
         page_gauche_0 = image[y_crop1[1] : y_crop1[2], x_crop1[1] : x_crop1[2]]
         if DEBUG:
-            cv2.imwrite(str(n) + "_1e.png", page_gauche_0)
+            cv2.imwrite("5_" + str(n) + "_6.png", page_gauche_0)
 
         # On enlève les bordures noirs sur le bord des pages.
         imgh, imgw, _ = page_gauche_0.shape
@@ -354,16 +540,16 @@ class SeparatePage:
         gray = TraitementImage.convertion_en_niveau_de_gris(page_gauche_0)
         dilated = cv2.dilate(gray, np.ones(parameters.DilateSize))
         if DEBUG:
-            cv2.imwrite(str(n) + "_1f.png", dilated)
+            cv2.imwrite("5_" + str(n) + "_7.png", dilated)
 
         _, threshold = cv2.threshold(
             dilated,
-            parameters.Threshold2Min,
-            parameters.Threshold2Max,
+            parameters.Threshold2.Min,
+            parameters.Threshold2.Max,
             cv2.THRESH_BINARY,
         )
         if DEBUG:
-            cv2.imwrite(str(n) + "_1g.png", dilated)
+            cv2.imwrite("5_" + str(n) + "_8.png", dilated)
         contours, _ = cv2.findContours(
             threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
@@ -380,7 +566,7 @@ class SeparatePage:
                 min_y, max_y = min(y, min_y), max(y + h, max_y)
                 ncontour_good_size = ncontour_good_size + 1
         if DEBUG:
-            cv2.imwrite(str(n) + "_1h.png", image2222)
+            cv2.imwrite("5_" + str(n) + "_9.png", image2222)
 
         # Aucun contour, on renvoit une image
         if ncontour_good_size == 0:
@@ -486,22 +672,14 @@ class SeparatePage:
         else:
             LOG.OUTPUT = print_test.PrintTest(dict_test)
 
-        self.parameters = parameters.Parameters.init_default_values(dict_default_values)
+        self.parameters = par.Parameters.init_default_values(dict_default_values)
 
         image1, image2 = SeparatePage.split_two_waves(
             img, self.parameters.split_two_waves
         )
 
-        if DEBUG:
-            cv2.imwrite("0_5.png", image1)
-            cv2.imwrite("0_6.png", image2)
-
         image1a = SeparatePage.unskew_page(image1, 1, self.parameters.unskew_page)
         image2a = SeparatePage.unskew_page(image2, 2, self.parameters.unskew_page)
-
-        if DEBUG:
-            cv2.imwrite("1_0c.png", image1a)
-            cv2.imwrite("2_0c.png", image2a)
 
         (
             image1a2,
@@ -533,8 +711,8 @@ class SeparatePage:
         )
 
         if DEBUG:
-            cv2.imwrite("1_1i.png", image1b)
-            cv2.imwrite("2_1i.png", image2b)
+            cv2.imwrite("5_1_10.png", image1b)
+            cv2.imwrite("5_2_10.png", image2b)
 
         image1c = self.recadre(
             image1b, 1, 21.0, 29.7, min_x1, max_x1, min_y1, max_y1, imgw1, imgh1
@@ -543,5 +721,5 @@ class SeparatePage:
             image2b, 2, 21.0, 29.7, min_x2, max_x2, min_y2, max_y2, imgw2, imgh2
         )
 
-        cv2.imwrite(filename + "1_2.png", image1c)
-        cv2.imwrite(filename + "2_2.png", image2c)
+        cv2.imwrite("6_1.png", image1c)
+        cv2.imwrite("6_2.png", image2c)

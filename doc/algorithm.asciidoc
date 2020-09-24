@@ -20,6 +20,8 @@ Algorithm have these steps :
 
 === Curve presence at top and bottom of folding
 
+Method ``SeparatePage.found_split_line_with_wave``
+
   * Exemple
 
 image::separate-1-input.png[]
@@ -32,7 +34,7 @@ Apply :
   ** a threshold : to remove small noise and to convert gray to black / white
   ** a erode : to work with a B/W image with big dot instead of lots of small data.
 
-Image 0_2.png in debug mode :
+Image 2_4.png in debug mode :
 
 image::separate-1-pretreatment.png[]
 
@@ -46,7 +48,7 @@ Found the polyline with the fewest lines but that have 3 points in the two inter
 
 The line that separate the two pages is the top (in blue) of the two "waves".
 
-Image 0_4.png in debug mode :
+Image 2_6_*.png in debug mode :
 
 image::separate-1-mainalgo.png[]
 
@@ -66,7 +68,7 @@ image::separate-1-algo2_2.png[]
 
 Apply a mask with an inclined line to separe pages.
 
-Image 0_5.png and 0_6.png in debug mode :
+Image 3_1.png and 3_2.png in debug mode :
 
 image::separate-1-posttreatment.png[]
 
@@ -82,9 +84,9 @@ image::rotate-1-input.png[]
 
   * Pretreatment
 
-Apply a blur to thicken letter to have just a big black mass to have less noise and to ease detect of liner.
+Apply a erode to thicken letter to have just a big black mass to have less noise and to ease detect of liner.
 
-Image 1_0a.png in debug mode :
+Image 4_*_2.png in debug mode :
 
 image::rotate-1-pretreatment.png[]
 
@@ -92,7 +94,7 @@ image::rotate-1-pretreatment.png[]
 
 Found all lines then keep only them who have a angle less than 20°. Then keep them who have a angle closed to the mean.
 
-Image 1_0b.png in debug mode :
+Image 4_*_4.png in debug mode :
 
 image::rotate-1-mainalgo.png[]
 
@@ -100,7 +102,7 @@ image::rotate-1-mainalgo.png[]
 
 Rotate image.
 
-Image 1_0c.png in debug mode :
+Image 4_*_5.png in debug mode :
 
 image::rotate-1-posttreatment.png[]
 
@@ -116,9 +118,9 @@ image::removeborder-1-input.png[]
 
   * Pretreatment
 
-Apply a blur to reduce noise.
+Apply a erode to thicken letter to have just a big black mass to have less noise and to ease detect of liner.
 
-Image 1-1b.png in debug mode :
+Image 5_*_3.png in debug mode :
 
 image::removeborder-1-pretreatment.png[]
 
@@ -126,13 +128,15 @@ image::removeborder-1-pretreatment.png[]
 
 Found the biggest (red) contour and the associated (blue) rectangle. With this action, you have isolated the border of the page.
 
-Image 1_1d.png in debug mode :
+Image 5_*_5.png in debug mode :
 
 image::removeborder-1-mainalgo1.png[]
 
 Then crop.
 
-Found all (not to big and not to small) contours to find all interesting data (1_1h.png in debug mode).
+Found all (not to big and not to small) contours to find all interesting data.
+
+Image 5_*_9.png in debug mode :
 
 image::removeborder-1-mainalgo2.png[]
 
@@ -142,7 +146,7 @@ NOTE: It's possible that no contour is found after the filter of all contours (b
 
 Then found the rectangle that catch all contours and crop again.
 
-Image 1_1i.png in debug mode :
+Image 5_*_10.png in debug mode :
 
 image::removeborder-1-posttreatment.png[]
 
