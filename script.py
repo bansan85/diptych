@@ -143,9 +143,9 @@ class SeparatePage:
             maxLineGap=parameters.HoughLines.MaxLineGap,
         )
         lines = list(map(lambda list_line: list_line[0], list_lines))
-        lines_angle_posx = list(map(
-            lambda p: Compute.get_alpha_posx((p[0], p[1]), (p[2], p[3])), lines
-        ))
+        lines_angle_posx = list(
+            map(lambda p: Compute.get_alpha_posx((p[0], p[1]), (p[2], p[3])), lines)
+        )
         if DEBUG:
             image_with_lines = image.copy()
             for a, b, c, d in lines:
@@ -358,7 +358,7 @@ class SeparatePage:
         angle2, pos2 = SeparatePage.found_split_line_with_wave(image, param2)
 
         pos_moy = (pos1 + pos2) / 2
-        angle_moy = (angle1 + angle2)/2
+        angle_moy = (angle1 + angle2) / 2
 
         h, w, _ = image.shape
 
@@ -484,6 +484,10 @@ class SeparatePage:
             )
         )
 
+        if len(angle_dans_ecarttype) == 0:
+            raise Exception(
+                "No angle have the defined constraints.", "AngleLimitStddev too small ?"
+            )
         rotate_angle = np.mean(angle_dans_ecarttype)
         LOG.OUTPUT.print("page rotation " + str(n), rotate_angle)
         # Enfin, on tourne.
