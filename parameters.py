@@ -450,7 +450,7 @@ class UnskewPageParameters:
         self.__hough_lines = HoughLinesParameters(1, np.pi / (180 * 20), 70, 300, 90)
 
         self.__angle_limit = 20
-        self.__angle_limit_stddev = 0.5
+        self.__angle_limit_stddev = 0.75
 
     @property
     def Erode(self):
