@@ -486,6 +486,7 @@ class CropAroundDataInPageParameters:
         self.__erode = ErodeParameters((9, 9), 1)
         self.__threshold1 = ThresholdParameters(240, 255)
         self.__rectangle_contour = RectangleContourParameters(0.00001, 0.99, 10)
+        self.__pourcentage_ecart_rectangle = 10.0
         self.__dilate_size = (2, 2)
         self.__threshold2 = ThresholdParameters(200, 255)
         self.__contour_area_min = 0.002 * 0.002
@@ -503,6 +504,14 @@ class CropAroundDataInPageParameters:
     @property
     def RectangleContour(self):
         return self.__rectangle_contour
+
+    @property
+    def PourcentageEcartRectangle(self):
+        return self.__pourcentage_ecart_rectangle
+
+    @PourcentageEcartRectangle.setter
+    def PourcentageEcartRectangle(self, val):
+        self.__pourcentage_ecart_rectangle = val
 
     @property
     def DilateSize(self):
@@ -645,6 +654,8 @@ class Parameters:
                 parameters.crop_around_data_in_page.RectangleContour.MaxIterations = (
                     value
                 )
+            elif param == "CropAroundDataInPagePourcentageEcartRectangle":
+                parameters.crop_around_data_in_page.PourcentageEcartRectangle = value
             elif param == "CropAroundDataInPageDilateSize":
                 parameters.crop_around_data_in_page.DilateSize = value
             elif param == "CropAroundDataInPageThreshold2Min":

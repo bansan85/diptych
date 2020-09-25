@@ -42,6 +42,36 @@ class Compute:
         )
         return angle_ok and posx_ok
 
+    def PourcentError(val1, val2):
+        assert val1 >= 0
+        assert val2 >= 0
+        return np.absolute(val1 - val2) / np.maximum(val1, val2) * 100.0
+
+    def IsContourRectangle(rect, tolerance):
+        if len(rect) != 4:
+            return False
+
+        distance = []
+        for i in range(4):
+            distance.append(
+                np.sqrt(
+                    np.square(rect[i, 0, 1] - rect[(i + 1) % 4, 0, 1])
+                    + np.square(rect[i, 0, 0] - rect[(i + 1) % 4, 0, 0])
+                )
+            )
+        diagonale = []
+        for i in range(2):
+            diagonale.append(
+                np.sqrt(
+                    np.square(rect[i, 0, 1] - rect[i + 2, 0, 1])
+                    + np.square(rect[i, 0, 0] - rect[i + 2, 0, 0])
+                )
+            )
+        un = Compute.PourcentError(distance[0], distance[2]) < tolerance
+        deux = Compute.PourcentError(distance[1], distance[3]) < tolerance
+        trois = Compute.PourcentError(diagonale[0], diagonale[1]) < tolerance
+        return un and deux and trois
+
 
 class TraitementImage:
     def charge_image(fichier):
@@ -534,6 +564,8 @@ class SeparatePage:
         image22223 = cv2.drawContours(image2222, [rect], -1, (255, 0, 0), 3)
         if DEBUG:
             cv2.imwrite("5_" + str(n) + "_5.png", image22223)
+        if not Compute.IsContourRectangle(rect, parameters.PourcentageEcartRectangle):
+            raise Exception("Contour not rectangular", rect)
 
         x_crop1 = [rect[0, 0, 0], rect[1, 0, 0], rect[2, 0, 0], rect[3, 0, 0]]
         y_crop1 = [rect[0, 0, 1], rect[1, 0, 1], rect[2, 0, 1], rect[3, 0, 1]]
