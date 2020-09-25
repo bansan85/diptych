@@ -142,7 +142,7 @@ class SeparatePage:
             minLineLength=parameters.HoughLines.MinLineLength,
             maxLineGap=parameters.HoughLines.MaxLineGap,
         )
-        lines = map(lambda list_line: list_line[0], list_lines)
+        lines = list(map(lambda list_line: list_line[0], list_lines))
         lines_angle_posx = list(map(
             lambda p: Compute.get_alpha_posx((p[0], p[1]), (p[2], p[3])), lines
         ))
@@ -435,7 +435,7 @@ class SeparatePage:
 
         # lines contient une liste de liste de lignes.
         # Le deuxième niveau de liste ne contient toujours qu'une ligne.
-        lines = map(lambda list_line: list_line[0], list_lines)
+        lines = list(map(lambda list_line: list_line[0], list_lines))
 
         # On filtre les lignes plutôt horizontales
         def constrait_angle(line, limit_angle=parameters.AngleLimit):
@@ -447,6 +447,14 @@ class SeparatePage:
 
         if DEBUG:
             image_with_lines = image.copy()
+            for line_x1, line_y1, line_x2, line_y2 in lines:
+                cv2.line(
+                    image_with_lines,
+                    (line_x1, line_y1),
+                    (line_x2, line_y2),
+                    (255, 0, 0),
+                    1,
+                )
             for line_x1, line_y1, line_x2, line_y2 in valid_lines:
                 cv2.line(
                     image_with_lines,
