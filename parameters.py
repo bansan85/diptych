@@ -181,9 +181,9 @@ class ThresholdParameters:
 
 
 class FoundSplitLineWithLineParameters:
-    def __init__(self, blur_size, threshold, erode, canny, hough_lines, limit):
+    def __init__(self, blur_size, threshold_min, erode, canny, hough_lines, limit):
         self.__blur_size = blur_size
-        self.__threshold = threshold
+        self.__threshold_min = threshold_min
         self.__erode = erode
         self.__canny = canny
         self.__hough_lines = hough_lines
@@ -194,8 +194,12 @@ class FoundSplitLineWithLineParameters:
         return self.__blur_size
 
     @property
-    def Threshold(self):
-        return self.__threshold
+    def ThresholdMin(self):
+        return self.__threshold_min
+
+    @ThresholdMin.setter
+    def ThresholdMin(self, val):
+        self.__threshold_min = val
 
     @property
     def Erode(self):
@@ -218,8 +222,9 @@ class FoundSplitLineWithWave:
     def __init__(
         self,
         blur_size,
-        threshold,
+        threshold_min,
         erode,
+        reduce_image_when_detecting,
         rapport_rect1_rect2,
         npoints_2pages,
         npoints_1page,
@@ -231,8 +236,9 @@ class FoundSplitLineWithWave:
         wave_right,
     ):
         self.__blur_size = blur_size
-        self.__threshold = threshold
+        self.__threshold_min = threshold_min
         self.__erode = erode
+        self.__reduce_image_when_detecting = reduce_image_when_detecting
         self.__rapport_rect1_rect2 = rapport_rect1_rect2
         self.__npoints_2pages = npoints_2pages
         self.__npoints_1page = npoints_1page
@@ -252,12 +258,24 @@ class FoundSplitLineWithWave:
         self.__blur_size = val
 
     @property
-    def Threshold(self):
-        return self.__threshold
+    def ThresholdMin(self):
+        return self.__threshold_min
+
+    @ThresholdMin.setter
+    def ThresholdMin(self, val):
+        self.__threshold_min = val
 
     @property
     def Erode(self):
         return self.__erode
+
+    @property
+    def ReduceImageWhenDetecting(self):
+        return self.__reduce_image_when_detecting
+
+    @ReduceImageWhenDetecting.setter
+    def ReduceImageWhenDetecting(self, val):
+        self.__reduce_image_when_detecting = val
 
     @property
     def RapportRect1Rect2(self):
@@ -332,10 +350,11 @@ class SplitTwoWavesParameters:
     def __init__(self):
         self.__erode = ErodeParameters((4, 4), 1)
         self.__blur_size = (10, 10)
-        self.__threshold = ThresholdParameters(240, 255)
+        self.__threshold_min = (200, 240)
         self.__canny = CannyParameters(25, 255, 5)
-        self.__hough_lines = HoughLinesParameters(1, np.pi / (180 * 20), 50, 300, 30)
+        self.__hough_lines = HoughLinesParameters(1, np.pi / (180 * 20), 150, 200, 150)
         self.__delta_rho_tetha = DeltaRhoTethaParameters(200, 20)
+        self.__reduce_image_when_detecting = 0.02
         self.__rapport_rect1_rect2 = 1.05
         self.__wave_top = 0.2
         self.__wave_bottom = 0.8
@@ -359,8 +378,12 @@ class SplitTwoWavesParameters:
         self.__blur_size = val
 
     @property
-    def Threshold(self):
-        return self.__threshold
+    def ThresholdMin(self):
+        return self.__threshold_min
+
+    @ThresholdMin.setter
+    def ThresholdMin(self, val):
+        self.__threshold_min = val
 
     @property
     def Canny(self):
@@ -373,6 +396,14 @@ class SplitTwoWavesParameters:
     @property
     def DeltaRhoTetha(self):
         return self.__delta_rho_tetha
+
+    @property
+    def ReduceImageWhenDetecting(self):
+        return self.__reduce_image_when_detecting
+
+    @ReduceImageWhenDetecting.setter
+    def ReduceImageWhenDetecting(self, val):
+        self.__reduce_image_when_detecting = val
 
     @property
     def RapportRect1Rect2(self):
@@ -567,9 +598,7 @@ class Parameters:
             elif param == "SplitTwoWavesBlurSize":
                 parameters.split_two_waves.BlurSize = value
             elif param == "SplitTwoWavesThresholdMin":
-                parameters.split_two_waves.Threshold.Min = value
-            elif param == "SplitTwoWavesThresholdMax":
-                parameters.split_two_waves.Threshold.Max = value
+                parameters.split_two_waves.ThresholdMin = value
             elif param == "SplitTwoWavesCannyMin":
                 parameters.split_two_waves.Canny.Min = value
             elif param == "SplitTwoWavesCannyMax":
