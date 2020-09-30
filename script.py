@@ -31,8 +31,29 @@ class Compute:
         angle = np.arctan2(point1[1] - point2[1], point1[0] - point2[0]) / np.pi * 180
         if angle < 0:
             angle = angle + 180
-        posx = (point1[0] * point2[1] - point2[0] * point1[1]) / (point2[1] - point1[1])
+        posx = int((point1[0] * point2[1] - point2[0] * point1[1]) / (point2[1] - point1[1]))
         return angle, posx
+
+    def get_bottom_point_from_alpha_posx(alpha, posx, height):
+        return (
+            int(posx - np.tan((alpha - 90.0) / 180.0 * np.pi) * height),
+            height - 1,
+        )
+
+    def get_alpha_posy(point1, point2):
+        if point1[0] == point2[0]:
+            return None, None
+        angle = np.arctan2(point1[1] - point2[1], point1[0] - point2[0]) / np.pi * 180
+        if angle < 0:
+            angle = angle + 180
+        posy = int((point1[0] * point2[1] - point2[0] * point1[1]) / (point1[0] - point2[0]))
+        return angle, posy
+
+    def get_bottom_point_from_alpha_posy(alpha, posy, width):
+        return (
+            width - 1,
+            int(posy + np.tan(alpha / 180.0 * np.pi) * width),
+        )
 
     # On filtre les lignes plutôt horizontales
     def constrait_angle(data, limit_angle, objectif_ang, objectif_posx, limit_posx):
@@ -139,8 +160,6 @@ class TraitementImage:
             # Si la taille du contour change, on réinitialise le compteur.
             if len(lastcnt) != len(cnt):
                 nn = 0
-            if DEBUG:
-                print(len(cnt), ":", e)
             lastcnt = cnt
 
     def rotate_image(image, angle_deg):
@@ -572,10 +591,7 @@ class SeparatePage:
         h, w, _ = image.shape
 
         toppoint = (int(pos_moy), 0)
-        bottompoint = (
-            int(pos_moy - np.tan((angle_moy - 90.0) / 180.0 * np.pi) * h),
-            h - 1,
-        )
+        bottompoint = Compute.get_bottom_point_from_alpha_posx(angle_moy, pos_moy, h)
 
         LOG.OUTPUT.print("separation double page angle", (angle1 + angle2) / 2)
         LOG.OUTPUT.print("separation double page y=0", (pos1 + pos2) / 2)
@@ -839,64 +855,126 @@ class SeparatePage:
                         )
                 cv2.imwrite("5_" + str(n) + "_5h.png", image_with_lines)
 
-            lines_90_angle = []
-            lines_0_angle = []
+            images_mask = SeparatePage.FindImages(image, 0.02)
+
+            vertical_lines_angle = []
+            lines_horizontal_angle = []
             DELTA_ANGLE = 3
             for liste in (lines1, lines2):
                 for line in liste:
-                    for a, b, c, d in line:
-                        angle = Compute.get_alpha((a, b), (c, d))
-                        if 90 - DELTA_ANGLE <= angle and angle <= 90 + DELTA_ANGLE:
-                            lines_90_angle.append((a, b, c, d))
-                        if angle <= DELTA_ANGLE or angle > 180 - DELTA_ANGLE:
-                            lines_0_angle.append((a, b, c, d))
+                    a, b, c, d = line[0]
+                    angle = Compute.get_alpha((a, b), (c, d))
+                    if 90 - DELTA_ANGLE <= angle and angle <= 90 + DELTA_ANGLE:
+                        angle, posx = Compute.get_alpha_posx((a, b), (c, d))
+                        image_line = np.zeros(images_mask.shape, np.uint8)
+                        cv2.line(
+                            image_line,
+                            (posx, 0),
+                            Compute.get_bottom_point_from_alpha_posx(angle, posx, image.shape[0]),
+                            (255, 255, 255),
+                            1,
+                        )
+                        image_line = cv2.bitwise_and(images_mask, image_line)
+                        if cv2.countNonZero(image_line) == 0:
+                            vertical_lines_angle.append((a, b, c, d))
+                    if angle <= DELTA_ANGLE or angle > 180 - DELTA_ANGLE:
+                        angle, posy = Compute.get_alpha_posy((a, b), (c, d))
+                        image_line = np.zeros(images_mask.shape, np.uint8)
+                        cv2.line(
+                            image_line,
+                            (0, posy),
+                            Compute.get_bottom_point_from_alpha_posy(angle, posy, image.shape[1]),
+                            (255, 255, 255),
+                            1,
+                        )
+                        image_line = cv2.bitwise_and(images_mask, image_line)
+                        if cv2.countNonZero(image_line) == 0:
+                            lines_horizontal_angle.append((a, b, c, d))
 
-            xx = SeparatePage.FindImages(image, 0.02)
             area = 0
             cnt = []
 
-            for i in range(len(lines_90_angle)):
-                for j in range(i + 1, len(lines_90_angle)):
-                    for k in range(len(lines_0_angle)):
-                        for l in range(k + 1, len(lines_0_angle)):
+            histogram_vertical = dict()
+            histogram_horizontal = dict()
+            histogram_vertical_points = dict()
+            histogram_horizontal_points = dict()
+
+            for line in vertical_lines_angle:
+                a, b, c, d = line
+                angle, posx = Compute.get_alpha_posx((a, b), (c, d))
+                histogram_vertical[posx] = histogram_vertical.get(posx, 0) + 1
+                histogram_vertical_points[posx] = (a, b, c, d)
+            for line in lines_horizontal_angle:
+                a, b, c, d = line
+                angle, posy = Compute.get_alpha_posy((a, b), (c, d))
+                histogram_horizontal[posy] = histogram_horizontal.get(posy, 0) + 1
+                histogram_horizontal_points[posy] = (a, b, c, d)
+            
+            histogram_vertical_arr = np.zeros(max(histogram_vertical.keys())+1)
+            histogram_horizontal_arr = np.zeros(max(histogram_horizontal.keys())+1)
+            for k, v in histogram_vertical.items():
+                if k >=0:
+                    histogram_vertical_arr[k] = v
+            for k, v in histogram_horizontal.items():
+                if k >=0:
+                    histogram_horizontal_arr[k] = v
+            
+            v_smooth = cv2.GaussianBlur(histogram_vertical_arr, (9,9), 9, 9,  cv2.BORDER_REPLICATE)
+            h_smooth = cv2.GaussianBlur(histogram_horizontal_arr, (9,9), 9, 9, cv2.BORDER_REPLICATE)
+
+            vertical_lines_angle_keep = []
+            for i in range(1,len(v_smooth)-1):
+                if v_smooth[i] > v_smooth[i-1] and v_smooth[i] > v_smooth[i+1]:
+                    vertical_lines_angle_keep.append(histogram_vertical_points[i])
+            vertical_lines_angle = vertical_lines_angle_keep
+            lines_horizontal_angle_keep = []
+            for i in range(1,len(h_smooth)-1):
+                if h_smooth[i] > h_smooth[i-1] and h_smooth[i] > h_smooth[i+1]:
+                    lines_horizontal_angle_keep.append(histogram_horizontal_points[i])
+            lines_horizontal_angle = lines_horizontal_angle_keep
+
+            for i in range(len(vertical_lines_angle)):
+                for j in range(i + 1, len(vertical_lines_angle)):
+                    for k in range(len(lines_horizontal_angle)):
+                        for l in range(k + 1, len(lines_horizontal_angle)):
                             x1, y1 = Compute.line_intersection(
                                 (
-                                    (lines_90_angle[i][0], lines_90_angle[i][1]),
-                                    (lines_90_angle[i][2], lines_90_angle[i][3]),
+                                    (vertical_lines_angle[i][0], vertical_lines_angle[i][1]),
+                                    (vertical_lines_angle[i][2], vertical_lines_angle[i][3]),
                                 ),
                                 (
-                                    (lines_0_angle[k][0], lines_0_angle[k][1]),
-                                    (lines_0_angle[k][2], lines_0_angle[k][3]),
+                                    (lines_horizontal_angle[k][0], lines_horizontal_angle[k][1]),
+                                    (lines_horizontal_angle[k][2], lines_horizontal_angle[k][3]),
                                 ),
                             )
                             x2, y2 = Compute.line_intersection(
                                 (
-                                    (lines_90_angle[i][0], lines_90_angle[i][1]),
-                                    (lines_90_angle[i][2], lines_90_angle[i][3]),
+                                    (vertical_lines_angle[i][0], vertical_lines_angle[i][1]),
+                                    (vertical_lines_angle[i][2], vertical_lines_angle[i][3]),
                                 ),
                                 (
-                                    (lines_0_angle[l][0], lines_0_angle[l][1]),
-                                    (lines_0_angle[l][2], lines_0_angle[l][3]),
+                                    (lines_horizontal_angle[l][0], lines_horizontal_angle[l][1]),
+                                    (lines_horizontal_angle[l][2], lines_horizontal_angle[l][3]),
                                 ),
                             )
                             x3, y3 = Compute.line_intersection(
                                 (
-                                    (lines_90_angle[j][0], lines_90_angle[j][1]),
-                                    (lines_90_angle[j][2], lines_90_angle[j][3]),
+                                    (vertical_lines_angle[j][0], vertical_lines_angle[j][1]),
+                                    (vertical_lines_angle[j][2], vertical_lines_angle[j][3]),
                                 ),
                                 (
-                                    (lines_0_angle[k][0], lines_0_angle[k][1]),
-                                    (lines_0_angle[k][2], lines_0_angle[k][3]),
+                                    (lines_horizontal_angle[k][0], lines_horizontal_angle[k][1]),
+                                    (lines_horizontal_angle[k][2], lines_horizontal_angle[k][3]),
                                 ),
                             )
                             x4, y4 = Compute.line_intersection(
                                 (
-                                    (lines_90_angle[j][0], lines_90_angle[j][1]),
-                                    (lines_90_angle[j][2], lines_90_angle[j][3]),
+                                    (vertical_lines_angle[j][0], vertical_lines_angle[j][1]),
+                                    (vertical_lines_angle[j][2], vertical_lines_angle[j][3]),
                                 ),
                                 (
-                                    (lines_0_angle[l][0], lines_0_angle[l][1]),
-                                    (lines_0_angle[l][2], lines_0_angle[l][3]),
+                                    (lines_horizontal_angle[l][0], lines_horizontal_angle[l][1]),
+                                    (lines_horizontal_angle[l][2], lines_horizontal_angle[l][3]),
                                 ),
                             )
                             xmoy = (x1 + x2 + x3 + x4) / 4
@@ -909,13 +987,13 @@ class SeparatePage:
                             list_of_points.sort(key=get_angle)
                             cnti = np.asarray(list_of_points)
                             areai = cv2.contourArea(cnti)
-                            mask = np.zeros(xx.shape, np.uint8)
+                            mask = np.zeros(images_mask.shape, np.uint8)
                             mask = cv2.drawContours(
                                 mask, [cnti], -1, (255, 255, 255), -1
                             )
-                            mask = cv2.bitwise_and(xx, mask)
+                            mask = cv2.bitwise_and(images_mask, mask)
 
-                            difference = cv2.subtract(xx, mask)
+                            difference = cv2.subtract(images_mask, mask)
                             if cv2.countNonZero(difference) == 0:
                                 if area == 0 or area > areai:
                                     area = areai
@@ -1036,12 +1114,14 @@ class SeparatePage:
         LOG.OUTPUT.print("image " + str(n) + " dpi", dpi)
 
         marge_haute_px = min_y
-        marge_basse_px = imgh - max_y
+        marge_basse_px = imgh - 1 - max_y
         marge_gauche_px = min_x
-        marge_droite_px = imgw - max_x
+        marge_droite_px = imgw - 1 - max_x
         white = [255, 255, 255]
         if marge_gauche_px + w + marge_droite_px < width_paper / 2.54 * dpi:
             pixels_manquant = width_paper / 2.54 * dpi - w
+            LOG.OUTPUT.print("image " + str(n) + " recadre gauche", int(pixels_manquant / 2.0))
+            LOG.OUTPUT.print("image " + str(n) + " recadre droite", int(pixels_manquant / 2.0))
             image_recadre = cv2.copyMakeBorder(
                 image,
                 0,
@@ -1055,8 +1135,14 @@ class SeparatePage:
             raise Exception("marge", "marge_gauche_px")
         if marge_haute_px + h + marge_basse_px < height_paper / 2.54 * dpi:
             pixels_manquant = height_paper / 2.54 * dpi - h
+            # If no crop at the previous operation, add the same value to the top and the bottom
+            if marge_haute_px == 0 and marge_basse_px == 0:
+                marge_haute_px = 1
+                marge_basse_px = 1
             pourcenthaut = marge_haute_px / (marge_haute_px + marge_basse_px)
             pourcentbas = marge_basse_px / (marge_haute_px + marge_basse_px)
+            LOG.OUTPUT.print("image " + str(n) + " recadre haut", int(pixels_manquant * pourcenthaut))
+            LOG.OUTPUT.print("image " + str(n) + " recadre bas", int(pixels_manquant * pourcentbas))
             image_recadre2 = cv2.copyMakeBorder(
                 image_recadre,
                 int(pixels_manquant * pourcenthaut),
