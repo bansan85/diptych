@@ -38,7 +38,3 @@ execute("C:/Users/vlea/wsl/ocr_img/im-036.png")
 execute("C:/Users/vlea/wsl/ocr_img/im-037.png")
 execute("C:/Users/vlea/wsl/ocr_img/im-038.png")
 execute("C:/Users/vlea/wsl/ocr_img/im-039.png")
-# if __name__ == '__main__':
-#    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-#        multiple_results = [pool.apply_async(f, args=["tests/0001.png"])]
-#        [res.get(timeout=10000) for res in multiple_results]

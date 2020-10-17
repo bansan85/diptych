@@ -16,7 +16,6 @@ class FindImageParameters:
         blur_black_white: Tuple[int, int]
         image_edges: int
         min_area: float
-        enable_debug: Optional[str]
 
     def __init__(  # pylint: disable=too-many-arguments
         self: FindImageParameters,
@@ -26,7 +25,6 @@ class FindImageParameters:
         blur_black_white: Tuple[int, int],
         image_edges: int,
         min_area: float,
-        enable_debug: Optional[str],
     ):
         self.__param = FindImageParameters.Impl(
             erode_pourcent_size=erode_pourcent_size,
@@ -35,7 +33,6 @@ class FindImageParameters:
             blur_black_white=blur_black_white,
             image_edges=image_edges,
             min_area=min_area,
-            enable_debug=enable_debug,
         )
 
     @property
@@ -92,19 +89,13 @@ class FindImageParameters:
     def min_area(self: FindImageParameters, val: float) -> None:
         self.__param.min_area = val
 
-    @property
-    def enable_debug(self: FindImageParameters) -> Optional[str]:
-        return self.__param.enable_debug
 
-    @enable_debug.setter
-    def enable_debug(self: FindImageParameters, val: Optional[str]) -> None:
-        self.__param.enable_debug = val
-
-
-def find_images(image: Any, param: FindImageParameters) -> Any:
+def find_images(
+    image: Any, param: FindImageParameters, enable_debug: Optional[str]
+) -> Any:
     __internal_border__ = 20
 
-    cv2ext.write_image_if(image, param.enable_debug, "_1.png")
+    cv2ext.write_image_if(image, enable_debug, "_1.png")
     gray = cv2ext.force_image_to_be_grayscale(image, param.blur_black_white)
     gray_bordered = cv2.copyMakeBorder(
         gray,
@@ -115,16 +106,16 @@ def find_images(image: Any, param: FindImageParameters) -> Any:
         cv2.BORDER_CONSTANT,
         value=[255],
     )
-    cv2ext.write_image_if(gray_bordered, param.enable_debug, "_2.png")
+    cv2ext.write_image_if(gray_bordered, enable_debug, "_2.png")
     dilated = cv2.dilate(
         gray_bordered,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, param.kernel_blur_size),
     )
-    cv2ext.write_image_if(dilated, param.enable_debug, "_3.png")
+    cv2ext.write_image_if(dilated, enable_debug, "_3.png")
     _, threshold1 = cv2.threshold(dilated, 254, 255, cv2.THRESH_TOZERO)
-    cv2ext.write_image_if(threshold1, param.enable_debug, "_4.png")
+    cv2ext.write_image_if(threshold1, enable_debug, "_4.png")
     _, threshold2 = cv2.threshold(threshold1, 0, 255, cv2.THRESH_BINARY_INV)
-    cv2ext.write_image_if(threshold2, param.enable_debug, "_5.png")
+    cv2ext.write_image_if(threshold2, enable_debug, "_5.png")
 
     morpho1 = cv2.morphologyEx(
         threshold2,
@@ -133,7 +124,7 @@ def find_images(image: Any, param: FindImageParameters) -> Any:
             cv2.MORPH_ELLIPSE, param.kernel_morphology_size
         ),
     )
-    cv2ext.write_image_if(morpho1, param.enable_debug, "_6.png")
+    cv2ext.write_image_if(morpho1, enable_debug, "_6.png")
     morpho2 = cv2.morphologyEx(
         morpho1,
         cv2.MORPH_OPEN,
@@ -141,17 +132,17 @@ def find_images(image: Any, param: FindImageParameters) -> Any:
             cv2.MORPH_ELLIPSE, param.kernel_morphology_size
         ),
     )
-    cv2ext.write_image_if(morpho2, param.enable_debug, "_7.png")
+    cv2ext.write_image_if(morpho2, enable_debug, "_7.png")
 
     contours, _ = cv2.findContours(
         morpho2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
     cv2ext.remove_border_in_contours(contours, __internal_border__, image)
-    if param.enable_debug is not None:
+    if enable_debug is not None:
         debug_image_contours = cv2.drawContours(
             cv2ext.convertion_en_couleur(image), contours, -1, (0, 0, 255), 3
         )
-        cv2.imwrite(param.enable_debug + "_8.png", debug_image_contours)
+        cv2.imwrite(enable_debug + "_8.png", debug_image_contours)
         debug_image_mask = np.zeros(image.shape, np.uint8)
     img_mask_erode = np.zeros(image.shape, np.uint8)
     all_polygon = map(
@@ -165,7 +156,7 @@ def find_images(image: Any, param: FindImageParameters) -> Any:
     all_polygon_hull = map(cv2.convexHull, big_images)
 
     for contour in all_polygon_hull:
-        if param.enable_debug is not None:
+        if enable_debug is not None:
             debug_image_contours = cv2.drawContours(
                 debug_image_contours, [contour], -1, (255, 0, 0), 3
             )
@@ -187,17 +178,20 @@ def find_images(image: Any, param: FindImageParameters) -> Any:
         )
         img_mask_erode = cv2.bitwise_or(img_mask_erode, img_mask_erodei)
 
-    if param.enable_debug is not None:
-        cv2.imwrite(param.enable_debug + "_9.png", debug_image_contours)
-        cv2.imwrite(param.enable_debug + "_10.png", debug_image_mask)
-        cv2.imwrite(param.enable_debug + "_11.png", img_mask_erode)
+    if enable_debug is not None:
+        cv2.imwrite(enable_debug + "_9.png", debug_image_contours)
+        cv2.imwrite(enable_debug + "_10.png", debug_image_mask)
+        cv2.imwrite(enable_debug + "_11.png", img_mask_erode)
     return img_mask_erode
 
 
 def remove_points_inside_images_in_contours(
-    contours: Any, image: Any, param: FindImageParameters
+    contours: Any,
+    image: Any,
+    param: FindImageParameters,
+    enable_debug: Optional[str],
 ) -> List[Any]:
-    mask_with_images = find_images(image, param)
+    mask_with_images = find_images(image, param, enable_debug)
 
     contours_filtered = []
     for contour_i in contours:

@@ -358,7 +358,7 @@ class SplitTwoWavesParameters:
         delta_rho: int = 200
         delta_tetha: float = 20.0
         find_images: FindImageParameters = FindImageParameters(
-            0.02, (10, 10), (10, 10), (10, 10), 8, 0.01, "A_wave"
+            0.02, (10, 10), (10, 10), (10, 10), 8, 0.01
         )
         find_candidates: FindCandidatesSplitLineWithWaveParameters = (
             FindCandidatesSplitLineWithWaveParameters(
@@ -807,6 +807,7 @@ def found_split_line_with_wave(
         sorted_contours,
         image,
         parameters.find_images,
+        compute.optional_concat(enable_debug, "_A_wave")
     )
 
     toppoints, bottompoints = __found_candidates_split_line_with_wave(

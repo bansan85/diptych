@@ -20,8 +20,6 @@ import cv2ext
 from pages import Parameters
 import compute
 
-DEBUG = True
-
 
 class SeparatePage:
     # Sépare une page en deux en détectant la vague dans le papier en haut et
@@ -30,7 +28,7 @@ class SeparatePage:
         self: SeparatePage,
         image: Any,
         parameters: SplitTwoWavesParameters,
-        enable_debug: bool,
+        enable_debug: Optional[str],
     ) -> Tuple[Any, Any]:
         param1 = FoundSplitLineWithLineParameters(
             parameters.blur_size,
@@ -42,7 +40,7 @@ class SeparatePage:
             parameters.delta_tetha,
         )
         first = page.split.found_split_line_with_line(
-            image, param1, "1" if enable_debug else None
+            image, param1, compute.optional_concat(enable_debug, "_1")
         )
 
         param2 = FoundSplitLineWithWave(
@@ -53,7 +51,7 @@ class SeparatePage:
             parameters.find_candidates,
         )
         second = page.split.found_split_line_with_wave(
-            image, param2, "2" if enable_debug else None
+            image, param2, compute.optional_concat(enable_debug, "_2")
         )
 
         angle_moy, pos_moy = page.split.find_best_split_in_all_candidates(
@@ -68,8 +66,8 @@ class SeparatePage:
         )
 
         if enable_debug:
-            cv2.imwrite("3_1.png", page_gauche)
-            cv2.imwrite("3_2.png", page_droite)
+            cv2.imwrite(enable_debug + "_3_1.png", page_gauche)
+            cv2.imwrite(enable_debug + "_3_2.png", page_droite)
 
         # On renvoie les images cropées.
         return page_gauche, page_droite
@@ -99,17 +97,19 @@ class SeparatePage:
         image: Any,
         n_page: int,
         parameters: CropAroundDataInPageParameters,
+        enable_debug: Optional[str],
     ) -> Tuple[Any, Tuple[int, int, int, int], int, int]:
         crop_rect_size = page.crop.crop_around_page(
-            image, n_page, parameters, "5"
+            image, n_page, parameters, enable_debug
         )
 
         page_gauche_0 = cv2ext.crop_rectangle(image, crop_rect_size)
-        if DEBUG:
-            cv2.imwrite("5_" + str(n_page) + "_6.png", page_gauche_0)
+        cv2ext.write_image_if(
+            page_gauche_0, enable_debug, "_" + str(n_page) + "_6.png"
+        )
 
         crop_rect2_size = page.crop.crop_around_data(
-            page_gauche_0, n_page, parameters, "5"
+            page_gauche_0, n_page, parameters, enable_debug
         )
 
         imgh, imgw = cv2ext.get_hw(page_gauche_0)
@@ -176,6 +176,7 @@ class SeparatePage:
         dict_default_values: Optional[
             Dict[str, Union[int, float, Tuple[int, int]]]
         ] = None,
+        enable_debug: bool = False,
     ) -> None:
         print(filename)
         img = cv2ext.charge_image(filename)
@@ -190,24 +191,42 @@ class SeparatePage:
         parameters = Parameters.init_default_values(dict_default_values)
 
         image1, image2 = self.split_two_waves(
-            img, parameters.split_two_waves, True
+            img,
+            parameters.split_two_waves,
+            compute.optional_str(enable_debug, filename),
         )
 
-        image1a = self.unskew_page(image1, 1, parameters.unskew_page, "4")
-        image2a = self.unskew_page(image2, 2, parameters.unskew_page, "4")
+        image1a = self.unskew_page(
+            image1,
+            1,
+            parameters.unskew_page,
+            compute.optional_str(enable_debug, filename + "_4"),
+        )
+        image2a = self.unskew_page(
+            image2,
+            2,
+            parameters.unskew_page,
+            compute.optional_str(enable_debug, filename + "_4"),
+        )
 
         (image1a2, crop1, imgw1, imgh1,) = self.crop_around_data_in_page(
-            image1a, 1, parameters.crop_around_data_in_page
+            image1a,
+            1,
+            parameters.crop_around_data_in_page,
+            compute.optional_str(enable_debug, filename + "_5"),
         )
         image1b = cv2ext.crop_rectangle(image1a2, crop1)
         (image2a2, crop2, imgw2, imgh2,) = self.crop_around_data_in_page(
-            image2a, 2, parameters.crop_around_data_in_page
+            image2a,
+            2,
+            parameters.crop_around_data_in_page,
+            compute.optional_str(enable_debug, filename + "_5"),
         )
         image2b = cv2ext.crop_rectangle(image2a2, crop2)
 
-        if DEBUG:
-            cv2.imwrite("5_1_10.png", image1b)
-            cv2.imwrite("5_2_10.png", image2b)
+        if enable_debug:
+            cv2.imwrite(filename + "_5_1_10.png", image1b)
+            cv2.imwrite(filename + "_5_2_10.png", image2b)
 
         dpi = compute.find_dpi(imgw1, imgh1, 21.0, 29.7)
         self.__output.print("image 1 dpi", dpi)
@@ -279,8 +298,8 @@ class SeparatePage:
             value=[255, 255, 255],
         )
 
-        cv2.imwrite(filename + "_1.png", image1c)
-        cv2.imwrite(filename + "_2.png", image2c)
+        cv2.imwrite(filename + "_page_1.png", image1c)
+        cv2.imwrite(filename + "_page_2.png", image2c)
 
         self.__output.close()
 

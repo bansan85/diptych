@@ -189,8 +189,7 @@ def find_dpi(
 
 
 def find_closed_value(
-    histogram: Dict[int, Tuple[Tuple[int, int], Tuple[int, int]]],
-    i: int
+    histogram: Dict[int, Tuple[Tuple[int, int], Tuple[int, int]]], i: int
 ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
     ibis = 0
     while True:
@@ -199,3 +198,15 @@ def find_closed_value(
         if i - ibis in histogram:
             return histogram[i - ibis]
         ibis = ibis + 1
+
+
+def optional_concat(root: Optional[str], string: str) -> Optional[str]:
+    if root is None:
+        return None
+    return root + string
+
+
+def optional_str(condition: bool, string: str) -> Optional[str]:
+    if condition:
+        return string
+    return None

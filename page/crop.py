@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any, Optional, Tuple, List, Dict, Union
 import types
-import copy
 
 import numpy as np
 import cv2
@@ -67,7 +66,6 @@ class FoundDataTry2Parameters:
             (10, 10),
             8,
             0.01,
-            "A_crop",
         )
 
     def __init__(self: FoundDataTry2Parameters):
@@ -613,11 +611,10 @@ def found_data_try2(
         image, n_page, param, enable_debug
     )
 
-    find_image_param = copy.deepcopy(param.find_images)
-    find_image_param.enable_debug = "A_crop_" + str(n_page)
     images_mask = page.find_images.find_images(
         image,
-        find_image_param,
+        param.find_images,
+        compute.optional_concat(enable_debug, "_A_crop_" + str(n_page)),
     )
 
     (
@@ -650,12 +647,12 @@ def crop_around_page(
         cv2.imwrite(enable_debug + "_" + str(n_page) + "_1.png", image)
 
     rect = page.crop.found_data_try1(
-        image, n_page, parameters.found_data_try1, "5"
+        image, n_page, parameters.found_data_try1, enable_debug
     )
 
     if rect is None:
         rect = page.crop.found_data_try2(
-            image, n_page, parameters.found_data_try2, "5"
+            image, n_page, parameters.found_data_try2, enable_debug
         )
 
     if rect is None:

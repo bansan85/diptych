@@ -25,3 +25,4 @@ jobs:
         - prospector {**,.}/*.py
         - pycodestyle {**,.}/*.py
         - mypy {**,.}/*.py
+        - pytest --junitxml=report.xml --cov --cov-report html:cov_html --cov-report xml:cov.xml
