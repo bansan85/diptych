@@ -1,0 +1,11 @@
+[run]
+branch = True
+# Ignore .../python3.7.6/lib/python3.7/site-packages/_pytest/_argcomplete.py
+# or xxx\Python38\site-packages\colorama\ansitowin32.py
+omit = *site-packages*
+
+[html]
+directory = cov_html
+
+[xml]
+output = coverage.xml

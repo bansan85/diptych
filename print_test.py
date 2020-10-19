@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import copy
+import time
 from typing import Any, Dict, Union, Optional
 import unittest
 
@@ -68,10 +69,10 @@ class PrintTest(PrintInterface):
             data (Union[int, float]): the value to check.
 
         Raises:
-            ValueError: raised if the nam
+            ValueError: raised if the value is outside of the valid domain.
         """
         if name in self.__values:
-            print("Checking", name, data)
+            print(str(time.time_ns()) + " : Checking", name, data)
             if self.__values[name][1] == "difference":
                 self.__check(
                     name,
@@ -91,9 +92,8 @@ class PrintTest(PrintInterface):
                     "Unknown approximate method", self.__values[name][1]
                 )
         else:
-            print("NO CHECK", name, data)
+            print(str(time.time_ns()) + " : NO CHECK", name, data)
 
     def close(self) -> None:
-        pass
-#        if self.__last_msg_assert is not None:
-#            raise Exception(self.__last_msg_assert)
+        if self.__last_msg_assert is not None:
+            raise Exception(self.__last_msg_assert)

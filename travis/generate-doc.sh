@@ -2,7 +2,7 @@
 
 if [ "$CI" = "true" ] && [ "$TRAVIS" = "true" ]
 then
-  git clone --depth 1 ssh://git@github.com/bansan85/ocr-book-travis.git -b documentation || { retval=1 && echo "Failure git clone"; }
+  git clone --depth 1 ssh://git@github.com/bansan85/ocr-book-travis.git -b documentation || { echo "Failure git clone" && exit 1; }
   rm -Rf documentation/{*.htm*,*.png}
 else
   mkdir -p ocr-book-travis
