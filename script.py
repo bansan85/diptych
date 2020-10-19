@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Any, Dict, Optional, Union, Tuple
 
 import cv2
@@ -17,7 +16,7 @@ import page.split
 import page.unskew
 from page.unskew import UnskewPageParameters
 import cv2ext
-from pages import Parameters
+import pages
 import compute
 
 
@@ -25,7 +24,7 @@ class SeparatePage:
     # Sépare une page en deux en détectant la vague dans le papier en haut et
     # en bas de la reliure.
     def split_two_waves(
-        self: SeparatePage,
+        self,
         image: Any,
         parameters: SplitTwoWavesParameters,
         enable_debug: Optional[str],
@@ -73,7 +72,7 @@ class SeparatePage:
         return page_gauche, page_droite
 
     def unskew_page(
-        self: SeparatePage,
+        self,
         image: Any,
         n_page: int,
         parameters: UnskewPageParameters,
@@ -93,7 +92,7 @@ class SeparatePage:
         return img_rotated
 
     def crop_around_data_in_page(
-        self: SeparatePage,
+        self,
         image: Any,
         n_page: int,
         parameters: CropAroundDataInPageParameters,
@@ -170,7 +169,7 @@ class SeparatePage:
         )
 
     def treat_file(
-        self: SeparatePage,
+        self,
         filename: str,
         dict_test: Optional[Dict[str, Any]] = None,
         dict_default_values: Optional[
@@ -188,7 +187,7 @@ class SeparatePage:
         else:
             self.__output = PrintTest(dict_test)
 
-        parameters = Parameters.init_default_values(dict_default_values)
+        parameters = pages.init_default_values(dict_default_values)
 
         image1, image2 = self.split_two_waves(
             img,

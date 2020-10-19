@@ -1,6 +1,9 @@
 import itertools
 import math
 from typing import Any, Iterable, Iterator, Optional, Tuple, TypeVar, Dict
+import sys
+import time
+
 import numpy as np
 
 _T = TypeVar("_T")
@@ -210,3 +213,9 @@ def optional_str(condition: bool, string: str) -> Optional[str]:
     if condition:
         return string
     return None
+
+
+def get_timestamp_ns() -> int:
+    if sys.version_info < (3, 7):
+        return np.int64(time.time() * 1000000000.0)
+    return time.time_ns()  # pylint: disable=no-member,useless-suppression

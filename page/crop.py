@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Any, Optional, Tuple, List, Dict, Union
 import types
 
@@ -18,31 +17,29 @@ class FoundDataTry1Parameters:
         threshold: int = 240
         pourcentage_ecart_rectangle: float = 10.0
 
-    def __init__(self: FoundDataTry1Parameters):
+    def __init__(self) -> None:
         self.__param = FoundDataTry1Parameters.Impl()
 
     @property
-    def erode(self: FoundDataTry1Parameters) -> ErodeParameters:
+    def erode(self) -> ErodeParameters:
         return self.__param.erode
 
     @property
-    def threshold(self: FoundDataTry1Parameters) -> int:
+    def threshold(self) -> int:
         return self.__param.threshold
 
     @threshold.setter
-    def threshold(self: FoundDataTry1Parameters, val: int) -> None:
+    def threshold(self, val: int) -> None:
         self.__param.threshold = val
 
     @property
     def pourcentage_ecart_rectangle(
-        self: FoundDataTry1Parameters,
+        self,
     ) -> float:
         return self.__param.pourcentage_ecart_rectangle
 
     @pourcentage_ecart_rectangle.setter
-    def pourcentage_ecart_rectangle(
-        self: FoundDataTry1Parameters, val: float
-    ) -> None:
+    def pourcentage_ecart_rectangle(self, val: float) -> None:
         self.__param.pourcentage_ecart_rectangle = val
 
 
@@ -68,55 +65,55 @@ class FoundDataTry2Parameters:
             0.01,
         )
 
-    def __init__(self: FoundDataTry2Parameters):
+    def __init__(self) -> None:
         self.__param = FoundDataTry2Parameters.Impl()
 
     @property
-    def blur_size(self: FoundDataTry2Parameters) -> Tuple[int, int]:
+    def blur_size(self) -> Tuple[int, int]:
         return self.__param.blur_size
 
     @blur_size.setter
-    def blur_size(self: FoundDataTry2Parameters, val: Tuple[int, int]) -> None:
+    def blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.blur_size = val
 
     @property
-    def threshold_gray(self: FoundDataTry2Parameters) -> int:
+    def threshold_gray(self) -> int:
         return self.__param.threshold_gray
 
     @threshold_gray.setter
-    def threshold_gray(self: FoundDataTry2Parameters, val: int) -> None:
+    def threshold_gray(self, val: int) -> None:
         self.__param.threshold_gray = val
 
     @property
-    def canny_gray(self: FoundDataTry2Parameters) -> CannyParameters:
+    def canny_gray(self) -> CannyParameters:
         return self.__param.canny_gray
 
     @property
     def hough_lines_gray(
-        self: FoundDataTry2Parameters,
+        self,
     ) -> HoughLinesParameters:
         return self.__param.hough_lines_gray
 
     @property
-    def threshold_histogram(self: FoundDataTry2Parameters) -> int:
+    def threshold_histogram(self) -> int:
         return self.__param.threshold_histogram
 
     @threshold_histogram.setter
-    def threshold_histogram(self: FoundDataTry2Parameters, val: int) -> None:
+    def threshold_histogram(self, val: int) -> None:
         self.__param.threshold_histogram = val
 
     @property
-    def canny_histogram(self: FoundDataTry2Parameters) -> CannyParameters:
+    def canny_histogram(self) -> CannyParameters:
         return self.__param.canny_histogram
 
     @property
     def hough_lines_histogram(
-        self: FoundDataTry2Parameters,
+        self,
     ) -> HoughLinesParameters:
         return self.__param.hough_lines_histogram
 
     @property
-    def find_images(self: FoundDataTry2Parameters) -> FindImageParameters:
+    def find_images(self) -> FindImageParameters:
         return self.__param.find_images
 
 
@@ -130,69 +127,63 @@ class CropAroundDataInPageParameters:
         contour_area_max: float = 0.5 * 0.5
         border: int = 10
 
-    def __init__(self: CropAroundDataInPageParameters):
+    def __init__(self) -> None:
         self.__param = CropAroundDataInPageParameters.Impl()
 
     @property
     def found_data_try1(
-        self: CropAroundDataInPageParameters,
+        self,
     ) -> FoundDataTry1Parameters:
         return self.__param.found_data_try1
 
     @property
     def found_data_try2(
-        self: CropAroundDataInPageParameters,
+        self,
     ) -> FoundDataTry2Parameters:
         return self.__param.found_data_try2
 
     @property
-    def dilate_size(self: CropAroundDataInPageParameters) -> Tuple[int, int]:
+    def dilate_size(self) -> Tuple[int, int]:
         return self.__param.dilate_size
 
     @dilate_size.setter
-    def dilate_size(
-        self: CropAroundDataInPageParameters, val: Tuple[int, int]
-    ) -> None:
+    def dilate_size(self, val: Tuple[int, int]) -> None:
         self.__param.dilate_size = val
 
     @property
-    def threshold2(self: CropAroundDataInPageParameters) -> int:
+    def threshold2(self) -> int:
         return self.__param.threshold2
 
     @threshold2.setter
-    def threshold2(self: CropAroundDataInPageParameters, val: int) -> None:
+    def threshold2(self, val: int) -> None:
         self.__param.threshold2 = val
 
     @property
-    def contour_area_min(self: CropAroundDataInPageParameters) -> float:
+    def contour_area_min(self) -> float:
         return self.__param.contour_area_min
 
     @contour_area_min.setter
-    def contour_area_min(
-        self: CropAroundDataInPageParameters, val: float
-    ) -> None:
+    def contour_area_min(self, val: float) -> None:
         self.__param.contour_area_min = val
 
     @property
-    def contour_area_max(self: CropAroundDataInPageParameters) -> float:
+    def contour_area_max(self) -> float:
         return self.__param.contour_area_max
 
     @contour_area_max.setter
-    def contour_area_max(
-        self: CropAroundDataInPageParameters, val: float
-    ) -> None:
+    def contour_area_max(self, val: float) -> None:
         self.__param.contour_area_max = val
 
     @property
-    def border(self: CropAroundDataInPageParameters) -> int:
+    def border(self) -> int:
         return self.__param.border
 
     @border.setter
-    def border(self: CropAroundDataInPageParameters, val: int) -> None:
+    def border(self, val: int) -> None:
         self.__param.border = val
 
     def init_default_values(
-        self: CropAroundDataInPageParameters,
+        self,
         key: str,
         value: Union[int, float, Tuple[int, int]],
     ) -> None:

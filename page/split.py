@@ -1,4 +1,3 @@
-from __future__ import annotations
 import types
 from typing import Union, Tuple, Any, Optional, Iterable, List
 import functools
@@ -24,7 +23,7 @@ class FoundSplitLineWithLineParameters:
         limit_tetha: float
 
     def __init__(  # pylint: disable=too-many-arguments
-        self: FoundSplitLineWithLineParameters,
+        self,
         blur_size: Tuple[int, int],
         thresholds_min: Tuple[int, int],
         erode: ErodeParameters,
@@ -44,57 +43,51 @@ class FoundSplitLineWithLineParameters:
         )
 
     @property
-    def blur_size(self: FoundSplitLineWithLineParameters) -> Tuple[int, int]:
+    def blur_size(self) -> Tuple[int, int]:
         return self.__param.blur_size
 
     @blur_size.setter
-    def blur_size(
-        self: FoundSplitLineWithLineParameters, val: Tuple[int, int]
-    ) -> None:
+    def blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.blur_size = val
 
     @property
     def thresholds_min(
-        self: FoundSplitLineWithLineParameters,
+        self,
     ) -> Tuple[int, int]:
         return self.__param.thresholds_min
 
     @thresholds_min.setter
-    def thresholds_min(
-        self: FoundSplitLineWithLineParameters, val: Tuple[int, int]
-    ) -> None:
+    def thresholds_min(self, val: Tuple[int, int]) -> None:
         self.__param.thresholds_min = val
 
     @property
-    def erode(self: FoundSplitLineWithLineParameters) -> ErodeParameters:
+    def erode(self) -> ErodeParameters:
         return self.__param.erode
 
     @property
-    def canny(self: FoundSplitLineWithLineParameters) -> CannyParameters:
+    def canny(self) -> CannyParameters:
         return self.__param.canny
 
     @property
     def hough_lines(
-        self: FoundSplitLineWithLineParameters,
+        self,
     ) -> HoughLinesParameters:
         return self.__param.hough_lines
 
     @property
-    def limit_rho(self: FoundSplitLineWithLineParameters) -> int:
+    def limit_rho(self) -> int:
         return self.__param.limit_rho
 
     @limit_rho.setter
-    def limit_rho(self: FoundSplitLineWithLineParameters, val: int) -> None:
+    def limit_rho(self, val: int) -> None:
         self.__param.limit_rho = val
 
     @property
-    def limit_tetha(self: FoundSplitLineWithLineParameters) -> float:
+    def limit_tetha(self) -> float:
         return self.__param.limit_tetha
 
     @limit_tetha.setter
-    def limit_tetha(
-        self: FoundSplitLineWithLineParameters, val: float
-    ) -> None:
+    def limit_tetha(self, val: float) -> None:
         self.__param.limit_tetha = val
 
 
@@ -108,7 +101,7 @@ class FindCandidatesSplitLineWithWaveParameters:
         wave_right: float
 
     def __init__(  # pylint: disable=too-many-arguments
-        self: FindCandidatesSplitLineWithWaveParameters,
+        self,
         rapport_rect1_rect2: float,
         found_contour_iterations: int,
         wave_top: float,
@@ -127,70 +120,58 @@ class FindCandidatesSplitLineWithWaveParameters:
 
     @property
     def rapport_rect1_rect2(
-        self: FindCandidatesSplitLineWithWaveParameters,
+        self,
     ) -> float:
         return self.__param.rapport_rect1_rect2
 
     @rapport_rect1_rect2.setter
-    def rapport_rect1_rect2(
-        self: FindCandidatesSplitLineWithWaveParameters, val: float
-    ) -> None:
+    def rapport_rect1_rect2(self, val: float) -> None:
         self.__param.rapport_rect1_rect2 = val
 
     @property
     def found_contour_iterations(
-        self: FindCandidatesSplitLineWithWaveParameters,
+        self,
     ) -> int:
         return self.__param.found_contour_iterations
 
     @found_contour_iterations.setter
-    def found_contour_iterations(
-        self: FindCandidatesSplitLineWithWaveParameters, val: int
-    ) -> None:
+    def found_contour_iterations(self, val: int) -> None:
         self.__param.found_contour_iterations = val
 
     @property
-    def wave_top(self: FindCandidatesSplitLineWithWaveParameters) -> float:
+    def wave_top(self) -> float:
         return self.__param.wave_top
 
     @wave_top.setter
-    def wave_top(
-        self: FindCandidatesSplitLineWithWaveParameters, val: float
-    ) -> None:
+    def wave_top(self, val: float) -> None:
         self.__param.wave_top = val
 
     @property
-    def wave_bottom(self: FindCandidatesSplitLineWithWaveParameters) -> float:
+    def wave_bottom(self) -> float:
         return self.__param.wave_bottom
 
     @wave_bottom.setter
-    def wave_bottom(
-        self: FindCandidatesSplitLineWithWaveParameters, val: float
-    ) -> None:
+    def wave_bottom(self, val: float) -> None:
         self.__param.wave_bottom = val
 
     @property
-    def wave_left(self: FindCandidatesSplitLineWithWaveParameters) -> float:
+    def wave_left(self) -> float:
         return self.__param.wave_left
 
     @wave_left.setter
-    def wave_left(
-        self: FindCandidatesSplitLineWithWaveParameters, val: float
-    ) -> None:
+    def wave_left(self, val: float) -> None:
         self.__param.wave_left = val
 
     @property
-    def wave_right(self: FindCandidatesSplitLineWithWaveParameters) -> float:
+    def wave_right(self) -> float:
         return self.__param.wave_right
 
     @wave_right.setter
-    def wave_right(
-        self: FindCandidatesSplitLineWithWaveParameters, val: float
-    ) -> None:
+    def wave_right(self, val: float) -> None:
         self.__param.wave_right = val
 
     def init_default_values(
-        self: FindCandidatesSplitLineWithWaveParameters,
+        self,
         key: str,
         value: Union[int, float, Tuple[int, int]],
     ) -> None:
@@ -219,7 +200,7 @@ class FoundSplitLineWithWave:
         find_candidates: FindCandidatesSplitLineWithWaveParameters
 
     def __init__(  # pylint: disable=too-many-arguments
-        self: FoundSplitLineWithWave,
+        self,
         blur_size: Tuple[int, int],
         threshold: int,
         erode: ErodeParameters,
@@ -235,32 +216,32 @@ class FoundSplitLineWithWave:
         )
 
     @property
-    def blur_size(self: FoundSplitLineWithWave) -> Tuple[int, int]:
+    def blur_size(self) -> Tuple[int, int]:
         return self.__param.blur_size
 
     @blur_size.setter
-    def blur_size(self: FoundSplitLineWithWave, val: Tuple[int, int]) -> None:
+    def blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.blur_size = val
 
     @property
-    def threshold(self: FoundSplitLineWithWave) -> int:
+    def threshold(self) -> int:
         return self.__param.threshold
 
     @threshold.setter
-    def threshold(self: FoundSplitLineWithWave, val: int) -> None:
+    def threshold(self, val: int) -> None:
         self.__param.threshold = val
 
     @property
-    def erode(self: FoundSplitLineWithWave) -> ErodeParameters:
+    def erode(self) -> ErodeParameters:
         return self.__param.erode
 
     @property
-    def find_images(self: FoundSplitLineWithWave) -> FindImageParameters:
+    def find_images(self) -> FindImageParameters:
         return self.__param.find_images
 
     @property
     def find_candidates(
-        self: FoundSplitLineWithWave,
+        self,
     ) -> FindCandidatesSplitLineWithWaveParameters:
         return self.__param.find_candidates
 
@@ -275,7 +256,7 @@ class FindCandidatesSplitLineWithLineParameters:
         limit_tetha: float
 
     def __init__(  # pylint: disable=too-many-arguments
-        self: FindCandidatesSplitLineWithLineParameters,
+        self,
         blur_size: Tuple[int, int],
         canny: CannyParameters,
         hough_lines: HoughLinesParameters,
@@ -294,54 +275,48 @@ class FindCandidatesSplitLineWithLineParameters:
 
     @property
     def blur_size(
-        self: FindCandidatesSplitLineWithLineParameters,
+        self,
     ) -> Tuple[int, int]:
         return self.__param.blur_size
 
     @blur_size.setter
-    def blur_size(
-        self: FindCandidatesSplitLineWithLineParameters, val: Tuple[int, int]
-    ) -> None:
+    def blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.blur_size = val
 
     @property
     def canny(
-        self: FindCandidatesSplitLineWithLineParameters,
+        self,
     ) -> CannyParameters:
         return self.__param.canny
 
     @property
     def hough_lines(
-        self: FindCandidatesSplitLineWithLineParameters,
+        self,
     ) -> HoughLinesParameters:
         return self.__param.hough_lines
 
     @property
     def erode(
-        self: FindCandidatesSplitLineWithLineParameters,
+        self,
     ) -> ErodeParameters:
         return self.__param.erode
 
     @property
-    def limit_rho(self: FindCandidatesSplitLineWithLineParameters) -> int:
+    def limit_rho(self) -> int:
         return self.__param.limit_rho
 
     @limit_rho.setter
-    def limit_rho(
-        self: FindCandidatesSplitLineWithLineParameters, val: int
-    ) -> None:
+    def limit_rho(self, val: int) -> None:
         self.__param.limit_rho = val
 
     @property
     def limit_tetha(
-        self: FindCandidatesSplitLineWithLineParameters,
+        self,
     ) -> float:
         return self.__param.limit_tetha
 
     @limit_tetha.setter
-    def limit_tetha(
-        self: FindCandidatesSplitLineWithLineParameters, val: float
-    ) -> None:
+    def limit_tetha(self, val: float) -> None:
         self.__param.limit_tetha = val
 
 
@@ -371,75 +346,73 @@ class SplitTwoWavesParameters:
             )
         )
 
-    def __init__(self: SplitTwoWavesParameters):
+    def __init__(self) -> None:
         self.__param = SplitTwoWavesParameters.Impl()
 
     @property
-    def erode(self: SplitTwoWavesParameters) -> ErodeParameters:
+    def erode(self) -> ErodeParameters:
         return self.__param.erode
 
     @property
-    def blur_size(self: SplitTwoWavesParameters) -> Tuple[int, int]:
+    def blur_size(self) -> Tuple[int, int]:
         return self.__param.blur_size
 
     @blur_size.setter
-    def blur_size(self: SplitTwoWavesParameters, val: Tuple[int, int]) -> None:
+    def blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.blur_size = val
 
     @property
-    def threshold(self: SplitTwoWavesParameters) -> int:
+    def threshold(self) -> int:
         return self.__param.threshold
 
     @threshold.setter
-    def threshold(self: SplitTwoWavesParameters, val: int) -> None:
+    def threshold(self, val: int) -> None:
         self.__param.threshold = val
 
     @property
-    def thresholds_min(self: SplitTwoWavesParameters) -> Tuple[int, int]:
+    def thresholds_min(self) -> Tuple[int, int]:
         return self.__param.thresholds_min
 
     @thresholds_min.setter
-    def thresholds_min(
-        self: SplitTwoWavesParameters, val: Tuple[int, int]
-    ) -> None:
+    def thresholds_min(self, val: Tuple[int, int]) -> None:
         self.__param.thresholds_min = val
 
     @property
-    def canny(self: SplitTwoWavesParameters) -> CannyParameters:
+    def canny(self) -> CannyParameters:
         return self.__param.canny
 
     @property
-    def hough_lines(self: SplitTwoWavesParameters) -> HoughLinesParameters:
+    def hough_lines(self) -> HoughLinesParameters:
         return self.__param.hough_lines
 
     @property
-    def delta_rho(self: SplitTwoWavesParameters) -> int:
-        return self.__param.delta_rho
-
-    @delta_rho.setter
-    def delta_rho(self: SplitTwoWavesParameters, val: int) -> None:
-        self.__param.delta_rho = val
-
-    @property
-    def delta_tetha(self: SplitTwoWavesParameters) -> float:
+    def delta_tetha(self) -> float:
         return self.__param.delta_tetha
 
     @delta_tetha.setter
-    def delta_tetha(self: SplitTwoWavesParameters, val: float) -> None:
+    def delta_tetha(self, val: float) -> None:
         self.__param.delta_tetha = val
 
     @property
-    def find_images(self: SplitTwoWavesParameters) -> FindImageParameters:
+    def delta_rho(self) -> int:
+        return self.__param.delta_rho
+
+    @delta_rho.setter
+    def delta_rho(self, val: int) -> None:
+        self.__param.delta_rho = val
+
+    @property
+    def find_images(self) -> FindImageParameters:
         return self.__param.find_images
 
     @property
     def find_candidates(
-        self: SplitTwoWavesParameters,
+        self,
     ) -> FindCandidatesSplitLineWithWaveParameters:
         return self.__param.find_candidates
 
     def init_default_values(
-        self: SplitTwoWavesParameters,
+        self,
         key: str,
         value: Union[int, float, Tuple[int, int]],
     ) -> None:
@@ -807,7 +780,7 @@ def found_split_line_with_wave(
         sorted_contours,
         image,
         parameters.find_images,
-        compute.optional_concat(enable_debug, "_A_wave")
+        compute.optional_concat(enable_debug, "_A_wave"),
     )
 
     toppoints, bottompoints = __found_candidates_split_line_with_wave(

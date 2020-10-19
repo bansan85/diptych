@@ -1,13 +1,12 @@
 """Module that print a tuple (key, value) in test mode.
 """
 
-from __future__ import annotations
 import copy
-import time
 from typing import Any, Dict, Union, Optional
 import unittest
 
 from print_interface import PrintInterface
+import compute
 
 
 class PrintTest(PrintInterface):
@@ -72,7 +71,7 @@ class PrintTest(PrintInterface):
             ValueError: raised if the value is outside of the valid domain.
         """
         if name in self.__values:
-            print(str(time.time_ns()) + " : Checking", name, data)
+            print(str(compute.get_timestamp_ns()) + " : Checking", name, data)
             if self.__values[name][1] == "difference":
                 self.__check(
                     name,
@@ -99,7 +98,7 @@ class PrintTest(PrintInterface):
                     "Unknown approximate method", self.__values[name][1]
                 )
         else:
-            print(str(time.time_ns()) + " : NO CHECK", name, data)
+            print(str(compute.get_timestamp_ns()) + " : NO CHECK", name, data)
 
     def close(self) -> None:
         if self.__last_msg_assert is not None:

@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Union, Tuple
 import types
 
@@ -8,29 +7,27 @@ class ErodeParameters:
         size: Tuple[int, int]
         iterations: int
 
-    def __init__(
-        self: ErodeParameters, size: Tuple[int, int], iterations: int
-    ):
+    def __init__(self, size: Tuple[int, int], iterations: int):
         self.__param = ErodeParameters.Impl(size=size, iterations=iterations)
 
     @property
-    def size(self: ErodeParameters) -> Tuple[int, int]:
+    def size(self) -> Tuple[int, int]:
         return self.__param.size
 
     @size.setter
-    def size(self: ErodeParameters, val: Tuple[int, int]) -> None:
+    def size(self, val: Tuple[int, int]) -> None:
         self.__param.size = val
 
     @property
-    def iterations(self: ErodeParameters) -> int:
+    def iterations(self) -> int:
         return self.__param.iterations
 
     @iterations.setter
-    def iterations(self: ErodeParameters, val: int) -> None:
+    def iterations(self, val: int) -> None:
         self.__param.iterations = val
 
     def init_default_values(
-        self: ErodeParameters,
+        self,
         key: str,
         value: Union[int, float, Tuple[int, int]],
     ) -> None:
@@ -48,39 +45,37 @@ class CannyParameters:
         maximum: int
         aperture_size: int
 
-    def __init__(
-        self: CannyParameters, minimum: int, maximum: int, aperture_size: int
-    ):
+    def __init__(self, minimum: int, maximum: int, aperture_size: int):
         self.__param = CannyParameters.Impl(
             minimum=minimum, maximum=maximum, aperture_size=aperture_size
         )
 
     @property
-    def minimum(self: CannyParameters) -> int:
+    def minimum(self) -> int:
         return self.__param.minimum
 
     @minimum.setter
-    def minimum(self: CannyParameters, val: int) -> None:
+    def minimum(self, val: int) -> None:
         self.__param.minimum = val
 
     @property
-    def maximum(self: CannyParameters) -> int:
+    def maximum(self) -> int:
         return self.__param.maximum
 
     @maximum.setter
-    def maximum(self: CannyParameters, val: int) -> None:
+    def maximum(self, val: int) -> None:
         self.__param.maximum = val
 
     @property
-    def aperture_size(self: CannyParameters) -> int:
+    def aperture_size(self) -> int:
         return self.__param.aperture_size
 
     @aperture_size.setter
-    def aperture_size(self: CannyParameters, val: int) -> None:
+    def aperture_size(self, val: int) -> None:
         self.__param.aperture_size = val
 
     def init_default_values(
-        self: CannyParameters,
+        self,
         key: str,
         value: Union[int, float, Tuple[int, int]],
     ) -> None:
@@ -103,7 +98,7 @@ class HoughLinesParameters:
         max_line_gap: int
 
     def __init__(  # pylint: disable=too-many-arguments
-        self: HoughLinesParameters,
+        self,
         delta_rho: int,
         delta_tetha: float,
         threshold: int,
@@ -119,47 +114,47 @@ class HoughLinesParameters:
         )
 
     @property
-    def delta_rho(self: HoughLinesParameters) -> int:
+    def delta_rho(self) -> int:
         return self.__param.delta_rho
 
     @delta_rho.setter
-    def delta_rho(self: HoughLinesParameters, val: int) -> None:
+    def delta_rho(self, val: int) -> None:
         self.__param.delta_rho = val
 
     @property
-    def delta_tetha(self: HoughLinesParameters) -> float:
+    def delta_tetha(self) -> float:
         return self.__param.delta_tetha
 
     @delta_tetha.setter
-    def delta_tetha(self: HoughLinesParameters, val: float) -> None:
+    def delta_tetha(self, val: float) -> None:
         self.__param.delta_tetha = val
 
     @property
-    def threshold(self: HoughLinesParameters) -> int:
+    def threshold(self) -> int:
         return self.__param.threshold
 
     @threshold.setter
-    def threshold(self: HoughLinesParameters, val: int) -> None:
+    def threshold(self, val: int) -> None:
         self.__param.threshold = val
 
     @property
-    def min_line_length(self: HoughLinesParameters) -> int:
+    def min_line_length(self) -> int:
         return self.__param.min_line_length
 
     @min_line_length.setter
-    def min_line_length(self: HoughLinesParameters, val: int) -> None:
+    def min_line_length(self, val: int) -> None:
         self.__param.min_line_length = val
 
     @property
-    def max_line_gap(self: HoughLinesParameters) -> int:
+    def max_line_gap(self) -> int:
         return self.__param.max_line_gap
 
     @max_line_gap.setter
-    def max_line_gap(self: HoughLinesParameters, val: int) -> None:
+    def max_line_gap(self, val: int) -> None:
         self.__param.max_line_gap = val
 
     def init_default_values(
-        self: HoughLinesParameters,
+        self,
         key: str,
         value: Union[int, float, Tuple[int, int]],
     ) -> None:

@@ -1,4 +1,3 @@
-from __future__ import annotations
 import types
 from typing import Union, Tuple, Any, Optional
 import numpy as np
@@ -19,39 +18,39 @@ class UnskewPageParameters:
         angle_limit: float = 20.0
         angle_limit_stddev: float = 0.75
 
-    def __init__(self: UnskewPageParameters):
+    def __init__(self) -> None:
         self.__param = UnskewPageParameters.Impl()
 
     @property
-    def erode(self: UnskewPageParameters) -> ErodeParameters:
+    def erode(self) -> ErodeParameters:
         return self.__param.erode
 
     @property
-    def canny(self: UnskewPageParameters) -> CannyParameters:
+    def canny(self) -> CannyParameters:
         return self.__param.canny
 
     @property
-    def hough_lines(self: UnskewPageParameters) -> HoughLinesParameters:
+    def hough_lines(self) -> HoughLinesParameters:
         return self.__param.hough_lines
 
     @property
-    def angle_limit(self: UnskewPageParameters) -> float:
+    def angle_limit(self) -> float:
         return self.__param.angle_limit
 
     @angle_limit.setter
-    def angle_limit(self: UnskewPageParameters, val: float) -> None:
+    def angle_limit(self, val: float) -> None:
         self.__param.angle_limit = val
 
     @property
-    def angle_limit_stddev(self: UnskewPageParameters) -> float:
+    def angle_limit_stddev(self) -> float:
         return self.__param.angle_limit_stddev
 
     @angle_limit_stddev.setter
-    def angle_limit_stddev(self: UnskewPageParameters, val: float) -> None:
+    def angle_limit_stddev(self, val: float) -> None:
         self.__param.angle_limit_stddev = val
 
     def init_default_values(
-        self: UnskewPageParameters,
+        self,
         key: str,
         value: Union[int, float, Tuple[int, int]],
     ) -> None:

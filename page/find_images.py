@@ -1,4 +1,3 @@
-from __future__ import annotations
 import types
 from typing import Tuple, Optional, Any, List
 
@@ -18,7 +17,7 @@ class FindImageParameters:
         min_area: float
 
     def __init__(  # pylint: disable=too-many-arguments
-        self: FindImageParameters,
+        self,
         erode_pourcent_size: float,
         kernel_blur_size: Tuple[int, int],
         kernel_morphology_size: Tuple[int, int],
@@ -36,57 +35,51 @@ class FindImageParameters:
         )
 
     @property
-    def erode_pourcent_size(self: FindImageParameters) -> float:
+    def erode_pourcent_size(self) -> float:
         return self.__param.erode_pourcent_size
 
     @erode_pourcent_size.setter
-    def erode_pourcent_size(self: FindImageParameters, val: float) -> None:
+    def erode_pourcent_size(self, val: float) -> None:
         self.__param.erode_pourcent_size = val
 
     @property
-    def kernel_blur_size(self: FindImageParameters) -> Tuple[int, int]:
+    def kernel_blur_size(self) -> Tuple[int, int]:
         return self.__param.kernel_blur_size
 
     @kernel_blur_size.setter
-    def kernel_blur_size(
-        self: FindImageParameters, val: Tuple[int, int]
-    ) -> None:
+    def kernel_blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.kernel_blur_size = val
 
     @property
-    def kernel_morphology_size(self: FindImageParameters) -> Tuple[int, int]:
+    def kernel_morphology_size(self) -> Tuple[int, int]:
         return self.__param.kernel_morphology_size
 
     @kernel_morphology_size.setter
-    def kernel_morphology_size(
-        self: FindImageParameters, val: Tuple[int, int]
-    ) -> None:
+    def kernel_morphology_size(self, val: Tuple[int, int]) -> None:
         self.__param.kernel_morphology_size = val
 
     @property
-    def blur_black_white(self: FindImageParameters) -> Tuple[int, int]:
+    def blur_black_white(self) -> Tuple[int, int]:
         return self.__param.blur_black_white
 
     @blur_black_white.setter
-    def blur_black_white(
-        self: FindImageParameters, val: Tuple[int, int]
-    ) -> None:
+    def blur_black_white(self, val: Tuple[int, int]) -> None:
         self.__param.blur_black_white = val
 
     @property
-    def image_edges(self: FindImageParameters) -> int:
+    def image_edges(self) -> int:
         return self.__param.image_edges
 
     @image_edges.setter
-    def image_edges(self: FindImageParameters, val: int) -> None:
+    def image_edges(self, val: int) -> None:
         self.__param.image_edges = val
 
     @property
-    def min_area(self: FindImageParameters) -> float:
+    def min_area(self) -> float:
         return self.__param.min_area
 
     @min_area.setter
-    def min_area(self: FindImageParameters, val: float) -> None:
+    def min_area(self, val: float) -> None:
         self.__param.min_area = val
 
 
