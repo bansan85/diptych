@@ -80,6 +80,13 @@ class PrintTest(PrintInterface):
                     self.__values[name][0] - self.__values[name][2],
                     self.__values[name][0] + self.__values[name][2],
                 )
+            elif self.__values[name][1] == "range":
+                self.__check(
+                    name,
+                    data,
+                    self.__values[name][0] + self.__values[name][2],
+                    self.__values[name][0] + self.__values[name][3],
+                )
             elif self.__values[name][1] == "pourcent":
                 self.__check(
                     name,
