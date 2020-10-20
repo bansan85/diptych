@@ -47,6 +47,7 @@ class FoundDataTry2Parameters:
     class Impl(types.SimpleNamespace):
         blur_size: Tuple[int, int] = (10, 10)
         threshold_gray: int = 200
+        kernel_morpho_size: Tuple[int, int] = (10, 10)
         canny_gray: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines_gray: HoughLinesParameters = HoughLinesParameters(
             1, np.pi / (180 * 20), 30, 100, 30
@@ -83,6 +84,14 @@ class FoundDataTry2Parameters:
     @threshold_gray.setter
     def threshold_gray(self, val: int) -> None:
         self.__param.threshold_gray = val
+
+    @property
+    def kernel_morpho_size(self) -> Tuple[int, int]:
+        return self.__param.kernel_morpho_size
+
+    @kernel_morpho_size.setter
+    def kernel_morpho_size(self, val: Tuple[int, int]) -> None:
+        self.__param.kernel_morpho_size = val
 
     @property
     def canny_gray(self) -> CannyParameters:
@@ -275,21 +284,24 @@ def found_data_try2_find_edges(
             threshold_param_i = param.threshold_gray
             canny_param_i = param.canny_gray
             hough_lines_param_i = param.hough_lines_gray
+            morpho_mode1 = cv2.MORPH_OPEN
+            morpho_mode2 = cv2.MORPH_CLOSE
+
+            blurimg2 = blurimg
         else:
             threshold_param_i = param.threshold_histogram
             canny_param_i = param.canny_histogram
             hough_lines_param_i = param.hough_lines_histogram
+            morpho_mode1 = cv2.MORPH_CLOSE
+            morpho_mode2 = cv2.MORPH_OPEN
 
-        if i == 0:
-            blurimg2 = blurimg
-        else:
             blurimg2 = cv2.equalizeHist(blurimg)
 
-        if enable_debug is not None:
-            cv2.imwrite(
-                enable_debug + "_" + str(n_page) + "_" + str(i) + "_5a.png",
-                blurimg2,
-            )
+        cv2ext.write_image_if(
+            blurimg2,
+            enable_debug,
+            "_" + str(n_page) + "_" + str(i) + "_5a.png",
+        )
 
         _, threshold = cv2.threshold(
             blurimg2,
@@ -298,22 +310,45 @@ def found_data_try2_find_edges(
             cv2.THRESH_BINARY,
         )
 
-        if enable_debug is not None:
-            cv2.imwrite(
-                enable_debug + "_" + str(n_page) + "_" + str(i) + "_5b.png",
-                threshold,
-            )
-        canny = cv2.Canny(
+        cv2ext.write_image_if(
             threshold,
+            enable_debug,
+            "_" + str(n_page) + "_" + str(i) + "_5b.png",
+        )
+
+        morpho1 = cv2.morphologyEx(
+            threshold,
+            morpho_mode1,
+            cv2.getStructuringElement(
+                cv2.MORPH_ELLIPSE, param.kernel_morpho_size
+            ),
+        )
+        cv2ext.write_image_if(
+            morpho1,
+            enable_debug,
+            "_" + str(n_page) + "_" + str(i) + "_5b1.png",
+        )
+        morpho2 = cv2.morphologyEx(
+            morpho1,
+            morpho_mode2,
+            cv2.getStructuringElement(
+                cv2.MORPH_ELLIPSE, param.kernel_morpho_size
+            ),
+        )
+        cv2ext.write_image_if(
+            morpho2,
+            enable_debug,
+            "_" + str(n_page) + "_" + str(i) + "_5b2.png",
+        )
+        canny = cv2.Canny(
+            morpho2,
             canny_param_i.minimum,
             canny_param_i.maximum,
             apertureSize=canny_param_i.aperture_size,
         )
-        if enable_debug is not None:
-            cv2.imwrite(
-                enable_debug + "_" + str(n_page) + "_" + str(i) + "_5c.png",
-                canny,
-            )
+        cv2ext.write_image_if(
+            canny, enable_debug, "_" + str(n_page) + "_" + str(i) + "_5c.png"
+        )
         lines_i = cv2.HoughLinesP(
             canny,
             hough_lines_param_i.delta_rho,
@@ -446,22 +481,21 @@ def found_data_try2_remove_duplicated_edges(
         histogram_horizontal_arr, (9, 9), 9, 9, cv2.BORDER_REPLICATE
     )
 
-    vertical_lines_angle_keep: List[
+    lines_vertical_angle_keep: List[
         Tuple[Tuple[int, int], Tuple[int, int]]
     ] = []
     lines_horizontal_angle_keep: List[
         Tuple[Tuple[int, int], Tuple[int, int]]
     ] = []
 
-    for smooth, histogram, points in (
-        (v_smooth, histogram_vertical_points, vertical_lines_angle_keep),
-        (h_smooth, histogram_horizontal_points, lines_horizontal_angle_keep),
-    ):
-        for i in range(1, len(smooth) - 1):
-            if smooth[i] > smooth[i - 1] and smooth[i] > smooth[i + 1]:
-                points.append(compute.find_closed_value(histogram, i))
+    lines_vertical_angle_keep = compute.get_top_histogram(
+        v_smooth, histogram_vertical_points
+    )
+    lines_horizontal_angle_keep = compute.get_top_histogram(
+        h_smooth, histogram_horizontal_points
+    )
 
-    return vertical_lines_angle_keep, lines_horizontal_angle_keep
+    return lines_vertical_angle_keep, lines_horizontal_angle_keep
 
 
 def found_data_try2_is_contour_around_images(

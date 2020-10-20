@@ -1,6 +1,15 @@
 import itertools
 import math
-from typing import Any, Iterable, Iterator, Optional, Tuple, TypeVar, Dict
+from typing import (
+    Any,
+    Iterable,
+    Iterator,
+    Optional,
+    Tuple,
+    TypeVar,
+    Dict,
+    List,
+)
 import sys
 import time
 
@@ -219,3 +228,17 @@ def get_timestamp_ns() -> int:
     if sys.version_info < (3, 7):
         return np.int64(time.time() * 1000000000.0)
     return time.time_ns()  # pylint: disable=no-member,useless-suppression
+
+
+def get_top_histogram(
+    smooth: Any, histogram: Dict[int, Tuple[Tuple[int, int], Tuple[int, int]]]
+) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+    retval: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
+    if smooth[0] > smooth[1]:
+        retval.append(find_closed_value(histogram, 0))
+    for i in range(1, len(smooth) - 1):
+        if smooth[i] > smooth[i - 1] and smooth[i] > smooth[i + 1]:
+            retval.append(find_closed_value(histogram, i))
+    if smooth[len(smooth) - 1] > smooth[len(smooth) - 2]:
+        retval.append(find_closed_value(histogram, len(smooth) - 1))
+    return retval
