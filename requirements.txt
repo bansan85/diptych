@@ -1,6 +1,13 @@
-opencv-python
+# opencv-Python >= 4.3 needs pip >= 19.3.
+# https://pypi.org/project/opencv-python/
+pip>=19.3
+opencv-python>=4
 numpy
-pylint
+
+# For quality
+# Need pylint >= 2.6 to avoid false positive (bad-continuation).
+# https://github.com/PyCQA/pylint/issues/289
+pylint>=2.6
 flake8
 prospector
 pycodestyle
