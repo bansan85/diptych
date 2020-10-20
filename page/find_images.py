@@ -89,9 +89,15 @@ def find_images(
     __internal_border__ = 20
 
     cv2ext.write_image_if(image, enable_debug, "_1.png")
-    gray = cv2ext.force_image_to_be_grayscale(image, param.blur_black_white)
+    gray = cv2ext.force_image_to_be_grayscale(
+        image, param.blur_black_white, True
+    )
+    cv2ext.write_image_if(gray, enable_debug, "_2.png")
+
+    gray_no_border = cv2ext.remove_black_border_in_image(gray, enable_debug)
+
     gray_bordered = cv2.copyMakeBorder(
-        gray,
+        gray_no_border,
         __internal_border__,
         __internal_border__,
         __internal_border__,
@@ -99,12 +105,12 @@ def find_images(
         cv2.BORDER_CONSTANT,
         value=[255],
     )
-    cv2ext.write_image_if(gray_bordered, enable_debug, "_2.png")
+    cv2ext.write_image_if(gray_bordered, enable_debug, "_3b.png")
     dilated = cv2.dilate(
         gray_bordered,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, param.kernel_blur_size),
     )
-    cv2ext.write_image_if(dilated, enable_debug, "_3.png")
+    cv2ext.write_image_if(dilated, enable_debug, "_3b.png")
     _, threshold1 = cv2.threshold(dilated, 254, 255, cv2.THRESH_TOZERO)
     cv2ext.write_image_if(threshold1, enable_debug, "_4.png")
     _, threshold2 = cv2.threshold(threshold1, 0, 255, cv2.THRESH_BINARY_INV)

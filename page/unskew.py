@@ -174,7 +174,7 @@ def find_rotation(
     )
 
     if enable_debug is not None:
-        image_with_lines = image.copy()
+        image_with_lines = cv2ext.convertion_en_couleur(image)
         for line_x1, line_y1, line_x2, line_y2 in lines:
             cv2.line(
                 image_with_lines,

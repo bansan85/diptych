@@ -72,30 +72,30 @@ class PrintTest(PrintInterface):
         """
         if name in self.__values:
             print(str(compute.get_timestamp_ns()) + " : Checking", name, data)
-            if self.__values[name][1] == "difference":
+            if self.__values[name][0] == "difference":
                 self.__check(
                     name,
                     data,
-                    self.__values[name][0] - self.__values[name][2],
-                    self.__values[name][0] + self.__values[name][2],
+                    self.__values[name][1] - self.__values[name][2],
+                    self.__values[name][1] + self.__values[name][2],
                 )
-            elif self.__values[name][1] == "range":
+            elif self.__values[name][0] == "range":
                 self.__check(
                     name,
                     data,
-                    self.__values[name][0] + self.__values[name][2],
-                    self.__values[name][0] + self.__values[name][3],
+                    self.__values[name][1],
+                    self.__values[name][2],
                 )
-            elif self.__values[name][1] == "pourcent":
+            elif self.__values[name][0] == "pourcent":
                 self.__check(
                     name,
                     data,
-                    self.__values[name][0] - data * self.__values[name][2],
-                    self.__values[name][0] + data * self.__values[name][2],
+                    self.__values[name][1] - data * self.__values[name][2],
+                    self.__values[name][1] + data * self.__values[name][2],
                 )
             else:
                 raise ValueError(
-                    "Unknown approximate method", self.__values[name][1]
+                    "Unknown approximate method", self.__values[name][0]
                 )
         else:
             print(str(compute.get_timestamp_ns()) + " : NO CHECK", name, data)

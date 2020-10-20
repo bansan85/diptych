@@ -94,14 +94,14 @@ def is_black_white(image: Any) -> bool:
 
 
 def force_image_to_be_grayscale(
-    image: Any, blur_kernel_size: Tuple[int, int]
+    image: Any, blur_kernel_size: Tuple[int, int], force_blur: bool
 ) -> Any:
     if number_channels(image) == 1:
         one_channel_image = image.copy()
     else:
         one_channel_image = convertion_en_niveau_de_gris(image)
 
-    if is_black_white(one_channel_image):
+    if force_blur or is_black_white(one_channel_image):
         return cv2.blur(one_channel_image, blur_kernel_size)
     return one_channel_image
 
@@ -243,3 +243,42 @@ def write_image_if(
 ) -> None:
     if enable_debug is not None:
         cv2.imwrite(enable_debug + filename, image)
+
+
+def remove_black_border_in_image(
+    gray_bordered: Any, enable_debug: Optional[str]
+) -> Any:
+    gray_bordered2 = cv2.bitwise_not(gray_bordered)
+    write_image_if(gray_bordered2, enable_debug, "_2a.png")
+    _, threshold = cv2.threshold(gray_bordered, 15, 255, cv2.THRESH_BINARY)
+    write_image_if(threshold, enable_debug, "_2b.png")
+    contours, _ = cv2.findContours(
+        threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    )
+    mask_border_only = np.zeros(shape=gray_bordered.shape, dtype=np.uint8)
+    height, width = get_hw(gray_bordered)
+    for cnt in contours:
+        draw = False
+        for ptx in cnt:
+            point_x, point_y = ptx[0]
+            if (
+                point_x <= 0
+                or point_y <= 0
+                or point_x >= width - 1
+                or point_y >= height - 1
+            ):
+                draw = True
+                break
+        if draw:
+            mask_border_only = cv2.drawContours(
+                mask_border_only, [cnt], 0, (255), -1
+            )
+
+    write_image_if(mask_border_only, enable_debug, "_2c.png")
+    res = cv2.bitwise_and(
+        gray_bordered2, gray_bordered2, mask=mask_border_only
+    )
+    write_image_if(res, enable_debug, "_2d.png")
+    gray_bordered2 = cv2.bitwise_not(res)
+    write_image_if(gray_bordered2, enable_debug, "_2e.png")
+    return gray_bordered2

@@ -444,7 +444,7 @@ def __found_candidates_split_line_with_line(
     param: FindCandidatesSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
 ) -> Iterable[Tuple[float, Optional[int]]]:
-    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size)
+    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
     if enable_debug is not None:
         cv2.imwrite(enable_debug + "_2.png", blurimg)
 
@@ -719,7 +719,9 @@ def found_split_line_with_wave(
     enable_debug: Optional[str] = None,
 ) -> Tuple[float, int]:
     cv2ext.write_image_if(image, enable_debug, "_1.png")
-    blurimg = cv2ext.force_image_to_be_grayscale(image, parameters.blur_size)
+    blurimg = cv2ext.force_image_to_be_grayscale(
+        image, parameters.blur_size, False
+    )
     cv2ext.write_image_if(blurimg, enable_debug, "_2.png")
     _, threshold = cv2.threshold(
         blurimg,
@@ -780,7 +782,7 @@ def found_split_line_with_wave(
         sorted_contours,
         image,
         parameters.find_images,
-        compute.optional_concat(enable_debug, "_A_wave"),
+        compute.optional_concat(enable_debug, "_4c_wave"),
     )
 
     toppoints, bottompoints = __found_candidates_split_line_with_wave(

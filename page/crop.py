@@ -276,7 +276,7 @@ def found_data_try2_find_edges(
     param: FoundDataTry2Parameters,
     enable_debug: Optional[str] = None,
 ) -> List[Any]:
-    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size)
+    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
 
     liste_lines = []
     for i in range(2):
