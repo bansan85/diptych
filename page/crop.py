@@ -373,6 +373,15 @@ def found_data_try2_find_edges(
                 enable_debug + "_" + str(n_page) + "_" + str(i) + "_5d.png",
                 image_with_lines,
             )
+    height, width = cv2ext.get_hw(image)
+    liste_lines.append(np.array([[0, 0, 0, height - 1]], dtype=int))
+    liste_lines.append(np.array([[0, 0, width - 1, 0]], dtype=int))
+    liste_lines.append(
+        np.array([[width - 1, 0, width - 1, height - 1]], dtype=int)
+    )
+    liste_lines.append(
+        np.array([[0, height - 1, width - 1, height - 1]], dtype=int)
+    )
     return liste_lines
 
 
