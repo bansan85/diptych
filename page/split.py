@@ -446,7 +446,7 @@ def __found_candidates_split_line_with_line(
 ) -> Iterable[Tuple[float, Optional[int]]]:
     blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
     if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_2.png", blurimg)
+        cv2.imwrite(enable_debug + "_2_" + str(thresholdi) + "_2.png", blurimg)
 
     _, threshold = cv2.threshold(
         blurimg,
@@ -455,14 +455,16 @@ def __found_candidates_split_line_with_line(
         cv2.THRESH_BINARY,
     )
     if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_3_" + str(thresholdi) + ".png", threshold)
+        cv2.imwrite(
+            enable_debug + "_2_" + str(thresholdi) + "_3.png", threshold
+        )
     eroded = cv2.erode(
         threshold,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, param.erode.size),
         iterations=param.erode.iterations,
     )
     if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_4_" + str(thresholdi) + ".png", eroded)
+        cv2.imwrite(enable_debug + "_2_" + str(thresholdi) + "_4.png", eroded)
     canny = cv2.Canny(
         eroded,
         param.canny.minimum,
@@ -470,7 +472,7 @@ def __found_candidates_split_line_with_line(
         apertureSize=param.canny.aperture_size,
     )
     if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_5_" + str(thresholdi) + ".png", canny)
+        cv2.imwrite(enable_debug + "_2_" + str(thresholdi) + "_5.png", canny)
     list_lines = cv2.HoughLinesP(
         canny,
         param.hough_lines.delta_rho,
@@ -481,7 +483,7 @@ def __found_candidates_split_line_with_line(
     )
     if enable_debug is not None:
         cv2.imwrite(
-            enable_debug + "_6_" + str(thresholdi) + ".png",
+            enable_debug + "_2_" + str(thresholdi) + "_6.png",
             cv2ext.draw_lines_from_hough_lines(
                 image, list_lines, (0, 0, 255), 1
             ),
