@@ -230,16 +230,16 @@ def found_data_try1(
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, param.erode.size),
         iterations=param.erode.iterations,
     )
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_2.png", eroded)
+    cv2ext.write_image_if(eroded, enable_debug, "_" + str(n_page) + "_2.png")
     _, threshold = cv2.threshold(
         eroded,
         param.threshold,
         255,
         cv2.THRESH_BINARY,
     )
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_3.png", threshold)
+    cv2ext.write_image_if(
+        threshold, enable_debug, "_" + str(n_page) + "_3.png"
+    )
     # On récupère le contour le plus grand.
     contours, _ = cv2.findContours(
         threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
@@ -677,8 +677,7 @@ def crop_around_page(
     parameters: CropAroundDataInPageParameters,
     enable_debug: Optional[str] = None,
 ) -> Tuple[int, int, int, int]:
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_1.png", image)
+    cv2ext.write_image_if(image, enable_debug, "_" + str(n_page) + "_1.png")
 
     rect = page.crop.found_data_try1(
         image, n_page, parameters.found_data_try1, enable_debug
@@ -716,8 +715,7 @@ def crop_around_data(
         gray,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, parameters.dilate_size),
     )
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_7.png", dilated)
+    cv2ext.write_image_if(dilated, enable_debug, "_" + str(n_page) + "_7.png")
 
     _, threshold = cv2.threshold(
         dilated,
@@ -725,13 +723,15 @@ def crop_around_data(
         255,
         cv2.THRESH_BINARY,
     )
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_8.png", threshold)
+    cv2ext.write_image_if(
+        threshold, enable_debug, "_" + str(n_page) + "_8.png"
+    )
     contours, _ = cv2.findContours(
         threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
-    image2222 = page_gauche_0.copy()
-    ncontour_good_size = 0
+    if enable_debug is not None:
+        image2222 = cv2ext.convertion_en_couleur(page_gauche_0)
+    ncontour_good_size = False
     contours_listered = filter(
         lambda x: parameters.contour_area_min * imgh * imgw
         < cv2.contourArea(x)
@@ -740,17 +740,19 @@ def crop_around_data(
     )
     for cnt in contours_listered:
         (point_x, point_y, width, height) = cv2.boundingRect(cnt)
-        cv2.drawContours(image2222, [cnt], -1, (0, 0, 255), 3)
+        if enable_debug is not None:
+            cv2.drawContours(image2222, [cnt], -1, (0, 0, 255), 3)
         min_x = min(point_x, min_x)
         max_x = max(point_x + width, max_x)
         min_y = min(point_y, min_y)
         max_y = max(point_y + height, max_y)
-        ncontour_good_size = ncontour_good_size + 1
+        ncontour_good_size = True
 
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_9.png", image2222)
+    cv2ext.write_image_if(
+        image2222, enable_debug, "_" + str(n_page) + "_9.png"
+    )
 
-    if ncontour_good_size == 0:
+    if not ncontour_good_size:
         return None
 
     return (min_x, max_x, min_y, max_y)

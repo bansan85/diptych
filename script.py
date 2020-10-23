@@ -66,9 +66,8 @@ class SeparatePage:
             image, angle_moy, pos_moy
         )
 
-        if enable_debug:
-            cv2.imwrite(enable_debug + "_3_1.png", page_gauche)
-            cv2.imwrite(enable_debug + "_3_2.png", page_droite)
+        cv2ext.write_image_if(page_gauche, enable_debug, "_3_1.png")
+        cv2ext.write_image_if(page_droite, enable_debug, "_3_2.png")
 
         # On renvoie les images cropées.
         return page_gauche, page_droite

@@ -445,34 +445,35 @@ def __found_candidates_split_line_with_line(
     enable_debug: Optional[str] = None,
 ) -> Iterable[Tuple[float, Optional[int]]]:
     blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_2_" + str(thresholdi) + "_2.png", blurimg)
-
+    cv2ext.write_image_if(
+        blurimg, enable_debug, "_2_" + str(thresholdi) + "_2.png"
+    )
     _, threshold = cv2.threshold(
         blurimg,
         thresholdi,
         255,
         cv2.THRESH_BINARY,
     )
-    if enable_debug is not None:
-        cv2.imwrite(
-            enable_debug + "_2_" + str(thresholdi) + "_3.png", threshold
-        )
+    cv2ext.write_image_if(
+        threshold, enable_debug, "_2_" + str(thresholdi) + "_3.png"
+    )
     eroded = cv2.erode(
         threshold,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, param.erode.size),
         iterations=param.erode.iterations,
     )
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_2_" + str(thresholdi) + "_4.png", eroded)
+    cv2ext.write_image_if(
+        eroded, enable_debug, "_2_" + str(thresholdi) + "_4.png"
+    )
     canny = cv2.Canny(
         eroded,
         param.canny.minimum,
         param.canny.maximum,
         apertureSize=param.canny.aperture_size,
     )
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_2_" + str(thresholdi) + "_5.png", canny)
+    cv2ext.write_image_if(
+        canny, enable_debug, "_2_" + str(thresholdi) + "_5.png"
+    )
     list_lines = cv2.HoughLinesP(
         canny,
         param.hough_lines.delta_rho,
@@ -555,8 +556,7 @@ def found_split_line_with_line(
     param: FoundSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
 ) -> Tuple[float, int]:
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_1.png", image)
+    cv2ext.write_image_if(image, enable_debug, "_1.png")
 
     valid_lines: List[Tuple[float, Optional[int]]] = []
 

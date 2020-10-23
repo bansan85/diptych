@@ -177,10 +177,9 @@ def find_images(
         )
         img_mask_erode = cv2.bitwise_or(img_mask_erode, img_mask_erodei)
 
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_9.png", debug_image_contours)
-        cv2.imwrite(enable_debug + "_10.png", debug_image_mask)
-        cv2.imwrite(enable_debug + "_11.png", img_mask_erode)
+    cv2ext.write_image_if(debug_image_contours, enable_debug, "_9.png")
+    cv2ext.write_image_if(debug_image_mask, enable_debug, "_10.png")
+    cv2ext.write_image_if(img_mask_erode, enable_debug, "_11.png")
     return img_mask_erode
 
 

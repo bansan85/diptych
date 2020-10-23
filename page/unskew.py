@@ -87,8 +87,7 @@ def find_rotation(
     parameters: UnskewPageParameters,
     enable_debug: Optional[str],
 ) -> float:
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_1.png", image)
+    cv2ext.write_image_if(image, enable_debug, "_" + str(n_page) + "_1.png")
 
     images_mask = page.find_images.find_images(
         image,
@@ -106,8 +105,7 @@ def find_rotation(
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, parameters.erode.size),
         iterations=parameters.erode.iterations,
     )
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_2.png", eroded)
+    cv2ext.write_image_if(eroded, enable_debug, "_" + str(n_page) + "_2.png")
 
     # Aide à la détection des contours
     canny = cv2.Canny(
@@ -116,8 +114,7 @@ def find_rotation(
         parameters.canny.maximum,
         apertureSize=parameters.canny.aperture_size,
     )
-    if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_3.png", canny)
+    cv2ext.write_image_if(canny, enable_debug, "_" + str(n_page) + "_3.png")
 
     # Détection des lignes.
     # La précision doit être de l'ordre de 0.05°
