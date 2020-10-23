@@ -748,9 +748,11 @@ def crop_around_data(
         max_y = max(point_y + height, max_y)
         ncontour_good_size = True
 
-    cv2ext.write_image_if(
-        image2222, enable_debug, "_" + str(n_page) + "_9.png"
-    )
+    if enable_debug is not None:
+        cv2.imwrite(
+            enable_debug + "_" + str(n_page) + "_9.png",
+            image2222,
+        )
 
     if not ncontour_good_size:
         return None
