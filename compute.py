@@ -98,13 +98,14 @@ def get_right_point_from_alpha_posy(
 
 
 def keep_angle_pos_closed_to_target(
-    data: Tuple[float, Optional[int]],
+    data: Tuple[int, int, int, int],
     limit_angle: float,
     target_angle: float,
     target_pos: int,
     limit_pos: int,
 ) -> bool:
-    ang, pos = data
+    ang, pos = get_angle_0_180_posx((data[0], data[1]), (data[2], data[3]))
+
     if pos is None:
         return False
     angle_ok = (
@@ -200,9 +201,7 @@ def find_dpi(
     raise Exception("dpi", "non détecté")
 
 
-def find_closed_value(
-    histogram: Dict[int, Tuple[Tuple[int, int], Tuple[int, int]]], i: int
-) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+def find_closed_value(histogram: Dict[int, _T], i: int) -> _T:
     ibis = 0
     while True:
         if i + ibis in histogram:
@@ -230,10 +229,8 @@ def get_timestamp_ns() -> int:
     return time.time_ns()  # pylint: disable=no-member,useless-suppression
 
 
-def get_top_histogram(
-    smooth: Any, histogram: Dict[int, Tuple[Tuple[int, int], Tuple[int, int]]]
-) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
-    retval: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
+def get_top_histogram(smooth: Any, histogram: Dict[int, _T]) -> List[_T]:
+    retval: List[_T] = []
     if smooth[0] > smooth[1]:
         retval.append(find_closed_value(histogram, 0))
     for i in range(1, len(smooth) - 1):
@@ -241,4 +238,16 @@ def get_top_histogram(
             retval.append(find_closed_value(histogram, i))
     if smooth[len(smooth) - 1] > smooth[len(smooth) - 2]:
         retval.append(find_closed_value(histogram, len(smooth) - 1))
+    return retval
+
+
+def get_tops_indices_histogram(smooth: Any) -> List[int]:
+    retval: List[int] = []
+    if smooth[0] > smooth[1]:
+        retval.append(0)
+    for i in range(1, len(smooth) - 1):
+        if smooth[i] > smooth[i - 1] and smooth[i] > smooth[i + 1]:
+            retval.append(i)
+    if smooth[len(smooth) - 1] > smooth[len(smooth) - 2]:
+        retval.append(len(smooth) - 1)
     return retval

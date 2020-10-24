@@ -282,3 +282,19 @@ def remove_black_border_in_image(
     gray_bordered2 = cv2.bitwise_not(res)
     write_image_if(gray_bordered2, enable_debug, "_2e.png")
     return gray_bordered2
+
+
+def erode_and_dilate(
+    image: Any, size: Tuple[int, int], iterations: int
+) -> Any:
+    eroded = cv2.erode(
+        image,
+        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, size),
+        iterations=iterations,
+    )
+    dilate = cv2.dilate(
+        eroded,
+        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, size),
+        iterations=iterations,
+    )
+    return dilate

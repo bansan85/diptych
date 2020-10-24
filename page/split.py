@@ -1,6 +1,5 @@
 import types
 from typing import Union, Tuple, Any, Optional, Iterable, List
-import functools
 
 import numpy as np
 import cv2
@@ -15,7 +14,7 @@ import compute
 class FoundSplitLineWithLineParameters:
     class Impl(types.SimpleNamespace):
         blur_size: Tuple[int, int]
-        thresholds_min: Tuple[int, int]
+        threshold_equalized: int
         erode: ErodeParameters
         canny: CannyParameters
         hough_lines: HoughLinesParameters
@@ -25,7 +24,7 @@ class FoundSplitLineWithLineParameters:
     def __init__(  # pylint: disable=too-many-arguments
         self,
         blur_size: Tuple[int, int],
-        thresholds_min: Tuple[int, int],
+        threshold_equalized: int,
         erode: ErodeParameters,
         canny: CannyParameters,
         hough_lines: HoughLinesParameters,
@@ -34,7 +33,7 @@ class FoundSplitLineWithLineParameters:
     ):
         self.__param = FoundSplitLineWithLineParameters.Impl(
             blur_size=blur_size,
-            thresholds_min=thresholds_min,
+            threshold_equalized=threshold_equalized,
             erode=erode,
             canny=canny,
             hough_lines=hough_lines,
@@ -51,14 +50,14 @@ class FoundSplitLineWithLineParameters:
         self.__param.blur_size = val
 
     @property
-    def thresholds_min(
+    def threshold_equalized(
         self,
-    ) -> Tuple[int, int]:
-        return self.__param.thresholds_min
+    ) -> int:
+        return self.__param.threshold_equalized
 
-    @thresholds_min.setter
-    def thresholds_min(self, val: Tuple[int, int]) -> None:
-        self.__param.thresholds_min = val
+    @threshold_equalized.setter
+    def threshold_equalized(self, val: int) -> None:
+        self.__param.threshold_equalized = val
 
     @property
     def erode(self) -> ErodeParameters:
@@ -322,13 +321,13 @@ class FindCandidatesSplitLineWithLineParameters:
 
 class SplitTwoWavesParameters:
     class Impl(types.SimpleNamespace):
-        erode: ErodeParameters = ErodeParameters((4, 4), 1)
+        erode: ErodeParameters = ErodeParameters((3, 3), 10)
         blur_size: Tuple[int, int] = (10, 10)
         threshold: int = 200
-        thresholds_min: Tuple[int, int] = (200, 240)
+        threshold_equalized: int = 100
         canny: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, np.pi / (180 * 20), 150, 200, 150
+            1, np.pi / (180 * 40), 150, 200, 150
         )
         delta_rho: int = 200
         delta_tetha: float = 20.0
@@ -370,12 +369,12 @@ class SplitTwoWavesParameters:
         self.__param.threshold = val
 
     @property
-    def thresholds_min(self) -> Tuple[int, int]:
-        return self.__param.thresholds_min
+    def threshold_equalized(self) -> int:
+        return self.__param.threshold_equalized
 
-    @thresholds_min.setter
-    def thresholds_min(self, val: Tuple[int, int]) -> None:
-        self.__param.thresholds_min = val
+    @threshold_equalized.setter
+    def threshold_equalized(self, val: int) -> None:
+        self.__param.threshold_equalized = val
 
     @property
     def canny(self) -> CannyParameters:
@@ -420,8 +419,8 @@ class SplitTwoWavesParameters:
             self.erode.init_default_values(key[len("Erode") :], value)
         elif key == "BlurSize" and isinstance(value, tuple):
             self.blur_size = value
-        elif key == "ThresholdMin" and isinstance(value, tuple):
-            self.thresholds_min = value
+        elif key == "ThresholdEqualized" and isinstance(value, int):
+            self.threshold_equalized = value
         elif key.startswith("Canny"):
             self.canny.init_default_values(key[len("Canny") :], value)
         elif key.startswith("HoughLines"):
@@ -443,38 +442,30 @@ def __found_candidates_split_line_with_line(
     thresholdi: int,
     param: FindCandidatesSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
-) -> Iterable[Tuple[float, Optional[int]]]:
+) -> Iterable[Tuple[int, int, int, int]]:
     blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
-    cv2ext.write_image_if(
-        blurimg, enable_debug, "_2_" + str(thresholdi) + "_2.png"
-    )
+    cv2ext.write_image_if(blurimg, enable_debug, "_2_2.png")
+    blurimg = cv2.equalizeHist(blurimg)
+    cv2ext.write_image_if(blurimg, enable_debug, "_2_2b.png")
     _, threshold = cv2.threshold(
         blurimg,
         thresholdi,
         255,
         cv2.THRESH_BINARY,
     )
-    cv2ext.write_image_if(
-        threshold, enable_debug, "_2_" + str(thresholdi) + "_3.png"
+    cv2ext.write_image_if(threshold, enable_debug, "_2_3.png")
+    erode_dilate = cv2ext.erode_and_dilate(
+        threshold, param.erode.size, param.erode.iterations
     )
-    eroded = cv2.erode(
-        threshold,
-        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, param.erode.size),
-        iterations=param.erode.iterations,
-    )
-    cv2ext.write_image_if(
-        eroded, enable_debug, "_2_" + str(thresholdi) + "_4.png"
-    )
+    cv2ext.write_image_if(erode_dilate, enable_debug, "_2_4.png")
     canny = cv2.Canny(
-        eroded,
+        erode_dilate,
         param.canny.minimum,
         param.canny.maximum,
         apertureSize=param.canny.aperture_size,
     )
-    cv2ext.write_image_if(
-        canny, enable_debug, "_2_" + str(thresholdi) + "_5.png"
-    )
-    list_lines = cv2.HoughLinesP(
+    cv2ext.write_image_if(canny, enable_debug, "_2_5.png")
+    list_lines_p = cv2.HoughLinesP(
         canny,
         param.hough_lines.delta_rho,
         param.hough_lines.delta_tetha,
@@ -484,17 +475,12 @@ def __found_candidates_split_line_with_line(
     )
     if enable_debug is not None:
         cv2.imwrite(
-            enable_debug + "_2_" + str(thresholdi) + "_6.png",
+            enable_debug + "_2_6.png",
             cv2ext.draw_lines_from_hough_lines(
-                image, list_lines, (0, 0, 255), 1
+                image, list_lines_p, (0, 0, 255), 1
             ),
         )
-    lines_angle_posx = map(
-        lambda p: compute.get_angle_0_180_posx(
-            (p[0][0], p[0][1]), (p[0][2], p[0][3])
-        ),
-        list_lines,
-    )
+    list_lines = map(lambda p: p[0], list_lines_p)
 
     # keep vertical lines and in the center of the image
     return filter(
@@ -505,50 +491,65 @@ def __found_candidates_split_line_with_line(
             cv2ext.get_hw(blurimg)[1] // 2,
             param.limit_rho,
         ),
-        lines_angle_posx,
+        list_lines,
     )
 
 
 def __best_candidates_split_line_with_line(
-    valid_lines: List[Tuple[float, Optional[int]]]
-) -> Tuple[float, int, List[Tuple[float, int]]]:
-    # TODO: use histogram, not mean
-    list_of_angles: List[float] = list(map(lambda x: x[0], valid_lines))
-    # Remove None because filter keep_angle_pos_closed_to_target.
-    list_of_posx = list(map(lambda x: x[1], valid_lines))
-    ecarttype_angles = np.std(list_of_angles)
-    moyenne_angles = np.mean(list_of_angles)
-    ecarttype_posx = np.std(list_of_posx)
-    moyenne_posx = np.mean(list_of_posx)
-    angle_dans_ecarttype_tmp = filter(
-        lambda x: moyenne_angles - ecarttype_angles
-        <= x[0]
-        <= moyenne_angles + ecarttype_angles
-        and moyenne_posx - ecarttype_posx
-        <= x[1]
-        <= moyenne_posx + ecarttype_posx,
-        valid_lines,
-    )
-    angle_dans_ecarttype = list(
-        map(
-            lambda x: (x[0], x[1] if x[1] is not None else 0),
-            angle_dans_ecarttype_tmp,
+    valid_lines: List[Tuple[int, int, int, int]],
+    delta_angle: float,
+    width: int,
+    height: int,
+) -> Tuple[float, int]:
+    histogram_angle = np.zeros(int(np.ceil(180 / delta_angle)) + 1)
+    histogram_posx = np.zeros(width + 1)
+    histogram_posx_miny = height * np.ones(width + 1)
+    histogram_posx_maxy = np.zeros(width + 1)
+    for point1_x, point1_y, point2_x, point2_y in valid_lines:
+        angle, pos = compute.get_angle_0_180_posx(
+            (point1_x, point1_y), (point2_x, point2_y)
         )
-    )
-
-    def sum_tmp(
-        angle_posx_1: Tuple[float, int], angle_posx_2: Tuple[float, int]
-    ) -> Tuple[float, int]:
-        return (
-            angle_posx_1[0] + angle_posx_2[0],
-            angle_posx_1[1] + angle_posx_2[1],
+        i = int(round(angle / delta_angle))
+        length = np.linalg.norm(
+            np.array((point1_x, point1_y)) - np.array((point2_x, point2_y))
+        )
+        histogram_angle[i] = histogram_angle[i] + length
+        histogram_posx[pos] = histogram_posx[pos] + length
+        histogram_posx_miny[pos] = min(
+            histogram_posx_miny[pos], point1_y, point2_y
+        )
+        histogram_posx_maxy[pos] = max(
+            histogram_posx_maxy[pos], point1_y, point2_y
         )
 
-    angle, posx = functools.reduce(sum_tmp, angle_dans_ecarttype)
-    angle_1 = angle / len(angle_dans_ecarttype)
-    posx_1 = posx // len(angle_dans_ecarttype)
+    histogram_angle_blur = cv2.GaussianBlur(
+        histogram_angle, (9, 9), 9, borderType=cv2.BORDER_REPLICATE
+    )
+    histogram_posx_blur = cv2.GaussianBlur(
+        histogram_posx, (1, 21), 21, borderType=cv2.BORDER_REPLICATE
+    )
+    histogram_list_of_top = np.zeros(width + 1)
+    list_of_top = compute.get_tops_indices_histogram(histogram_posx_blur)
+    for i in list_of_top:
+        length_i = max(histogram_posx_maxy[i - 8 : i + 8]) - min(
+            histogram_posx_miny[i - 8 : i + 8]
+        )
+        if length_i > 0.7 * height:
+            histogram_list_of_top[i] = sum(
+                filter(
+                    lambda x: x > 0,
+                    histogram_posx_maxy[i - 8 : i + 8]
+                    - histogram_posx_miny[i - 8 : i + 8],
+                )
+            )
+    histogram_list_of_top_blur = cv2.GaussianBlur(
+        histogram_list_of_top, (1, 31), 31, borderType=cv2.BORDER_REPLICATE
+    )
 
-    return (angle_1, posx_1, angle_dans_ecarttype)
+    return (
+        np.argmax(histogram_angle_blur) * delta_angle,
+        np.argmax(histogram_list_of_top_blur),
+    )
 
 
 def found_split_line_with_line(
@@ -558,24 +559,23 @@ def found_split_line_with_line(
 ) -> Tuple[float, int]:
     cv2ext.write_image_if(image, enable_debug, "_1.png")
 
-    valid_lines: List[Tuple[float, Optional[int]]] = []
+    valid_lines: List[Tuple[int, int, int, int]] = []
 
-    for thresholdi in param.thresholds_min:
-        valid_lines.extend(
-            __found_candidates_split_line_with_line(
-                image,
-                thresholdi,
-                FindCandidatesSplitLineWithLineParameters(
-                    param.blur_size,
-                    param.canny,
-                    param.hough_lines,
-                    param.erode,
-                    param.limit_rho,
-                    param.limit_tetha,
-                ),
-                enable_debug,
-            )
+    valid_lines.extend(
+        __found_candidates_split_line_with_line(
+            image,
+            param.threshold_equalized,
+            FindCandidatesSplitLineWithLineParameters(
+                param.blur_size,
+                param.canny,
+                param.hough_lines,
+                param.erode,
+                param.limit_rho,
+                param.limit_tetha,
+            ),
+            enable_debug,
         )
+    )
 
     if len(valid_lines) == 0:
         raise Exception(
@@ -583,11 +583,12 @@ def found_split_line_with_line(
             "Failed to find candidates for the separator line.",
         )
 
-    (
-        angle_1,
-        posx_1,
-        angle_dans_ecarttype,
-    ) = __best_candidates_split_line_with_line(valid_lines)
+    (angle_1, posx_1,) = __best_candidates_split_line_with_line(
+        valid_lines,
+        param.hough_lines.delta_tetha / np.pi * 180.0 / 10.0,
+        cv2ext.get_hw(image)[1],
+        cv2ext.get_hw(image)[0],
+    )
 
     height, _ = cv2ext.get_hw(image)
     point_1a = (posx_1, 0)
@@ -597,21 +598,7 @@ def found_split_line_with_line(
     )
 
     if enable_debug is not None:
-        lines_from_angle_posx = map(
-            lambda angle_posx: [
-                (
-                    angle_posx[1],
-                    0,
-                    *compute.get_bottom_point_from_alpha_posx(
-                        angle_posx[0], angle_posx[1], height
-                    ),
-                )
-            ],
-            angle_dans_ecarttype,
-        )
-        image_with_lines = cv2ext.draw_lines_from_hough_lines(
-            image, lines_from_angle_posx, (0, 0, 255), 1
-        )
+        image_with_lines = cv2ext.convertion_en_couleur(image)
         cv2.line(
             image_with_lines,
             (point_1a[0], point_1a[1]),
@@ -619,6 +606,14 @@ def found_split_line_with_line(
             (255, 0, 0),
             5,
         )
+        for line in valid_lines:
+            cv2.line(
+                image_with_lines,
+                (line[0], line[1]),
+                (line[2], line[3]),
+                (0, 0, 255),
+                1,
+            )
         cv2.imwrite(enable_debug + "_7.png", image_with_lines)
 
     return angle_1, posx_1
@@ -732,15 +727,13 @@ def found_split_line_with_wave(
         cv2.THRESH_BINARY,
     )
     cv2ext.write_image_if(threshold, enable_debug, "_3.png")
-    eroded = cv2.erode(
-        threshold,
-        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, parameters.erode.size),
-        iterations=parameters.erode.iterations,
+    erode_dilate = cv2ext.erode_and_dilate(
+        threshold, parameters.erode.size, parameters.erode.iterations
     )
-    cv2ext.write_image_if(eroded, enable_debug, "_4.png")
+    cv2ext.write_image_if(erode_dilate, enable_debug, "_4.png")
     size_border = 20
     eroded_bordered = cv2.copyMakeBorder(
-        eroded,
+        erode_dilate,
         size_border,
         size_border,
         size_border,
@@ -790,7 +783,7 @@ def found_split_line_with_wave(
     toppoints, bottompoints = __found_candidates_split_line_with_wave(
         cs2,
         image,
-        eroded,
+        erode_dilate,
         parameters.find_candidates,
         enable_debug,
     )

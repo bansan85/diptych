@@ -31,7 +31,7 @@ class SeparatePage:
     ) -> Tuple[Any, Any]:
         param1 = FoundSplitLineWithLineParameters(
             parameters.blur_size,
-            parameters.thresholds_min,
+            parameters.threshold_equalized,
             parameters.erode,
             parameters.canny,
             parameters.hough_lines,

@@ -69,7 +69,7 @@ def found_angle_unskew_page(lines: Any, delta_angle: float) -> Any:
             np.arctan2(line[3] - line[1], line[2] - line[0]) / np.pi * 180
             + 180
         ) % 90
-        i = int(angle / delta_angle)
+        i = int(round(angle / delta_angle))
         length = np.linalg.norm(
             np.array((line[0], line[1])) - np.array((line[2], line[3]))
         )
@@ -152,9 +152,7 @@ def find_rotation(
         cv2.imwrite(
             enable_debug + "_" + str(n_page) + "_4.png", image_with_lines
         )
-        cv2.imwrite(
-            enable_debug + "_" + str(n_page) + "_4bbbb.png", img
-        )
+        cv2.imwrite(enable_debug + "_" + str(n_page) + "_4bbbb.png", img)
 
     lines_filtered = []
     for line_x1, line_y1, line_x2, line_y2 in lines:
@@ -185,5 +183,6 @@ def find_rotation(
         )
 
     return found_angle_unskew_page(
-        lines_filtered, parameters.hough_lines.delta_tetha / np.pi * 180.0
+        lines_filtered,
+        parameters.hough_lines.delta_tetha / np.pi * 180.0,
     )

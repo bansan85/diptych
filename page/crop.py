@@ -690,6 +690,12 @@ def crop_around_page(
 
     if rect is None:
         raise Exception("Failed to found contour of the page.")
+
+    if enable_debug is not None:
+        image_cnt = cv2ext.convertion_en_couleur(image)
+        cv2.drawContours(image_cnt, [rect], 0, (0, 0, 255), 3)
+        cv2.imwrite(enable_debug + "_" + str(n_page) + "_1_6.png", image_cnt)
+
     x_crop1 = [rect[0, 0, 0], rect[1, 0, 0], rect[2, 0, 0], rect[3, 0, 0]]
     y_crop1 = [rect[0, 0, 1], rect[1, 0, 1], rect[2, 0, 1], rect[3, 0, 1]]
     x_crop1.sort()
