@@ -152,9 +152,8 @@ def find_images(
         lambda c: cv2.contourArea(c) > param.min_area * cv2ext.get_area(image),
         all_polygon,
     )
-    all_polygon_hull = map(cv2.convexHull, big_images)
 
-    for contour in all_polygon_hull:
+    for contour in big_images:
         if enable_debug is not None:
             debug_image_contours = cv2.drawContours(
                 debug_image_contours, [contour], -1, (255, 0, 0), 3
