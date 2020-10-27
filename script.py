@@ -113,6 +113,7 @@ class SeparatePage:
         )
 
         imgh, imgw = cv2ext.get_hw(page_gauche_0)
+
         # Aucun contour, page vide : on renvoie une image d'un pixel
         if crop_rect2_size is None:
             self.__output.print(
@@ -128,46 +129,96 @@ class SeparatePage:
                 ConstString.image_crop(n_page, "y2"), int(imgh / 2)
             )
 
-            return (
-                page_gauche_0,
-                (
-                    int(imgw / 2) - 1,
-                    int(imgw / 2),
-                    int(imgh / 2) - 1,
-                    int(imgh / 2),
-                ),
-                imgw,
-                imgh,
+            crop = (
+                int(imgw / 2) - 1,
+                int(imgw / 2),
+                int(imgh / 2) - 1,
+                int(imgh / 2),
+            )
+        else:
+            self.__output.print(
+                ConstString.image_crop(n_page, "x1"),
+                crop_rect_size[0] + crop_rect2_size[0],
+            )
+            self.__output.print(
+                ConstString.image_crop(n_page, "y1"),
+                crop_rect_size[2] + crop_rect2_size[2],
+            )
+            self.__output.print(
+                ConstString.image_crop(n_page, "x2"),
+                crop_rect_size[0] + crop_rect2_size[1],
+            )
+            self.__output.print(
+                ConstString.image_crop(n_page, "y2"),
+                crop_rect_size[2] + crop_rect2_size[3],
             )
 
-        self.__output.print(
-            ConstString.image_crop(n_page, "x1"),
-            crop_rect_size[0] + crop_rect2_size[0],
-        )
-        self.__output.print(
-            ConstString.image_crop(n_page, "y1"),
-            crop_rect_size[2] + crop_rect2_size[2],
-        )
-        self.__output.print(
-            ConstString.image_crop(n_page, "x2"),
-            crop_rect_size[0] + crop_rect2_size[1],
-        )
-        self.__output.print(
-            ConstString.image_crop(n_page, "y2"),
-            crop_rect_size[2] + crop_rect2_size[3],
-        )
-
-        return (
-            page_gauche_0,
-            (
+            crop = (
                 np.maximum(crop_rect2_size[0] - parameters.border, 0),
                 np.minimum(crop_rect2_size[1] + parameters.border, imgw - 1),
                 np.maximum(crop_rect2_size[2] - parameters.border, 0),
                 np.minimum(crop_rect2_size[3] + parameters.border, imgh - 1),
-            ),
+            )
+
+        image_crop = cv2ext.crop_rectangle(page_gauche_0, crop)
+
+        cv2ext.write_image_if(
+            image_crop, enable_debug, "_" + str(n_page) + "_10.png"
+        )
+
+        return (
+            image_crop,
+            crop,
             imgw,
             imgh,
         )
+
+    def uncrop_to_fit_size(
+        self,
+        image: Any,
+        n_page: int,
+        size_wh: Tuple[int, int],
+        crop: Tuple[int, int, int, int],
+    ) -> Any:
+        dpi = compute.find_dpi(size_wh[0], size_wh[1], 21.0, 29.7)
+        self.__output.print(ConstString.image_dpi(n_page), dpi)
+        recadre = cv2ext.add_border_to_match_size(
+            image,
+            (21.0, 29.7),
+            crop,
+            size_wh,
+            dpi,
+        )
+        self.__output.print(
+            ConstString.image_border(n_page, 1),
+            recadre[0],
+        )
+        self.__output.print(
+            ConstString.image_border(n_page, 2),
+            recadre[1],
+        )
+        self.__output.print(
+            ConstString.image_border(n_page, 3),
+            recadre[2],
+        )
+        self.__output.print(
+            ConstString.image_border(n_page, 4),
+            recadre[3],
+        )
+        return cv2.copyMakeBorder(
+            image,
+            recadre[0],
+            recadre[1],
+            recadre[2],
+            recadre[3],
+            cv2.BORDER_CONSTANT,
+            value=[255, 255, 255],
+        )
+
+    # Need a function to be able to override behavior
+    # pylint: disable=no-self-use
+    def save_final_page(self, filename: str, image: Any) -> None:
+        cv2.imwrite(filename, image)
 
     def treat_file(
         self,
@@ -209,97 +260,24 @@ class SeparatePage:
             compute.optional_str(enable_debug, filename + "_4"),
         )
 
-        (image1a2, crop1, imgw1, imgh1,) = self.crop_around_data_in_page(
+        (image1b, crop1, imgw1, imgh1) = self.crop_around_data_in_page(
             image1a,
             1,
             parameters.crop_around_data_in_page,
             compute.optional_str(enable_debug, filename + "_5"),
         )
-        image1b = cv2ext.crop_rectangle(image1a2, crop1)
-        (image2a2, crop2, imgw2, imgh2,) = self.crop_around_data_in_page(
+        (image2b, crop2, imgw2, imgh2) = self.crop_around_data_in_page(
             image2a,
             2,
             parameters.crop_around_data_in_page,
             compute.optional_str(enable_debug, filename + "_5"),
         )
-        image2b = cv2ext.crop_rectangle(image2a2, crop2)
 
-        if enable_debug:
-            cv2.imwrite(filename + "_5_1_10.png", image1b)
-            cv2.imwrite(filename + "_5_2_10.png", image2b)
+        image1c = self.uncrop_to_fit_size(image1b, 1, (imgw1, imgh1), crop1)
+        image2c = self.uncrop_to_fit_size(image2b, 2, (imgw2, imgh2), crop2)
 
-        dpi = compute.find_dpi(imgw1, imgh1, 21.0, 29.7)
-        self.__output.print(ConstString.image_dpi(1), dpi)
-        recadre1 = cv2ext.add_border_to_match_size(
-            image1b,
-            (21.0, 29.7),
-            crop1,
-            (imgw1, imgh1),
-            dpi,
-        )
-        self.__output.print(
-            ConstString.image_border(1, 1),
-            recadre1[0],
-        )
-        self.__output.print(
-            ConstString.image_border(1, 2),
-            recadre1[1],
-        )
-        self.__output.print(
-            ConstString.image_border(1, 3),
-            recadre1[2],
-        )
-        self.__output.print(
-            ConstString.image_border(1, 4),
-            recadre1[3],
-        )
-        image1c = cv2.copyMakeBorder(
-            image1b,
-            recadre1[0],
-            recadre1[1],
-            recadre1[2],
-            recadre1[3],
-            cv2.BORDER_CONSTANT,
-            value=[255, 255, 255],
-        )
-
-        dpi = compute.find_dpi(imgw2, imgh2, 21.0, 29.7)
-        self.__output.print(ConstString.image_dpi(2), dpi)
-        recadre2 = cv2ext.add_border_to_match_size(
-            image2b,
-            (21.0, 29.7),
-            crop2,
-            (imgw2, imgh2),
-            dpi,
-        )
-        self.__output.print(
-            ConstString.image_border(2, 1),
-            recadre2[0],
-        )
-        self.__output.print(
-            ConstString.image_border(2, 2),
-            recadre2[1],
-        )
-        self.__output.print(
-            ConstString.image_border(2, 3),
-            recadre2[2],
-        )
-        self.__output.print(
-            ConstString.image_border(2, 4),
-            recadre2[3],
-        )
-        image2c = cv2.copyMakeBorder(
-            image2b,
-            recadre2[0],
-            recadre2[1],
-            recadre2[2],
-            recadre2[3],
-            cv2.BORDER_CONSTANT,
-            value=[255, 255, 255],
-        )
-
-        cv2.imwrite(filename + "_page_1.png", image1c)
-        cv2.imwrite(filename + "_page_2.png", image2c)
+        self.save_final_page(filename + "_page_1.png", image1c)
+        self.save_final_page(filename + "_page_2.png", image2c)
 
         self.__output.close()
 
