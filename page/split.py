@@ -14,7 +14,6 @@ import compute
 class FoundSplitLineWithLineParameters:
     class Impl(types.SimpleNamespace):
         blur_size: Tuple[int, int]
-        threshold_equalized: int
         erode: ErodeParameters
         canny: CannyParameters
         hough_lines: HoughLinesParameters
@@ -24,7 +23,6 @@ class FoundSplitLineWithLineParameters:
     def __init__(  # pylint: disable=too-many-arguments
         self,
         blur_size: Tuple[int, int],
-        threshold_equalized: int,
         erode: ErodeParameters,
         canny: CannyParameters,
         hough_lines: HoughLinesParameters,
@@ -33,7 +31,6 @@ class FoundSplitLineWithLineParameters:
     ):
         self.__param = FoundSplitLineWithLineParameters.Impl(
             blur_size=blur_size,
-            threshold_equalized=threshold_equalized,
             erode=erode,
             canny=canny,
             hough_lines=hough_lines,
@@ -48,16 +45,6 @@ class FoundSplitLineWithLineParameters:
     @blur_size.setter
     def blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.blur_size = val
-
-    @property
-    def threshold_equalized(
-        self,
-    ) -> int:
-        return self.__param.threshold_equalized
-
-    @threshold_equalized.setter
-    def threshold_equalized(self, val: int) -> None:
-        self.__param.threshold_equalized = val
 
     @property
     def erode(self) -> ErodeParameters:
@@ -324,7 +311,6 @@ class SplitTwoWavesParameters:
         erode: ErodeParameters = ErodeParameters((3, 3), 10)
         blur_size: Tuple[int, int] = (10, 10)
         threshold: int = 200
-        threshold_equalized: int = 100
         canny: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
             1, np.pi / (180 * 40), 150, 200, 150
@@ -369,14 +355,6 @@ class SplitTwoWavesParameters:
         self.__param.threshold = val
 
     @property
-    def threshold_equalized(self) -> int:
-        return self.__param.threshold_equalized
-
-    @threshold_equalized.setter
-    def threshold_equalized(self, val: int) -> None:
-        self.__param.threshold_equalized = val
-
-    @property
     def canny(self) -> CannyParameters:
         return self.__param.canny
 
@@ -419,8 +397,6 @@ class SplitTwoWavesParameters:
             self.erode.init_default_values(key[len("Erode") :], value)
         elif key == "BlurSize" and isinstance(value, tuple):
             self.blur_size = value
-        elif key == "ThresholdEqualized" and isinstance(value, int):
-            self.threshold_equalized = value
         elif key.startswith("Canny"):
             self.canny.init_default_values(key[len("Canny") :], value)
         elif key.startswith("HoughLines"):
@@ -439,17 +415,16 @@ class SplitTwoWavesParameters:
 
 def __found_candidates_split_line_with_line(
     image: Any,
-    thresholdi: int,
     param: FindCandidatesSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
 ) -> Iterable[Tuple[int, int, int, int]]:
     blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
     cv2ext.write_image_if(blurimg, enable_debug, "_2_2.png")
-    blurimg = cv2.equalizeHist(blurimg)
-    cv2ext.write_image_if(blurimg, enable_debug, "_2_2b.png")
+    blurimg_equ = cv2.equalizeHist(blurimg)
+    cv2ext.write_image_if(blurimg_equ, enable_debug, "_2_2b.png")
     _, threshold = cv2.threshold(
-        blurimg,
-        thresholdi,
+        blurimg_equ,
+        cv2ext.threshold_from_gaussian_histogram(blurimg_equ),
         255,
         cv2.THRESH_BINARY,
     )
@@ -564,7 +539,6 @@ def found_split_line_with_line(
     valid_lines.extend(
         __found_candidates_split_line_with_line(
             image,
-            param.threshold_equalized,
             FindCandidatesSplitLineWithLineParameters(
                 param.blur_size,
                 param.canny,

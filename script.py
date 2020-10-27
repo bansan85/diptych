@@ -18,6 +18,7 @@ from page.unskew import UnskewPageParameters
 import cv2ext
 import pages
 import compute
+import fsext
 
 
 class SeparatePage:
@@ -31,7 +32,6 @@ class SeparatePage:
     ) -> Tuple[Any, Any]:
         param1 = FoundSplitLineWithLineParameters(
             parameters.blur_size,
-            parameters.threshold_equalized,
             parameters.erode,
             parameters.canny,
             parameters.hough_lines,
@@ -282,3 +282,24 @@ class SeparatePage:
         self.__output.close()
 
     __output: PrintInterface
+
+
+def get_absolute_from_current_path(root: str, filename: str) -> str:
+    return fsext.get_absolute_from_current_path(root, filename)
+
+
+def treat_file(
+    sep: SeparatePage,
+    filename: str,
+    dict_test: Optional[Dict[str, Any]] = None,
+    dict_default_values: Optional[
+        Dict[str, Union[int, float, Tuple[int, int]]]
+    ] = None,
+    enable_debug: bool = True,
+) -> None:
+    sep.treat_file(
+        filename,
+        dict_test,
+        dict_default_values,
+        enable_debug,
+    )

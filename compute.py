@@ -251,3 +251,16 @@ def get_tops_indices_histogram(smooth: Any) -> List[int]:
     if smooth[len(smooth) - 1] > smooth[len(smooth) - 2]:
         retval.append(len(smooth) - 1)
     return retval
+
+
+def image_to_256_histogram(image: Any) -> Any:
+    height, width = image.shape[:2]
+    histogram = np.zeros(256)
+
+    for height_i in range(height):
+        for width_i in range(width):
+            histogram[image[height_i, width_i]] = (
+                histogram[image[height_i, width_i]] + 1
+            )
+
+    return histogram
