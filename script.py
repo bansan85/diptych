@@ -44,7 +44,6 @@ class SeparatePage:
 
         param2 = FoundSplitLineWithWave(
             parameters.blur_size,
-            parameters.threshold,
             parameters.erode,
             parameters.find_images,
             parameters.find_candidates,

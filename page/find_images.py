@@ -95,9 +95,10 @@ def find_images(
     cv2ext.write_image_if(gray, enable_debug, "_2.png")
 
     gray_no_border = cv2ext.remove_black_border_in_image(gray, enable_debug)
-
+    gray_equ = cv2.equalizeHist(gray_no_border)
+    cv2ext.write_image_if(gray_equ, enable_debug, "_3a.png")
     gray_bordered = cv2.copyMakeBorder(
-        gray_no_border,
+        gray_equ,
         __internal_border__,
         __internal_border__,
         __internal_border__,
@@ -110,8 +111,9 @@ def find_images(
         gray_bordered,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, param.kernel_blur_size),
     )
-    cv2ext.write_image_if(dilated, enable_debug, "_3b.png")
-    _, threshold1 = cv2.threshold(dilated, 254, 255, cv2.THRESH_TOZERO)
+    cv2ext.write_image_if(dilated, enable_debug, "_3c.png")
+    thresholdi = cv2ext.threshold_from_gaussian_histogram(dilated)
+    _, threshold1 = cv2.threshold(dilated, thresholdi, 255, cv2.THRESH_BINARY)
     cv2ext.write_image_if(threshold1, enable_debug, "_4.png")
     _, threshold2 = cv2.threshold(threshold1, 0, 255, cv2.THRESH_BINARY_INV)
     cv2ext.write_image_if(threshold2, enable_debug, "_5.png")

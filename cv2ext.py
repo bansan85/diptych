@@ -301,10 +301,16 @@ def erode_and_dilate(
 
 
 def threshold_from_gaussian_histogram(
-    image: Any, ksize: int = 5, pourcentage: float = 0.8
+    image: Any, pourcentage: float = 0.8
 ) -> Any:
-    histogram = compute.image_to_256_histogram(image)
-    blur = cv2.GaussianBlur(
-        histogram, (1, ksize), ksize, borderType=cv2.BORDER_REPLICATE
-    )
-    return int(pourcentage * np.argmin(blur))
+    histogram = cv2.calcHist([image], [0], None, [256], [0, 256])
+    i = 255
+    for j in range(255, 0, -1):
+        if histogram[j][0] == 0:
+            i = j
+            break
+    for j in range(i, 0, -1):
+        if histogram[j][0] != 0:
+            i = j
+            break
+    return int(pourcentage * i)

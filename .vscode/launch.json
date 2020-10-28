@@ -19,10 +19,11 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: Module",
+            "name": "Python: test_images",
             "type": "python",
             "request": "launch",
-            "module": "tests.test_images"
+            "module": "pytest",
+            "args": [ "-n=auto", "tests/test_images.py" ]
         }
     ]
 }

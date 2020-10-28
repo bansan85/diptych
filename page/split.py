@@ -180,22 +180,19 @@ class FindCandidatesSplitLineWithWaveParameters:
 class FoundSplitLineWithWave:
     class Impl(types.SimpleNamespace):
         blur_size: Tuple[int, int]
-        threshold: int
         erode: ErodeParameters
         find_images: FindImageParameters
         find_candidates: FindCandidatesSplitLineWithWaveParameters
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         blur_size: Tuple[int, int],
-        threshold: int,
         erode: ErodeParameters,
         find_images: FindImageParameters,
         find_candidates: FindCandidatesSplitLineWithWaveParameters,
     ):
         self.__param = FoundSplitLineWithWave.Impl(
             blur_size=blur_size,
-            threshold=threshold,
             erode=erode,
             find_images=find_images,
             find_candidates=find_candidates,
@@ -208,14 +205,6 @@ class FoundSplitLineWithWave:
     @blur_size.setter
     def blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.blur_size = val
-
-    @property
-    def threshold(self) -> int:
-        return self.__param.threshold
-
-    @threshold.setter
-    def threshold(self, val: int) -> None:
-        self.__param.threshold = val
 
     @property
     def erode(self) -> ErodeParameters:
@@ -310,7 +299,6 @@ class SplitTwoWavesParameters:
     class Impl(types.SimpleNamespace):
         erode: ErodeParameters = ErodeParameters((3, 3), 10)
         blur_size: Tuple[int, int] = (10, 10)
-        threshold: int = 200
         canny: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
             1, np.pi / (180 * 40), 150, 200, 150
@@ -345,14 +333,6 @@ class SplitTwoWavesParameters:
     @blur_size.setter
     def blur_size(self, val: Tuple[int, int]) -> None:
         self.__param.blur_size = val
-
-    @property
-    def threshold(self) -> int:
-        return self.__param.threshold
-
-    @threshold.setter
-    def threshold(self, val: int) -> None:
-        self.__param.threshold = val
 
     @property
     def canny(self) -> CannyParameters:
@@ -470,25 +450,97 @@ def __found_candidates_split_line_with_line(
     )
 
 
+def __loop_to_find_best_mean_angle_pos(
+    histogram_posx: Any,
+    histogram_posx_maxy: Any,
+    histogram_posx_miny: Any,
+    size: Tuple[int, int],
+    valid_lines: List[Tuple[int, int, int, int]],
+) -> Tuple[float, int]:
+    width, height = size
+
+    old_angle_i = 0.0
+    n_same_angle = 0
+    posx = 0
+    for __size__ in range(1, 100, 2):
+        histogram_posx_blur = cv2.GaussianBlur(
+            histogram_posx,
+            (1, __size__),
+            __size__,
+            borderType=cv2.BORDER_REPLICATE,
+        )
+        histogram_list_of_top = np.zeros(width + 1)
+        list_of_top = compute.get_tops_indices_histogram(histogram_posx_blur)
+        top_found = False
+        for i in list_of_top:
+            length_i = max(
+                histogram_posx_maxy[i - __size__ : i + __size__]
+            ) - min(histogram_posx_miny[i - __size__ : i + __size__])
+            if length_i > 0.5 * height:
+                top_found = True
+                histogram_list_of_top[i] = sum(
+                    filter(
+                        lambda x: x > 0,
+                        histogram_posx_maxy[i - __size__ : i + __size__]
+                        - histogram_posx_miny[i - __size__ : i + __size__],
+                    )
+                )
+        if not top_found:
+            continue
+        histogram_list_of_top_blur = cv2.GaussianBlur(
+            histogram_list_of_top,
+            (1, __size__),
+            __size__,
+            borderType=cv2.BORDER_REPLICATE,
+        )
+        posx = np.argmax(histogram_list_of_top_blur)
+
+        count = 0
+        anglex = 0.0
+
+        all_angle_pos = map(
+            lambda x: compute.get_angle_0_180_posx((x[0], x[1]), (x[2], x[3])),
+            valid_lines,
+        )
+        valid_angle_pos = filter(
+            lambda x: x[1] is not None
+            # pylint: disable=cell-var-from-loop
+            and x[1] - __size__ <= posx <= x[1] + __size__,
+            all_angle_pos,
+        )
+
+        for angle, _ in valid_angle_pos:
+            anglex = anglex + angle
+            count = count + 1
+
+        if count != 0:
+            if anglex / count == old_angle_i:
+                n_same_angle = n_same_angle + 1
+            else:
+                n_same_angle = 1
+            old_angle_i = anglex / count
+
+        if n_same_angle == 3:
+            break
+
+    return (old_angle_i, posx)
+
+
 def __best_candidates_split_line_with_line(
     valid_lines: List[Tuple[int, int, int, int]],
-    delta_angle: float,
     width: int,
     height: int,
 ) -> Tuple[float, int]:
-    histogram_angle = np.zeros(int(np.ceil(180 / delta_angle)) + 1)
     histogram_posx = np.zeros(width + 1)
     histogram_posx_miny = height * np.ones(width + 1)
     histogram_posx_maxy = np.zeros(width + 1)
     for point1_x, point1_y, point2_x, point2_y in valid_lines:
-        angle, pos = compute.get_angle_0_180_posx(
+        _, pos = compute.get_angle_0_180_posx(
             (point1_x, point1_y), (point2_x, point2_y)
         )
-        i = int(round(angle / delta_angle))
         length = np.linalg.norm(
             np.array((point1_x, point1_y)) - np.array((point2_x, point2_y))
         )
-        histogram_angle[i] = histogram_angle[i] + length
         histogram_posx[pos] = histogram_posx[pos] + length
         histogram_posx_miny[pos] = min(
             histogram_posx_miny[pos], point1_y, point2_y
@@ -497,33 +549,12 @@ def __best_candidates_split_line_with_line(
             histogram_posx_maxy[pos], point1_y, point2_y
         )
 
-    histogram_angle_blur = cv2.GaussianBlur(
-        histogram_angle, (9, 9), 9, borderType=cv2.BORDER_REPLICATE
-    )
-    histogram_posx_blur = cv2.GaussianBlur(
-        histogram_posx, (1, 21), 21, borderType=cv2.BORDER_REPLICATE
-    )
-    histogram_list_of_top = np.zeros(width + 1)
-    list_of_top = compute.get_tops_indices_histogram(histogram_posx_blur)
-    for i in list_of_top:
-        length_i = max(histogram_posx_maxy[i - 8 : i + 8]) - min(
-            histogram_posx_miny[i - 8 : i + 8]
-        )
-        if length_i > 0.7 * height:
-            histogram_list_of_top[i] = sum(
-                filter(
-                    lambda x: x > 0,
-                    histogram_posx_maxy[i - 8 : i + 8]
-                    - histogram_posx_miny[i - 8 : i + 8],
-                )
-            )
-    histogram_list_of_top_blur = cv2.GaussianBlur(
-        histogram_list_of_top, (1, 31), 31, borderType=cv2.BORDER_REPLICATE
-    )
-
-    return (
-        np.argmax(histogram_angle_blur) * delta_angle,
-        np.argmax(histogram_list_of_top_blur),
+    return __loop_to_find_best_mean_angle_pos(
+        histogram_posx,
+        histogram_posx_maxy,
+        histogram_posx_miny,
+        (width, height),
+        valid_lines,
     )
 
 
@@ -559,7 +590,6 @@ def found_split_line_with_line(
 
     (angle_1, posx_1,) = __best_candidates_split_line_with_line(
         valid_lines,
-        param.hough_lines.delta_tetha / np.pi * 180.0 / 10.0,
         cv2ext.get_hw(image)[1],
         cv2ext.get_hw(image)[0],
     )
@@ -694,9 +724,11 @@ def found_split_line_with_wave(
         image, parameters.blur_size, False
     )
     cv2ext.write_image_if(blurimg, enable_debug, "_2.png")
+    blurimg_equ = cv2.equalizeHist(blurimg)
+    cv2ext.write_image_if(blurimg_equ, enable_debug, "_2b.png")
     _, threshold = cv2.threshold(
-        blurimg,
-        parameters.threshold,
+        blurimg_equ,
+        cv2ext.threshold_from_gaussian_histogram(blurimg_equ),
         255,
         cv2.THRESH_BINARY,
     )
