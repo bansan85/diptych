@@ -74,11 +74,13 @@ def found_angle_unskew_page(lines: Any, delta_angle: float) -> Any:
             np.array((line[0], line[1])) - np.array((line[2], line[3]))
         )
         histogram[i] = histogram[i] + length
-    histogram_blur = cv2.GaussianBlur(
-        histogram, (9, 9), 9, 9, cv2.BORDER_REPLICATE
-    )
 
-    return np.argmax(histogram_blur) * delta_angle
+    histogram_blur = cv2ext.gaussian_blur_wrap(histogram, 9)
+
+    retval = np.argmax(histogram_blur) * delta_angle
+    if retval >= 45.0:
+        retval = retval - 90.0
+    return retval
 
 
 def find_rotation(

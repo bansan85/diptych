@@ -314,3 +314,20 @@ def threshold_from_gaussian_histogram(
             i = j
             break
     return int(pourcentage * i)
+
+
+def gaussian_blur_wrap(histogram: Any, kernel_size: int) -> Any:
+    histogram_wrap = np.concatenate(
+        [
+            histogram[-kernel_size:],
+            histogram,
+            histogram[:kernel_size],
+        ]
+    )
+    histogram_wrap_blur = cv2.GaussianBlur(
+        histogram_wrap,
+        (1, kernel_size),
+        kernel_size,
+        borderType=cv2.BORDER_REPLICATE,
+    )
+    return histogram_wrap_blur[kernel_size:-kernel_size]
