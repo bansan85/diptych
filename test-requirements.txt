@@ -1,0 +1,10 @@
+# Need pylint >= 2.6 to avoid false positive (bad-continuation).
+# https://github.com/PyCQA/pylint/issues/289
+pylint>=2.6
+flake8
+prospector
+pycodestyle
+mypy
+pytest
+pytest-cov
+pytest-xdist

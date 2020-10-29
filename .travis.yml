@@ -24,6 +24,7 @@ jobs:
         - bash ./travis/register_ssh_key.sh
       install:
         - pip install -r requirements.txt
+        - pip install -r test-requirements.txt
       script:
         - bash ./travis/run-tests.sh
 
@@ -35,6 +36,7 @@ jobs:
         - bash ./travis/register_ssh_key.sh
       install:
         - pip install -r requirements.txt
+        - pip install -r test-requirements.txt
       script:
         - bash ./travis/run-tests.sh
 
@@ -46,5 +48,6 @@ jobs:
         - bash ./travis/register_ssh_key.sh
       install:
         - pip install -r requirements.txt
+        - pip install -r test-requirements.txt
       script:
         - bash ./travis/run-tests.sh
