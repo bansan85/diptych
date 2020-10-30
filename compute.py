@@ -14,6 +14,7 @@ import sys
 import time
 
 import numpy as np
+from scipy.stats import norm
 
 _T = TypeVar("_T")
 
@@ -251,3 +252,7 @@ def get_tops_indices_histogram(smooth: Any) -> List[int]:
     if smooth[len(smooth) - 1] > smooth[len(smooth) - 2]:
         retval.append(len(smooth) - 1)
     return retval
+
+
+def norm_cdf(value: float, mean: float, std: float) -> float:
+    return norm.cdf(value, mean, std)

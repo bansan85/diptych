@@ -52,17 +52,18 @@ class SeparatePage:
             image, param2, compute.optional_concat(enable_debug, "_2")
         )
 
-        angle_moy, pos_moy = page.split.find_best_split_in_all_candidates(
-            first, second
-        )
+        (
+            self.__angle_split,
+            pos_moy,
+        ) = page.split.find_best_split_in_all_candidates(first, second)
 
         self.__output.print(
-            ConstString.separation_double_page_angle(), angle_moy
+            ConstString.separation_double_page_angle(), self.__angle_split
         )
         self.__output.print(ConstString.separation_double_page_y(), pos_moy)
 
         page_gauche, page_droite = cv2ext.split_image(
-            image, angle_moy, pos_moy
+            image, self.__angle_split, pos_moy
         )
 
         cv2ext.write_image_if(page_gauche, enable_debug, "_3_1.png")
@@ -79,7 +80,7 @@ class SeparatePage:
         enable_debug: Optional[str],
     ) -> Any:
         rotate_angle = page.unskew.find_rotation(
-            image, n_page, parameters, enable_debug
+            image, n_page, parameters, self.__angle_split - 90.0, enable_debug
         )
 
         self.__output.print(ConstString.page_rotation(n_page), rotate_angle)
@@ -281,6 +282,7 @@ class SeparatePage:
         self.__output.close()
 
     __output: PrintInterface
+    __angle_split: float
 
 
 def get_absolute_from_current_path(root: str, filename: str) -> str:

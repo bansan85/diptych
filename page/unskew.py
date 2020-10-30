@@ -62,7 +62,9 @@ class UnskewPageParameters:
             raise Exception("Invalid property.", key)
 
 
-def found_angle_unskew_page(lines: Any, delta_angle: float) -> Any:
+def found_angle_unskew_page(
+    lines: Any, delta_angle: float, approximate_angle: float
+) -> Any:
     histogram = np.zeros(int(np.ceil(90 / delta_angle)) + 1)
     for line in lines:
         angle = (
@@ -76,8 +78,21 @@ def found_angle_unskew_page(lines: Any, delta_angle: float) -> Any:
         histogram[i] = histogram[i] + length
 
     histogram_blur = cv2ext.gaussian_blur_wrap(histogram, 9)
+    histogram_blur_top = compute.get_tops_indices_histogram(histogram_blur)
+    histogram_blur_top_sorted = sorted(
+        histogram_blur_top,
+        key=lambda x: (
+            1.
+            - 2.
+            * np.absolute(
+                compute.norm_cdf(x * delta_angle, approximate_angle, 10.) - 0.5
+            )
+        )
+        * histogram_blur[x],
+        reverse=True,
+    )
 
-    retval = np.argmax(histogram_blur) * delta_angle
+    retval = histogram_blur_top_sorted[0] * delta_angle
     if retval >= 45.0:
         retval = retval - 90.0
     return retval
@@ -87,6 +102,7 @@ def find_rotation(
     image: Any,
     n_page: int,
     parameters: UnskewPageParameters,
+    approximate_angle: float,
     enable_debug: Optional[str],
 ) -> float:
     cv2ext.write_image_if(image, enable_debug, "_" + str(n_page) + "_1.png")
@@ -187,4 +203,5 @@ def find_rotation(
     return found_angle_unskew_page(
         lines_filtered,
         parameters.hough_lines.delta_tetha / np.pi * 180.0,
+        approximate_angle,
     )
