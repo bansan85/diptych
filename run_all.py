@@ -1,6 +1,7 @@
 # import multiprocessing
 
 import script
+import tests.test_images
 
 
 def execute(filename: str) -> None:
@@ -10,6 +11,8 @@ def execute(filename: str) -> None:
     # except:
     #    print("ECHEC :", filename)
 
+
+tests.test_images.test_image_failed_to_rotate_png()
 
 execute("C:/Users/vlea/wsl/ocr_img/im-013.png")
 execute("C:/Users/vlea/wsl/ocr_img/im-014.png")

@@ -110,6 +110,7 @@ def find_rotation(
     images_mask = page.find_images.find_images(
         image,
         parameters.find_images,
+        approximate_angle,
         compute.optional_concat(
             enable_debug, "_" + str(n_page) + "_1______.png"
         ),

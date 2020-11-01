@@ -13,7 +13,7 @@ class FindImageParameters:
         kernel_blur_size: Tuple[int, int]
         kernel_morphology_size: Tuple[int, int]
         blur_black_white: Tuple[int, int]
-        image_edges: int
+        epsilon_approx_poly: float
         min_area: float
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -22,7 +22,7 @@ class FindImageParameters:
         kernel_blur_size: Tuple[int, int],
         kernel_morphology_size: Tuple[int, int],
         blur_black_white: Tuple[int, int],
-        image_edges: int,
+        epsilon_approx_poly: float,
         min_area: float,
     ):
         self.__param = FindImageParameters.Impl(
@@ -30,7 +30,7 @@ class FindImageParameters:
             kernel_blur_size=kernel_blur_size,
             kernel_morphology_size=kernel_morphology_size,
             blur_black_white=blur_black_white,
-            image_edges=image_edges,
+            epsilon_approx_poly=epsilon_approx_poly,
             min_area=min_area,
         )
 
@@ -67,12 +67,12 @@ class FindImageParameters:
         self.__param.blur_black_white = val
 
     @property
-    def image_edges(self) -> int:
-        return self.__param.image_edges
+    def epsilon_approx_poly(self) -> float:
+        return self.__param.epsilon_approx_poly
 
-    @image_edges.setter
-    def image_edges(self, val: int) -> None:
-        self.__param.image_edges = val
+    @epsilon_approx_poly.setter
+    def epsilon_approx_poly(self, val: float) -> None:
+        self.__param.epsilon_approx_poly = val
 
     @property
     def min_area(self) -> float:
@@ -84,17 +84,27 @@ class FindImageParameters:
 
 
 def find_images(
-    image: Any, param: FindImageParameters, enable_debug: Optional[str]
+    image: Any,
+    param: FindImageParameters,
+    page_angle: Optional[float],
+    enable_debug: Optional[str],
 ) -> Any:
     __internal_border__ = 20
 
-    cv2ext.write_image_if(image, enable_debug, "_1.png")
+    cv2ext.write_image_if(image, enable_debug, "_1a.png")
     gray = cv2ext.force_image_to_be_grayscale(
         image, param.blur_black_white, True
     )
-    cv2ext.write_image_if(gray, enable_debug, "_2.png")
+    cv2ext.write_image_if(gray, enable_debug, "_1b.png")
+    blurimg_bc = cv2ext.apply_brightness_contrast(gray, -96, 64)
+    cv2ext.write_image_if(blurimg_bc, enable_debug, "_1c.png")
 
-    gray_no_border = cv2ext.remove_black_border_in_image(gray, enable_debug)
+    if page_angle is not None:
+        gray_no_border = cv2ext.remove_black_border_in_image(
+            blurimg_bc, page_angle, enable_debug
+        )
+    else:
+        gray_no_border = blurimg_bc
     gray_equ = cv2.equalizeHist(gray_no_border)
     cv2ext.write_image_if(gray_equ, enable_debug, "_3a.png")
     gray_bordered = cv2.copyMakeBorder(
@@ -146,16 +156,18 @@ def find_images(
         cv2.imwrite(enable_debug + "_8.png", debug_image_contours)
         debug_image_mask = np.zeros(image.shape, np.uint8)
     img_mask_erode = np.zeros(image.shape, np.uint8)
-    all_polygon = map(
-        lambda cnt: cv2ext.get_polygon_from_contour(cnt, param.image_edges),
-        contours,
-    )
     big_images = filter(
         lambda c: cv2.contourArea(c) > param.min_area * cv2ext.get_area(image),
-        all_polygon,
+        contours,
+    )
+    all_polygon = map(
+        lambda cnt: cv2.approxPolyDP(
+            cnt, param.epsilon_approx_poly * cv2ext.get_hw(image)[0], True
+        ),
+        big_images,
     )
 
-    for contour in big_images:
+    for contour in all_polygon:
         if enable_debug is not None:
             debug_image_contours = cv2.drawContours(
                 debug_image_contours, [contour], -1, (255, 0, 0), 3
@@ -190,9 +202,10 @@ def remove_points_inside_images_in_contours(
     contours: Any,
     image: Any,
     param: FindImageParameters,
+    page_angle: Optional[float],
     enable_debug: Optional[str],
 ) -> List[Any]:
-    mask_with_images = find_images(image, param, enable_debug)
+    mask_with_images = find_images(image, param, page_angle, enable_debug)
 
     contours_filtered = []
     for contour_i in contours:

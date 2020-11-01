@@ -62,7 +62,7 @@ class FoundDataTry2Parameters:
             (10, 10),
             (10, 10),
             (10, 10),
-            8,
+            0.005,
             0.01,
         )
 
@@ -276,7 +276,7 @@ def found_data_try2_find_edges(
     param: FoundDataTry2Parameters,
     enable_debug: Optional[str] = None,
 ) -> List[Any]:
-    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
+    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, True)
 
     liste_lines = []
     for i in range(2):
@@ -295,7 +295,13 @@ def found_data_try2_find_edges(
             morpho_mode1 = cv2.MORPH_CLOSE
             morpho_mode2 = cv2.MORPH_OPEN
 
-            blurimg2 = cv2.equalizeHist(blurimg)
+            blurimg_bc = cv2ext.apply_brightness_contrast(blurimg, -96, 64)
+            cv2ext.write_image_if(
+                blurimg_bc,
+                enable_debug,
+                "_" + str(n_page) + "_" + str(i) + "_5_.png",
+            )
+            blurimg2 = cv2.equalizeHist(blurimg_bc)
 
         cv2ext.write_image_if(
             blurimg2,
@@ -401,11 +407,9 @@ def found_data_try2_filter_edges(
             (point1_x, point1_y), (point2_x, point2_y)
         )
         if 90 - delta_angle <= angle <= 90 + delta_angle:
-            angle, posx = compute.get_angle_0_180_posx(
+            angle, posx = compute.get_angle_0_180_posx_safe(
                 (point1_x, point1_y), (point2_x, point2_y)
             )
-            if posx is None:
-                raise Exception("Line can't be horizontal")
             image_line = np.zeros(images_mask.shape, np.uint8)
             cv2.line(
                 image_line,
@@ -422,11 +426,9 @@ def found_data_try2_filter_edges(
                     ((point1_x, point1_y), (point2_x, point2_y))
                 )
         if angle <= delta_angle or angle > 180 - delta_angle:
-            angle, posy = compute.get_alpha_posy(
+            angle, posy = compute.get_angle_0_180_posy_safe(
                 (point1_x, point1_y), (point2_x, point2_y)
             )
-            if posy is None:
-                raise Exception("Line can't be vertical")
             image_line = np.zeros(images_mask.shape, np.uint8)
             cv2.line(
                 image_line,
@@ -463,16 +465,12 @@ def found_data_try2_remove_duplicated_edges(
 
     for line in lines_vertical_angle:
         pt1, pt2 = line
-        _, posx = compute.get_angle_0_180_posx(pt1, pt2)
-        if posx is None:
-            raise Exception("Ligne can't be horizontal")
+        _, posx = compute.get_angle_0_180_posx_safe(pt1, pt2)
         histogram_vertical[posx] = histogram_vertical.get(posx, 0) + 1
         histogram_vertical_points[posx] = line
     for line in lines_horizontal_angle:
         pt1, pt2 = line
-        _, posy = compute.get_alpha_posy(pt1, pt2)
-        if posy is None:
-            raise Exception("Ligne can't be vertical")
+        _, posy = compute.get_angle_0_180_posy_safe(pt1, pt2)
         histogram_horizontal[posy] = histogram_horizontal.get(posy, 0) + 1
         histogram_horizontal_points[posy] = line
 
@@ -507,24 +505,16 @@ def found_data_try2_remove_duplicated_edges(
     return lines_vertical_angle_keep, lines_horizontal_angle_keep
 
 
-def found_data_try2_is_contour_around_images(
-    zone: Tuple[int, int, int, int],
-    lines_vertical_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
-    lines_horizontal_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
-    images_mask: Any,
-) -> Optional[Any]:
-    point1_x, point1_y = compute.line_intersection(
-        lines_vertical_angle[zone[0]], lines_horizontal_angle[zone[2]]
-    )
-    point2_x, point2_y = compute.line_intersection(
-        lines_vertical_angle[zone[0]], lines_horizontal_angle[zone[3]]
-    )
-    point3_x, point3_y = compute.line_intersection(
-        lines_vertical_angle[zone[1]], lines_horizontal_angle[zone[2]]
-    )
-    point4_x, point4_y = compute.line_intersection(
-        lines_vertical_angle[zone[1]], lines_horizontal_angle[zone[3]]
-    )
+def convert_line_to_contour(
+    line0: Tuple[Tuple[int, int], Tuple[int, int]],
+    line1: Tuple[Tuple[int, int], Tuple[int, int]],
+    line2: Tuple[Tuple[int, int], Tuple[int, int]],
+    line3: Tuple[Tuple[int, int], Tuple[int, int]],
+) -> Any:
+    point1_x, point1_y = compute.line_intersection(line0, line2)
+    point2_x, point2_y = compute.line_intersection(line0, line3)
+    point3_x, point3_y = compute.line_intersection(line1, line2)
+    point4_x, point4_y = compute.line_intersection(line1, line3)
 
     xmoy = (point1_x + point2_x + point3_x + point4_x) // 4
     ymoy = (point1_y + point2_y + point3_y + point4_y) // 4
@@ -538,7 +528,21 @@ def found_data_try2_is_contour_around_images(
     list_of_points.sort(
         key=lambda x: compute.get_angle__180_180((xmoy, ymoy), (x[0], x[1]))
     )
-    cnti = np.asarray(list_of_points)
+    return np.asarray(list_of_points)
+
+
+def found_data_try2_is_contour_around_images(
+    zone: Tuple[int, int, int, int],
+    lines_vertical_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
+    lines_horizontal_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
+    images_mask: Any,
+) -> Optional[Any]:
+    cnti = convert_line_to_contour(
+        lines_vertical_angle[zone[0]],
+        lines_vertical_angle[zone[1]],
+        lines_horizontal_angle[zone[2]],
+        lines_horizontal_angle[zone[3]],
+    )
     mask = np.zeros(images_mask.shape, np.uint8)
     mask = cv2.drawContours(mask, [cnti], -1, (255, 255, 255), -1)
     mask = cv2.bitwise_and(images_mask, mask)
@@ -554,20 +558,15 @@ def found_data_try2_find_smallest_rectangular_with_all_images_inside(
     lines_vertical_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
     lines_horizontal_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
     images_mask: Any,
-) -> Optional[Any]:
-    cnt = []
-
-    v_min = 0
-    v_max = len(lines_vertical_angle) - 1
-    h_min = 0
-    h_max = len(lines_horizontal_angle) - 1
+) -> Any:
 
     # Keep the smallest rectangle that have inside all images.
+    flag_v_min: List[bool] = []
     for v_i in range(len(lines_vertical_angle)):
         v_i_min = v_i
-        v_i_max = v_max
-        h_i_min = h_min
-        h_i_max = h_max
+        v_i_max = len(lines_vertical_angle) - 1
+        h_i_min = 0
+        h_i_max = len(lines_horizontal_angle) - 1
 
         cnti = found_data_try2_is_contour_around_images(
             (v_i_min, v_i_max, h_i_min, h_i_max),
@@ -575,15 +574,13 @@ def found_data_try2_find_smallest_rectangular_with_all_images_inside(
             lines_horizontal_angle,
             images_mask,
         )
-        if cnti is None:
-            break
-        v_min = v_i
-        cnt = cnti
-    for v_i in range(len(lines_vertical_angle) - 1, v_min, -1):
-        v_i_min = v_min
+        flag_v_min.append(cnti is not None)
+    flag_v_max: List[bool] = []
+    for v_i in range(len(lines_vertical_angle) - 1, -1, -1):
+        v_i_min = 0
         v_i_max = v_i
-        h_i_min = h_min
-        h_i_max = h_max
+        h_i_min = 0
+        h_i_max = len(lines_horizontal_angle) - 1
 
         cnti = found_data_try2_is_contour_around_images(
             (v_i_min, v_i_max, h_i_min, h_i_max),
@@ -591,15 +588,13 @@ def found_data_try2_find_smallest_rectangular_with_all_images_inside(
             lines_horizontal_angle,
             images_mask,
         )
-        if cnti is None:
-            break
-        v_i_max = v_i
-        cnt = cnti
+        flag_v_max.insert(0, cnti is not None)
+    flag_h_min: List[bool] = []
     for h_i in range(len(lines_horizontal_angle)):
-        v_i_min = v_min
-        v_i_max = v_max
+        v_i_min = 0
+        v_i_max = len(lines_vertical_angle) - 1
         h_i_min = h_i
-        h_i_max = h_max
+        h_i_max = len(lines_horizontal_angle) - 1
 
         cnti = found_data_try2_is_contour_around_images(
             (v_i_min, v_i_max, h_i_min, h_i_max),
@@ -607,15 +602,12 @@ def found_data_try2_find_smallest_rectangular_with_all_images_inside(
             lines_horizontal_angle,
             images_mask,
         )
-        if cnti is None:
-            break
-        h_min = h_i
-        cnt = cnti
-
-    for h_i in range(len(lines_horizontal_angle) - 1, h_min, -1):
-        v_i_min = v_min
-        v_i_max = v_max
-        h_i_min = h_min
+        flag_h_min.append(cnti is not None)
+    flag_h_max: List[bool] = []
+    for h_i in range(len(lines_horizontal_angle) - 1, -1, -1):
+        v_i_min = 0
+        v_i_max = len(lines_vertical_angle) - 1
+        h_i_min = 0
         h_i_max = h_i
 
         cnti = found_data_try2_is_contour_around_images(
@@ -624,23 +616,22 @@ def found_data_try2_find_smallest_rectangular_with_all_images_inside(
             lines_horizontal_angle,
             images_mask,
         )
-        if cnti is None:
-            break
-        h_max = h_i
-        cnt = cnti
+        flag_h_max.insert(0, cnti is not None)
 
-    if len(cnt) == 0:
-        return None
-
-    return cv2ext.get_polygon_from_contour(cnt, 4)
+    return cv2ext.bounding_rectangle(
+        cv2ext.get_hw(images_mask),
+        (lines_vertical_angle, lines_horizontal_angle),
+        (flag_v_min, flag_v_max, flag_h_min, flag_h_max),
+    )
 
 
 def found_data_try2(
     image: Any,
     n_page: int,
     param: FoundDataTry2Parameters,
+    page_angle: float,
     enable_debug: Optional[str] = None,
-) -> Optional[Any]:
+) -> Any:
     liste_lines = found_data_try2_find_edges(
         image, n_page, param, enable_debug
     )
@@ -648,6 +639,7 @@ def found_data_try2(
     images_mask = page.find_images.find_images(
         image,
         param.find_images,
+        page_angle,
         compute.optional_concat(enable_debug, "_A_crop_" + str(n_page)),
     )
 
@@ -663,8 +655,12 @@ def found_data_try2(
         lines_vertical_angle, lines_horizontal_angle
     )
 
-    lines_vertical_angle.sort(key=compute.sort_edges_by_posx)
-    lines_horizontal_angle.sort(key=compute.sort_edges_by_posy)
+    lines_vertical_angle.sort(
+        key=lambda x: compute.get_angle_0_180_posx_safe(x[0], x[1])[1]
+    )
+    lines_horizontal_angle.sort(
+        key=lambda x: compute.get_angle_0_180_posy_safe(x[0], x[1])[1]
+    )
 
     return found_data_try2_find_smallest_rectangular_with_all_images_inside(
         lines_vertical_angle, lines_horizontal_angle, images_mask
@@ -675,6 +671,7 @@ def crop_around_page(
     image: Any,
     n_page: int,
     parameters: CropAroundDataInPageParameters,
+    page_angle: float,
     enable_debug: Optional[str] = None,
 ) -> Tuple[int, int, int, int]:
     cv2ext.write_image_if(image, enable_debug, "_" + str(n_page) + "_1.png")
@@ -685,11 +682,8 @@ def crop_around_page(
 
     if rect is None:
         rect = page.crop.found_data_try2(
-            image, n_page, parameters.found_data_try2, enable_debug
+            image, n_page, parameters.found_data_try2, page_angle, enable_debug
         )
-
-    if rect is None:
-        raise Exception("Failed to found contour of the page.")
 
     if enable_debug is not None:
         image_cnt = cv2ext.convertion_en_couleur(image)

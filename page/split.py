@@ -306,7 +306,7 @@ class SplitTwoWavesParameters:
         delta_rho: int = 200
         delta_tetha: float = 20.0
         find_images: FindImageParameters = FindImageParameters(
-            0.02, (10, 10), (10, 10), (10, 10), 8, 0.01
+            0.02, (10, 10), (10, 10), (10, 10), 0.005, 0.01
         )
         find_candidates: FindCandidatesSplitLineWithWaveParameters = (
             FindCandidatesSplitLineWithWaveParameters(
@@ -399,9 +399,11 @@ def __found_candidates_split_line_with_line(
     enable_debug: Optional[str] = None,
 ) -> Iterable[Tuple[int, int, int, int]]:
     blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
-    cv2ext.write_image_if(blurimg, enable_debug, "_2_2.png")
-    blurimg_equ = cv2.equalizeHist(blurimg)
-    cv2ext.write_image_if(blurimg_equ, enable_debug, "_2_2b.png")
+    cv2ext.write_image_if(blurimg, enable_debug, "_2_2a.png")
+    blurimg_bc = cv2ext.apply_brightness_contrast(blurimg, -96, 64)
+    cv2ext.write_image_if(blurimg_bc, enable_debug, "_2_2b.png")
+    blurimg_equ = cv2.equalizeHist(blurimg_bc)
+    cv2ext.write_image_if(blurimg_equ, enable_debug, "_2_2c.png")
     _, threshold = cv2.threshold(
         blurimg_equ,
         cv2ext.threshold_from_gaussian_histogram(blurimg_equ),
@@ -478,13 +480,7 @@ def __loop_to_find_best_mean_angle_pos(
             ) - min(histogram_posx_miny[i - __size__ : i + __size__])
             if length_i > 0.5 * height:
                 top_found = True
-                histogram_list_of_top[i] = sum(
-                    filter(
-                        lambda x: x > 0,
-                        histogram_posx_maxy[i - __size__ : i + __size__]
-                        - histogram_posx_miny[i - __size__ : i + __size__],
-                    )
-                )
+                histogram_list_of_top[i] = length_i
         if not top_found:
             continue
         histogram_list_of_top_blur = cv2.GaussianBlur(
@@ -520,7 +516,7 @@ def __loop_to_find_best_mean_angle_pos(
                 n_same_angle = 1
             old_angle_i = anglex / count
 
-        if n_same_angle == 3:
+        if n_same_angle == 7:
             break
 
     return (old_angle_i, posx)
@@ -588,7 +584,7 @@ def found_split_line_with_line(
             "Failed to find candidates for the separator line.",
         )
 
-    (angle_1, posx_1,) = __best_candidates_split_line_with_line(
+    (angle_1, posx_1) = __best_candidates_split_line_with_line(
         valid_lines,
         cv2ext.get_hw(image)[1],
         cv2ext.get_hw(image)[0],
@@ -717,15 +713,18 @@ def __found_candidates_split_line_with_wave(
 def found_split_line_with_wave(
     image: Any,
     parameters: FoundSplitLineWithWave,
+    page_angle: Optional[float],
     enable_debug: Optional[str] = None,
 ) -> Tuple[float, int]:
     cv2ext.write_image_if(image, enable_debug, "_1.png")
     blurimg = cv2ext.force_image_to_be_grayscale(
         image, parameters.blur_size, False
     )
-    cv2ext.write_image_if(blurimg, enable_debug, "_2.png")
-    blurimg_equ = cv2.equalizeHist(blurimg)
-    cv2ext.write_image_if(blurimg_equ, enable_debug, "_2b.png")
+    cv2ext.write_image_if(blurimg, enable_debug, "_2a.png")
+    blurimg_bc = cv2ext.apply_brightness_contrast(blurimg, -96, 64)
+    cv2ext.write_image_if(blurimg_bc, enable_debug, "_2b.png")
+    blurimg_equ = cv2.equalizeHist(blurimg_bc)
+    cv2ext.write_image_if(blurimg_equ, enable_debug, "_2c.png")
     _, threshold = cv2.threshold(
         blurimg_equ,
         cv2ext.threshold_from_gaussian_histogram(blurimg_equ),
@@ -783,6 +782,7 @@ def found_split_line_with_wave(
         sorted_contours,
         image,
         parameters.find_images,
+        None if page_angle is None else page_angle - 90.0,
         compute.optional_concat(enable_debug, "_4c_wave"),
     )
 
@@ -824,7 +824,9 @@ def found_split_line_with_wave(
             5,
         )
         cv2.imwrite(enable_debug + "_7.png", image_with_lines)
-    angle_ret, posx_ret = compute.get_angle_0_180_posx(bottompoint, toppoint)
+    angle_ret, posx_ret = compute.get_angle_0_180_posx_safe(
+        bottompoint, toppoint
+    )
     if posx_ret is None:
         raise Exception("Failed to found vertical line.")
     return angle_ret, posx_ret

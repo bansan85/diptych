@@ -49,7 +49,10 @@ class SeparatePage:
             parameters.find_candidates,
         )
         second = page.split.found_split_line_with_wave(
-            image, param2, compute.optional_concat(enable_debug, "_2")
+            image,
+            param2,
+            first[0],
+            compute.optional_concat(enable_debug, "_2"),
         )
 
         (
@@ -100,7 +103,7 @@ class SeparatePage:
         enable_debug: Optional[str],
     ) -> Tuple[Any, Tuple[int, int, int, int], int, int]:
         crop_rect_size = page.crop.crop_around_page(
-            image, n_page, parameters, enable_debug
+            image, n_page, parameters, self.__angle_split - 90.0, enable_debug
         )
 
         page_gauche_0 = cv2ext.crop_rectangle(image, crop_rect_size)

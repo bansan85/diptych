@@ -37,7 +37,7 @@ def get_polygon_from_contour(contour: Any, number_of_vertices: int) -> Any:
     last_contour_size = 0
 
     while True:
-        contour_i: Any = cv2.approxPolyDP(
+        contour_i = cv2.approxPolyDP(
             contour, epsilon * arc_length_contour, True
         )
         if len(contour_i) == number_of_vertices:
@@ -245,35 +245,221 @@ def write_image_if(
         cv2.imwrite(enable_debug + filename, image)
 
 
+def __find_longest_lines_in_border(
+    shape: Tuple[int, int], epsilon: int, cnt: Any
+) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
+    height, width = shape
+    left_top = height
+    left_bottom = 0
+    right_top = height
+    right_bottom = 0
+    top_left = width
+    top_right = 0
+    bottom_left = width
+    bottom_right = 0
+    for pt1, pt2 in compute.iterator_zip_n_n_1(cnt):
+        point1_x, point1_y = pt1[0]
+        point2_x, point2_y = pt2[0]
+        if point1_x <= epsilon and point2_x <= epsilon:
+            left_top = min(left_top, point1_y, point2_y)
+            left_bottom = max(left_bottom, point1_y, point2_y)
+        if point1_y <= epsilon and point2_y <= epsilon:
+            top_left = min(top_left, point1_x, point2_x)
+            top_right = max(top_right, point1_x, point2_x)
+        if point1_x >= width - 1 - epsilon and point2_x >= width - 1 - epsilon:
+            right_top = min(right_top, point1_y, point2_y)
+            right_bottom = max(right_bottom, point1_y, point2_y)
+        if (
+            point1_y >= height - 1 - epsilon
+            and point2_y >= height - 1 - epsilon
+        ):
+            bottom_left = min(bottom_left, point1_x, point2_x)
+            bottom_right = max(bottom_right, point1_x, point2_x)
+    return (
+        (left_top, left_bottom),
+        (right_top, right_bottom),
+        (top_left, top_right),
+        (bottom_left, bottom_right),
+    )
+
+
+def __insert_border_in_mask(
+    cnt: Any,
+    threshold2: Any,
+    mask_border_only: Any,
+    epsilon: Tuple[int, float],
+    page_angle: float,
+) -> None:
+    epsilon_border, epsilon_angle = epsilon
+    height, width = get_hw(threshold2)
+    cnt2 = cnt[cnt[:, 0, 0] > epsilon_border]
+    cnt3 = cnt2[cnt2[:, 0, 0] < width - 1 - epsilon_border]
+    cnt4 = cnt3[cnt3[:, 0, 1] > epsilon_border]
+    cnt5 = cnt4[cnt4[:, 0, 1] < height - 1 - epsilon_border]
+    if len(cnt5) == 0:
+        return
+    contour_approximate = cv2.approxPolyDP(cnt5, epsilon_border, True)
+    all_pair = list(compute.iterator_zip_n_n_1(contour_approximate))
+    all_pair_no_single_pixel = list(
+        filter(
+            lambda x: x[0][0][0] != x[1][0][0] or x[0][0][1] != x[1][0][1],
+            all_pair,
+        )
+    )
+    all_angles = list(
+        map(
+            lambda x: (
+                (x[0][0], x[1][0]),
+                compute.get_angle_0_180(x[0][0], x[1][0]),
+                np.linalg.norm(x[0][0] - x[1][0]),
+            ),
+            all_pair_no_single_pixel,
+        )
+    )
+    vertical_lines = list(
+        filter(
+            lambda x: compute.is_angle_closed_to(
+                x[1], page_angle + 90.0, epsilon_angle, 180
+            ),
+            all_angles,
+        )
+    )
+    horizontal_lines = list(
+        filter(
+            lambda x: compute.is_angle_closed_to(
+                x[1], page_angle, epsilon_angle, 180
+            ),
+            all_angles,
+        )
+    )
+    vertical_lines_pos = list(
+        map(
+            lambda x: (
+                compute.get_angle_0_180_posx_safe(x[0][0], x[0][1])[1],
+                x[1],
+            ),
+            vertical_lines,
+        )
+    )
+    horizontal_lines_pos = list(
+        map(
+            lambda x: (
+                compute.get_angle_0_180_posy_safe(x[0][0], x[0][1])[1],
+                x[1],
+            ),
+            horizontal_lines,
+        )
+    )
+    vertical_lines_pos.sort(key=lambda x: x[0])
+    horizontal_lines_pos.sort(key=lambda x: x[0])
+    for posx, angle in vertical_lines_pos:
+        mask = np.zeros((height, width), np.uint8)
+        bottom_point = compute.get_bottom_point_from_alpha_posx(
+            angle, posx, height
+        )
+        if posx < width / 2:
+            pts = np.array(
+                [
+                    [-1, 0],
+                    [posx - 1, 0],
+                    [bottom_point[0] - 1, bottom_point[1]],
+                    [-1, height - 1],
+                ]
+            )
+        else:
+            pts = np.array(
+                [
+                    [width, 0],
+                    [posx + 1, 0],
+                    [bottom_point[0] + 1, bottom_point[1]],
+                    [width, height - 1],
+                ]
+            )
+        mask = cv2.drawContours(mask, [pts], 0, 255, -1)
+        histogram = cv2.calcHist([threshold2], [0], mask, [2], [0, 256])
+        if 0.1 * histogram[0] > sum(histogram[1:]) or 0.1 * histogram[
+            -1
+        ] > sum(histogram[:-1]):
+            mask_border_only = cv2.drawContours(
+                mask_border_only, [pts], 0, (0), -1
+            )
+    for posy, angle in horizontal_lines_pos:
+        mask = np.zeros((height, width), np.uint8)
+        bottom_point = compute.get_right_point_from_alpha_posy(
+            angle, posy, width
+        )
+        if posy < height / 2:
+            pts = np.array(
+                [
+                    [0, -1],
+                    [0, posy - 1],
+                    [bottom_point[0], bottom_point[1] - 1],
+                    [width - 1, -1],
+                ]
+            )
+        else:
+            pts = np.array(
+                [
+                    [0, height],
+                    [0, posy + 1],
+                    [bottom_point[0], bottom_point[1] + 1],
+                    [width - 1, height],
+                ]
+            )
+        mask = cv2.drawContours(mask, [pts], 0, 255, -1)
+        histogram = cv2.calcHist([threshold2], [0], mask, [2], [0, 256])
+        if 0.1 * histogram[0] > sum(histogram[1:]) or 0.1 * histogram[
+            -1
+        ] > sum(histogram[:-1]):
+            mask_border_only = cv2.drawContours(
+                mask_border_only, [pts], 0, (0), -1
+            )
+
+
 def remove_black_border_in_image(
-    gray_bordered: Any, enable_debug: Optional[str]
+    gray_bordered: Any, page_angle: float, enable_debug: Optional[str]
 ) -> Any:
     gray_bordered2 = cv2.bitwise_not(gray_bordered)
     write_image_if(gray_bordered2, enable_debug, "_2a.png")
     _, threshold = cv2.threshold(gray_bordered, 15, 255, cv2.THRESH_BINARY)
     write_image_if(threshold, enable_debug, "_2b.png")
+    threshold2 = cv2.bitwise_not(threshold)
+    write_image_if(threshold2, enable_debug, "_2b2.png")
     contours, _ = cv2.findContours(
-        threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        threshold2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
-    mask_border_only = np.zeros(shape=gray_bordered.shape, dtype=np.uint8)
+    if enable_debug is not None:
+        image_contours = cv2.drawContours(
+            convertion_en_couleur(gray_bordered), contours, -1, (0, 0, 255), 3
+        )
+        write_image_if(image_contours, enable_debug, "_2b3.png")
+    __epsilon__ = 5
+    mask_border_only = 255 * np.ones(shape=gray_bordered.shape, dtype=np.uint8)
     height, width = get_hw(gray_bordered)
+    __angle_tolerance__ = 3.0
     for cnt in contours:
-        draw = False
-        for ptx in cnt:
-            point_x, point_y = ptx[0]
-            if (
-                point_x <= 0
-                or point_y <= 0
-                or point_x >= width - 1
-                or point_y >= height - 1
-            ):
-                draw = True
-                break
-        if draw:
-            mask_border_only = cv2.drawContours(
-                mask_border_only, [cnt], 0, (255), -1
+        (
+            (left_top, left_bottom),
+            (right_top, right_bottom),
+            (top_left, top_right),
+            (bottom_left, bottom_right),
+        ) = __find_longest_lines_in_border((height, width), __epsilon__, cnt)
+
+        if (
+            left_bottom - left_top > 0
+            or top_right - top_left > 0
+            or right_bottom - right_top > 0
+            or bottom_right - bottom_left > 0
+        ):
+            __insert_border_in_mask(
+                cnt,
+                threshold2,
+                mask_border_only,
+                (__epsilon__, __angle_tolerance__),
+                page_angle,
             )
 
+    # Borders are in black.
     write_image_if(mask_border_only, enable_debug, "_2c.png")
     res = cv2.bitwise_and(
         gray_bordered2, gray_bordered2, mask=mask_border_only
@@ -331,3 +517,123 @@ def gaussian_blur_wrap(histogram: Any, kernel_size: int) -> Any:
         borderType=cv2.BORDER_REPLICATE,
     )
     return histogram_wrap_blur[kernel_size:-kernel_size]
+
+
+def apply_brightness_contrast(
+    input_img: Any, brightness: int = 0, contrast: int = 0
+) -> Any:
+    if brightness != 0:
+        if brightness > 0:
+            shadow = brightness
+            highlight = 255
+        else:
+            shadow = 0
+            highlight = 255 + brightness
+        alpha_b = (highlight - shadow) / 255
+        gamma_b = shadow
+        buf = cv2.addWeighted(input_img, alpha_b, input_img, 0, gamma_b)
+    else:
+        buf = input_img.copy()
+
+    if contrast != 0:
+        alpha_c = 131 * (contrast + 127) / (127 * (131 - contrast))
+        gamma_c = 127 * (1 - alpha_c)
+        buf = cv2.addWeighted(buf, alpha_c, buf, 0, gamma_c)
+
+    return buf
+
+
+# return cv2ext.bounding_rectangle(
+#     cv2ext.get_hw(images_mask),
+#     (lines_vertical_angle, lines_horizontal_angle),
+#     (flag_v_min, flag_v_max, flag_h_min, flag_h_max),
+# )
+def bounding_rectangle(
+    shape: Tuple[int, int],
+    lines: Tuple[
+        List[Tuple[Tuple[int, int], Tuple[int, int]]],
+        List[Tuple[Tuple[int, int], Tuple[int, int]]],
+    ],
+    flags: Tuple[List[bool], List[bool], List[bool], List[bool]],
+) -> Any:
+    mask = 255 * np.ones(shape, dtype=np.uint8)
+    lines_vertical_angle, lines_horizontal_angle = lines
+
+    for line, flag in zip(lines_vertical_angle, flags[0]):
+        if not flag:
+            continue
+        pt1, pt2 = line
+        angle, posx = compute.get_angle_0_180_posx_safe(pt1, pt2)
+
+        pts = np.array(
+            [
+                [0, 0],
+                [posx, 0],
+                compute.get_bottom_point_from_alpha_posx(
+                    angle, posx, shape[0]
+                ),
+                [0, shape[0] - 1],
+            ]
+        )
+        mask = cv2.drawContours(mask, np.int32([pts]), 0, (0), -1)
+
+    for line, flag in zip(lines_vertical_angle, flags[1]):
+        if not flag:
+            continue
+        pt1, pt2 = line
+        angle, posx = compute.get_angle_0_180_posx_safe(pt1, pt2)
+
+        pts = np.array(
+            [
+                [shape[1] - 1, 0],
+                [posx, 0],
+                compute.get_bottom_point_from_alpha_posx(
+                    angle, posx, shape[0]
+                ),
+                [shape[1] - 1, shape[0] - 1],
+            ]
+        )
+        mask = cv2.drawContours(mask, np.int32([pts]), 0, (0), -1)
+
+    for line, flag in zip(lines_horizontal_angle, flags[2]):
+        if not flag:
+            continue
+        pt1, pt2 = line
+        angle, posy = compute.get_angle_0_180_posy_safe(pt1, pt2)
+
+        pts = np.array(
+            [
+                [0, 0],
+                [0, posy],
+                compute.get_right_point_from_alpha_posy(angle, posy, shape[1]),
+                [shape[1] - 1, 0],
+            ]
+        )
+        mask = cv2.drawContours(mask, np.int32([pts]), 0, (0), -1)
+
+    for line, flag in zip(lines_horizontal_angle, flags[3]):
+        if not flag:
+            continue
+        pt1, pt2 = line
+        angle, posy = compute.get_angle_0_180_posy_safe(pt1, pt2)
+
+        pts = np.array(
+            [
+                [0, shape[0] - 1],
+                [0, posy],
+                compute.get_right_point_from_alpha_posy(angle, posy, shape[1]),
+                [shape[1] - 1, shape[0] - 1],
+            ]
+        )
+        mask = cv2.drawContours(mask, np.int32([pts]), 0, (0), -1)
+
+    rectangle = cv2.boundingRect(mask)
+
+    return np.array(
+        [
+            [[rectangle[0], rectangle[1]]],
+            [[rectangle[0], rectangle[1] + rectangle[3]]],
+            [[rectangle[0] + rectangle[2], rectangle[1] + rectangle[3]]],
+            [[rectangle[0] + rectangle[2], rectangle[1]]],
+        ]
+    )

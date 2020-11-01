@@ -55,11 +55,13 @@ def get_angle_0_180_posx(
     return angle, posx
 
 
-def sort_edges_by_posx(line: Tuple[Tuple[int, int], Tuple[int, int]]) -> int:
-    _, posx = get_angle_0_180_posx(line[0], line[1])
+def get_angle_0_180_posx_safe(
+    point1: Tuple[int, int], point2: Tuple[int, int]
+) -> Tuple[float, int]:
+    angle, posx = get_angle_0_180_posx(point1, point2)
     if posx is None:
-        raise Exception("Line can't be vertical")
-    return posx
+        raise Exception("Line can't be horizontal")
+    return angle, posx
 
 
 def get_bottom_point_from_alpha_posx(
@@ -71,7 +73,7 @@ def get_bottom_point_from_alpha_posx(
     )
 
 
-def get_alpha_posy(
+def get_angle_0_180_posy(
     point1: Tuple[int, int], point2: Tuple[int, int]
 ) -> Tuple[float, Optional[int]]:
     angle = get_angle_0_180(point1, point2)
@@ -85,11 +87,13 @@ def get_alpha_posy(
     return angle, posy
 
 
-def sort_edges_by_posy(line: Tuple[Tuple[int, int], Tuple[int, int]]) -> int:
-    _, posy = get_alpha_posy(line[0], line[1])
+def get_angle_0_180_posy_safe(
+    point1: Tuple[int, int], point2: Tuple[int, int]
+) -> Tuple[float, int]:
+    angle, posy = get_angle_0_180_posy(point1, point2)
     if posy is None:
         raise Exception("Line can't be vertical")
-    return posy
+    return angle, posy
 
 
 def get_right_point_from_alpha_posy(
@@ -256,3 +260,13 @@ def get_tops_indices_histogram(smooth: Any) -> List[int]:
 
 def norm_cdf(value: float, mean: float, std: float) -> float:
     return norm.cdf(value, mean, std)
+
+
+def is_angle_closed_to(
+    value: float, objectif: float, tolerance: float, max_range: int
+) -> bool:
+    angle1 = (objectif - tolerance + max_range) % max_range
+    angle2 = (objectif + tolerance + max_range) % max_range
+    if angle1 <= angle2:
+        return angle1 <= value <= angle2
+    return value >= angle1 or value <= angle2
