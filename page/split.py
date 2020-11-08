@@ -1,5 +1,5 @@
 import types
-from typing import Union, Tuple, Any, Optional, Iterable, List
+from typing import Union, Tuple, Any, Optional, List
 
 import numpy as np
 import cv2
@@ -397,19 +397,12 @@ def __found_candidates_split_line_with_line(
     image: Any,
     param: FindCandidatesSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
-) -> Iterable[Tuple[int, int, int, int]]:
+) -> List[Tuple[int, int, int, int]]:
     blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
     cv2ext.write_image_if(blurimg, enable_debug, "_2_2a.png")
     blurimg_bc = cv2ext.apply_brightness_contrast(blurimg, -96, 64)
     cv2ext.write_image_if(blurimg_bc, enable_debug, "_2_2b.png")
-    blurimg_equ = cv2.equalizeHist(blurimg_bc)
-    cv2ext.write_image_if(blurimg_equ, enable_debug, "_2_2c.png")
-    _, threshold = cv2.threshold(
-        blurimg_equ,
-        cv2ext.threshold_from_gaussian_histogram(blurimg_equ),
-        255,
-        cv2.THRESH_BINARY,
-    )
+    threshold = blurimg_bc & 0b11000000
     cv2ext.write_image_if(threshold, enable_debug, "_2_3.png")
     erode_dilate = cv2ext.erode_and_dilate(
         threshold, param.erode.size, param.erode.iterations
@@ -437,119 +430,93 @@ def __found_candidates_split_line_with_line(
                 image, list_lines_p, (0, 0, 255), 1
             ),
         )
-    list_lines = map(lambda p: p[0], list_lines_p)
-
-    # keep vertical lines and in the center of the image
-    return filter(
-        lambda x: compute.keep_angle_pos_closed_to_target(
-            x,
-            param.limit_tetha,
-            90,
-            cv2ext.get_hw(blurimg)[1] // 2,
-            param.limit_rho,
-        ),
-        list_lines,
+    lines_valid = list(
+        filter(
+            lambda x: compute.keep_angle_pos_closed_to_target(
+                x[0],
+                param.limit_tetha,
+                90,
+                cv2ext.get_hw(blurimg)[1] // 2,
+                param.limit_rho,
+            ),
+            list_lines_p,
+        )
     )
+    if enable_debug is not None:
+        cv2.imwrite(
+            enable_debug + "_2_7.png",
+            cv2ext.draw_lines_from_hough_lines(
+                image, lines_valid, (0, 0, 255), 1
+            ),
+        )
+    return list(map(lambda p: p[0], lines_valid))
 
 
 def __loop_to_find_best_mean_angle_pos(
-    histogram_posx: Any,
     histogram_posx_maxy: Any,
     histogram_posx_miny: Any,
-    size: Tuple[int, int],
+    ecart: int,
     valid_lines: List[Tuple[int, int, int, int]],
 ) -> Tuple[float, int]:
-    width, height = size
+    histogram_posx_length = histogram_posx_maxy - histogram_posx_miny
 
-    old_angle_i = 0.0
-    n_same_angle = 0
-    posx = 0
-    for __size__ in range(1, 100, 2):
-        histogram_posx_blur = cv2.GaussianBlur(
-            histogram_posx,
-            (1, __size__),
-            __size__,
-            borderType=cv2.BORDER_REPLICATE,
-        )
-        histogram_list_of_top = np.zeros(width + 1)
-        list_of_top = compute.get_tops_indices_histogram(histogram_posx_blur)
-        top_found = False
-        for i in list_of_top:
-            length_i = max(
-                histogram_posx_maxy[i - __size__ : i + __size__]
-            ) - min(histogram_posx_miny[i - __size__ : i + __size__])
-            if length_i > 0.5 * height:
-                top_found = True
-                histogram_list_of_top[i] = length_i
-        if not top_found:
-            continue
-        histogram_list_of_top_blur = cv2.GaussianBlur(
-            histogram_list_of_top,
-            (1, __size__),
-            __size__,
-            borderType=cv2.BORDER_REPLICATE,
-        )
-        posx = np.argmax(histogram_list_of_top_blur)
+    histogram_posx_length_blur = cv2.GaussianBlur(
+        histogram_posx_length,
+        (1, ecart),
+        ecart,
+        borderType=cv2.BORDER_REPLICATE,
+    )
 
-        count = 0
-        anglex = 0.0
+    posx = np.argmax(histogram_posx_length_blur)
 
-        all_angle_pos = map(
+    all_angle_pos = list(
+        map(
             lambda x: compute.get_angle_0_180_posx((x[0], x[1]), (x[2], x[3])),
             valid_lines,
         )
-        valid_angle_pos = filter(
+    )
+    valid_angle_pos = list(
+        filter(
             lambda x: x[1] is not None
-            # pylint: disable=cell-var-from-loop
-            and x[1] - __size__ <= posx <= x[1] + __size__,
+            and x[1] - ecart <= posx <= x[1] + ecart,
             all_angle_pos,
         )
+    )
+    angle_only = list(map(lambda x: x[0], valid_angle_pos))
 
-        for angle, _ in valid_angle_pos:
-            anglex = anglex + angle
-            count = count + 1
-
-        if count != 0:
-            if anglex / count == old_angle_i:
-                n_same_angle = n_same_angle + 1
-            else:
-                n_same_angle = 1
-            old_angle_i = anglex / count
-
-        if n_same_angle == 7:
-            break
-
-    return (old_angle_i, posx)
+    return (compute.mean_angle(angle_only), posx)
 
 
 def __best_candidates_split_line_with_line(
     valid_lines: List[Tuple[int, int, int, int]],
     width: int,
     height: int,
+    epsilon_angle: float,
 ) -> Tuple[float, int]:
-    histogram_posx = np.zeros(width + 1)
     histogram_posx_miny = height * np.ones(width + 1)
     histogram_posx_maxy = np.zeros(width + 1)
+    ecart = int(
+        np.ceil(
+            np.tan(epsilon_angle) * np.linalg.norm(np.array((width, height)))
+        )
+    )
     for point1_x, point1_y, point2_x, point2_y in valid_lines:
-        _, pos = compute.get_angle_0_180_posx(
+        _, pos = compute.get_angle_0_180_posx_safe(
             (point1_x, point1_y), (point2_x, point2_y)
         )
-        length = np.linalg.norm(
-            np.array((point1_x, point1_y)) - np.array((point2_x, point2_y))
-        )
-        histogram_posx[pos] = histogram_posx[pos] + length
-        histogram_posx_miny[pos] = min(
-            histogram_posx_miny[pos], point1_y, point2_y
-        )
-        histogram_posx_maxy[pos] = max(
-            histogram_posx_maxy[pos], point1_y, point2_y
-        )
+        histogram_posx_miny[pos - ecart : pos + ecart] = [
+            min(c, point1_y, point2_y)
+            for c in histogram_posx_miny[pos - ecart : pos + ecart]
+        ]
+        histogram_posx_maxy[pos - ecart : pos + ecart] = [
+            max(c, point1_y, point2_y)
+            for c in histogram_posx_maxy[pos - ecart : pos + ecart]
+        ]
 
     return __loop_to_find_best_mean_angle_pos(
-        histogram_posx,
         histogram_posx_maxy,
         histogram_posx_miny,
-        (width, height),
+        ecart,
         valid_lines,
     )
 
@@ -588,6 +555,7 @@ def found_split_line_with_line(
         valid_lines,
         cv2ext.get_hw(image)[1],
         cv2ext.get_hw(image)[0],
+        param.hough_lines.delta_tetha,
     )
 
     height, _ = cv2ext.get_hw(image)

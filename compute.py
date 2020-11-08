@@ -270,3 +270,13 @@ def is_angle_closed_to(
     if angle1 <= angle2:
         return angle1 <= value <= angle2
     return value >= angle1 or value <= angle2
+
+
+def mean_angle(liste: List[float]) -> float:
+    sin = sum(map(lambda x: np.sin(x / 180.0 * np.pi), liste)) / len(liste)
+    cos = sum(map(lambda x: np.cos(x / 180.0 * np.pi), liste)) / len(liste)
+    if cos < 0:
+        return np.arctan(sin / cos) / np.pi * 180.0 + 180.0
+    if sin > 0:
+        return np.arctan(sin / cos) / np.pi * 180.0
+    return np.arctan(sin / cos) / np.pi * 180.0 + 360.0
