@@ -58,11 +58,10 @@ class FoundDataTry2Parameters:
             1, np.pi / (180 * 20), 30, 100, 30
         )
         find_images: FindImageParameters = FindImageParameters(
-            0.005,
+            5,
             (10, 10),
             (10, 10),
             (10, 10),
-            0.005,
             0.01,
         )
 
@@ -130,11 +129,13 @@ class CropAroundDataInPageParameters:
     class Impl(types.SimpleNamespace):
         found_data_try1: FoundDataTry1Parameters = FoundDataTry1Parameters()
         found_data_try2: FoundDataTry2Parameters = FoundDataTry2Parameters()
-        dilate_size: Tuple[int, int] = (2, 2)
+        dilate_size: Tuple[int, int] = (5, 5)
         threshold2: int = 200
-        contour_area_min: float = 0.002 * 0.002
-        contour_area_max: float = 0.5 * 0.5
+        contour_area_min: float = 0.01 * 0.01
+        contour_area_max: float = 1.0
         border: int = 10
+        skip_rectangle_closed_to_line: float = 5.0
+        closed_to_edge: float = 0.02
 
     def __init__(self) -> None:
         self.__param = CropAroundDataInPageParameters.Impl()
@@ -190,6 +191,22 @@ class CropAroundDataInPageParameters:
     @border.setter
     def border(self, val: int) -> None:
         self.__param.border = val
+
+    @property
+    def skip_rectangle_closed_to_line(self) -> float:
+        return self.__param.skip_rectangle_closed_to_line
+
+    @skip_rectangle_closed_to_line.setter
+    def skip_rectangle_closed_to_line(self, val: float) -> None:
+        self.__param.skip_rectangle_closed_to_line = val
+
+    @property
+    def closed_to_edge(self) -> float:
+        return self.__param.closed_to_edge
+
+    @closed_to_edge.setter
+    def closed_to_edge(self, val: float) -> None:
+        self.__param.closed_to_edge = val
 
     def init_default_values(
         self,
@@ -711,9 +728,8 @@ def crop_around_data(
 
     gray = cv2ext.convertion_en_niveau_de_gris(page_gauche_0)
 
-    dilated = cv2.dilate(
-        gray,
-        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, parameters.dilate_size),
+    dilated = cv2ext.erode_and_dilate(
+        gray, parameters.dilate_size, parameters.dilate_size[0]
     )
     cv2ext.write_image_if(dilated, enable_debug, "_" + str(n_page) + "_7.png")
 
@@ -726,19 +742,53 @@ def crop_around_data(
     cv2ext.write_image_if(
         threshold, enable_debug, "_" + str(n_page) + "_8.png"
     )
-    contours, _ = cv2.findContours(
-        threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    threshold2 = cv2.copyMakeBorder(
+        threshold,
+        1,
+        1,
+        1,
+        1,
+        cv2.BORDER_CONSTANT,
+        value=[255],
     )
+    contours, hierarchy = cv2.findContours(
+        threshold2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    )
+    cv2ext.remove_border_in_contours(contours, 1, threshold)
     if enable_debug is not None:
         image2222 = cv2ext.convertion_en_couleur(page_gauche_0)
     ncontour_good_size = False
+    first_cnt_all = int(cv2.contourArea(contours[0])) == (imgh - 1) * (
+        imgw - 1
+    )
+
+    def is_border(contour: Any) -> bool:
+        rectangle = cv2.boundingRect(contour)
+        ratio = rectangle[3] / rectangle[2]
+        if ratio > parameters.skip_rectangle_closed_to_line and (
+            rectangle[0] < parameters.closed_to_edge * imgw
+            or rectangle[0] > (1 - parameters.closed_to_edge) * imgw
+        ):
+            return True
+        if ratio < 1 / parameters.skip_rectangle_closed_to_line and (
+            rectangle[1] < parameters.closed_to_edge * imgh
+            or rectangle[1] > (1 - parameters.closed_to_edge) * imgh
+        ):
+            return True
+        return False
+
     contours_listered = filter(
         lambda x: parameters.contour_area_min * imgh * imgw
-        < cv2.contourArea(x)
-        < parameters.contour_area_max * imgh * imgw,
-        contours,
+        < cv2.contourArea(x[0])
+        < parameters.contour_area_max * imgh * imgw
+        and (
+            (x[1][3] == -1 and not first_cnt_all)
+            or (x[1][3] == 0 and first_cnt_all)
+        )
+        and not is_border(x[0]),
+        zip(contours, hierarchy[0]),
     )
-    for cnt in contours_listered:
+    for cnt, _ in contours_listered:
         (point_x, point_y, width, height) = cv2.boundingRect(cnt)
         if enable_debug is not None:
             cv2.drawContours(image2222, [cnt], -1, (0, 0, 255), 3)

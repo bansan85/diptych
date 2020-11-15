@@ -18,11 +18,10 @@ class UnskewPageParameters:
             1, np.pi / (180 * 20), 70, 300, 90
         )
         find_images: FindImageParameters = FindImageParameters(
-            0.005,
+            5,
             (10, 10),
             (10, 10),
             (10, 10),
-            8,
             0.01,
         )
 
@@ -82,10 +81,11 @@ def found_angle_unskew_page(
     histogram_blur_top_sorted = sorted(
         histogram_blur_top,
         key=lambda x: (
-            1.
-            - 2.
+            1.0
+            - 2.0
             * np.absolute(
-                compute.norm_cdf(x * delta_angle, approximate_angle, 10.) - 0.5
+                compute.norm_cdf(x * delta_angle, approximate_angle, 10.0)
+                - 0.5
             )
         )
         * histogram_blur[x],
@@ -173,19 +173,11 @@ def find_rotation(
         )
         cv2.imwrite(enable_debug + "_" + str(n_page) + "_4bbbb.png", img)
 
-    lines_filtered = []
-    for line_x1, line_y1, line_x2, line_y2 in lines:
-        image_line = np.zeros(images_mask.shape, np.uint8)
-        cv2.line(
-            image_line,
-            (line_x1, line_y1),
-            (line_x2, line_y2),
-            (255, 255, 255),
-            1,
+    lines_filtered = list(
+        filter(
+            lambda x: cv2ext.is_line_not_cross_images(x, images_mask), lines
         )
-        image_line = cv2.bitwise_and(images_mask, image_line)
-        if cv2.countNonZero(image_line) == 0:
-            lines_filtered.append((line_x1, line_y1, line_x2, line_y2))
+    )
 
     if enable_debug is not None:
         image_with_lines = cv2ext.convertion_en_couleur(image)

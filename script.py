@@ -30,6 +30,12 @@ class SeparatePage:
         parameters: SplitTwoWavesParameters,
         enable_debug: Optional[str],
     ) -> Tuple[Any, Any]:
+        self.__images_found = page.find_images.find_images(
+            image,
+            parameters.find_images,
+            None,
+            compute.optional_concat(enable_debug, "_0"),
+        )
         param1 = FoundSplitLineWithLineParameters(
             parameters.blur_size,
             parameters.erode,
@@ -39,7 +45,10 @@ class SeparatePage:
             parameters.delta_tetha,
         )
         first = page.split.found_split_line_with_line(
-            image, param1, compute.optional_concat(enable_debug, "_1")
+            image,
+            self.__images_found,
+            param1,
+            compute.optional_concat(enable_debug, "_1"),
         )
 
         param2 = FoundSplitLineWithWave(
@@ -286,6 +295,7 @@ class SeparatePage:
 
     __output: PrintInterface
     __angle_split: float
+    __images_found: Any
 
 
 def get_absolute_from_current_path(root: str, filename: str) -> str:

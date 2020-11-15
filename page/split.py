@@ -301,12 +301,12 @@ class SplitTwoWavesParameters:
         blur_size: Tuple[int, int] = (10, 10)
         canny: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, np.pi / (180 * 40), 150, 200, 150
+            1, np.pi / (180 * 20), 150, 200, 150
         )
         delta_rho: int = 200
         delta_tetha: float = 20.0
         find_images: FindImageParameters = FindImageParameters(
-            0.02, (10, 10), (10, 10), (10, 10), 0.005, 0.01
+            5, (10, 10), (10, 10), (10, 10), 0.01
         )
         find_candidates: FindCandidatesSplitLineWithWaveParameters = (
             FindCandidatesSplitLineWithWaveParameters(
@@ -395,33 +395,30 @@ class SplitTwoWavesParameters:
 
 def __found_candidates_split_line_with_line(
     image: Any,
+    images_mask: Any,
     param: FindCandidatesSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
 ) -> List[Tuple[int, int, int, int]]:
-    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, False)
-    cv2ext.write_image_if(blurimg, enable_debug, "_2_2a.png")
-    blurimg_bc = cv2ext.apply_brightness_contrast(blurimg, -96, 64)
-    cv2ext.write_image_if(blurimg_bc, enable_debug, "_2_2b.png")
-    threshold = blurimg_bc & 0b11000000
-    cv2ext.write_image_if(threshold, enable_debug, "_2_3.png")
-    erode_dilate = cv2ext.erode_and_dilate(
-        threshold, param.erode.size, param.erode.iterations
-    )
-    cv2ext.write_image_if(erode_dilate, enable_debug, "_2_4.png")
+    xxx = 7
+    blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx), True)
+    cv2ext.write_image_if(blurimg, enable_debug, "_2_1.png")
+    erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), xxx)
+    cv2ext.write_image_if(erode_dilate, enable_debug, "_2_2.png")
     canny = cv2.Canny(
         erode_dilate,
         param.canny.minimum,
         param.canny.maximum,
         apertureSize=param.canny.aperture_size,
     )
-    cv2ext.write_image_if(canny, enable_debug, "_2_5.png")
+    cv2ext.write_image_if(canny, enable_debug, "_2_3.png")
+
     list_lines_p = cv2.HoughLinesP(
         canny,
         param.hough_lines.delta_rho,
         param.hough_lines.delta_tetha,
         param.hough_lines.threshold,
         minLineLength=param.hough_lines.min_line_length,
-        maxLineGap=param.hough_lines.max_line_gap,
+        maxLineGap=xxx ** 2,
     )
     if enable_debug is not None:
         cv2.imwrite(
@@ -449,7 +446,21 @@ def __found_candidates_split_line_with_line(
                 image, lines_valid, (0, 0, 255), 1
             ),
         )
-    return list(map(lambda p: p[0], lines_valid))
+    lines_valid2 = list(
+        filter(
+            lambda x: cv2ext.is_line_not_cross_images(x[0], images_mask),
+            lines_valid,
+        )
+    )
+    if enable_debug is not None:
+        cv2.imwrite(
+            enable_debug + "_2_8.png",
+            cv2ext.draw_lines_from_hough_lines(
+                image, lines_valid2, (0, 0, 255), 1
+            ),
+        )
+
+    return list(map(lambda p: p[0], lines_valid2))
 
 
 def __loop_to_find_best_mean_angle_pos(
@@ -458,6 +469,9 @@ def __loop_to_find_best_mean_angle_pos(
     ecart: int,
     valid_lines: List[Tuple[int, int, int, int]],
 ) -> Tuple[float, int]:
+    if ecart % 2 == 0:
+        ecart = ecart + 1
+
     histogram_posx_length = histogram_posx_maxy - histogram_posx_miny
 
     histogram_posx_length_blur = cv2.GaussianBlur(
@@ -523,6 +537,7 @@ def __best_candidates_split_line_with_line(
 
 def found_split_line_with_line(
     image: Any,
+    images_found: Any,
     param: FoundSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
 ) -> Tuple[float, int]:
@@ -533,6 +548,7 @@ def found_split_line_with_line(
     valid_lines.extend(
         __found_candidates_split_line_with_line(
             image,
+            images_found,
             FindCandidatesSplitLineWithLineParameters(
                 param.blur_size,
                 param.canny,
@@ -684,26 +700,11 @@ def found_split_line_with_wave(
     page_angle: Optional[float],
     enable_debug: Optional[str] = None,
 ) -> Tuple[float, int]:
-    cv2ext.write_image_if(image, enable_debug, "_1.png")
-    blurimg = cv2ext.force_image_to_be_grayscale(
-        image, parameters.blur_size, False
-    )
-    cv2ext.write_image_if(blurimg, enable_debug, "_2a.png")
-    blurimg_bc = cv2ext.apply_brightness_contrast(blurimg, -96, 64)
-    cv2ext.write_image_if(blurimg_bc, enable_debug, "_2b.png")
-    blurimg_equ = cv2.equalizeHist(blurimg_bc)
-    cv2ext.write_image_if(blurimg_equ, enable_debug, "_2c.png")
-    _, threshold = cv2.threshold(
-        blurimg_equ,
-        cv2ext.threshold_from_gaussian_histogram(blurimg_equ),
-        255,
-        cv2.THRESH_BINARY,
-    )
-    cv2ext.write_image_if(threshold, enable_debug, "_3.png")
-    erode_dilate = cv2ext.erode_and_dilate(
-        threshold, parameters.erode.size, parameters.erode.iterations
-    )
-    cv2ext.write_image_if(erode_dilate, enable_debug, "_4.png")
+    xxx = 7
+    blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx), True)
+    cv2ext.write_image_if(blurimg, enable_debug, "_0.png")
+    erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), xxx)
+    cv2ext.write_image_if(erode_dilate, enable_debug, "_1.png")
     size_border = 20
     eroded_bordered = cv2.copyMakeBorder(
         erode_dilate,
@@ -714,11 +715,19 @@ def found_split_line_with_wave(
         cv2.BORDER_CONSTANT,
         value=[0],
     )
-    cv2ext.write_image_if(eroded_bordered, enable_debug, "_4a.png")
+    cv2ext.write_image_if(eroded_bordered, enable_debug, "_2.png")
+    dilated = cv2.dilate(
+        eroded_bordered,
+        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (xxx, xxx)),
+    )
+    cv2ext.write_image_if(dilated, enable_debug, "_3.png")
+    thresholdi = cv2ext.threshold_from_gaussian_histogram_white(dilated)
+    _, threshold1 = cv2.threshold(dilated, thresholdi, 255, cv2.THRESH_BINARY)
+    cv2ext.write_image_if(threshold1, enable_debug, "_4.png")
 
     # On cherche tous les contours
     contours, _ = cv2.findContours(
-        eroded_bordered, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        threshold1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
     # pour ne garder que le plus grand. Normalement, cela doit être celui
     # qui fait le contour des pages

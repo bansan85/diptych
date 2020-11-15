@@ -136,17 +136,9 @@ def remove_border_in_contours(
     height, width = get_hw(image)
     for cnt in contours:
         for contour in cnt:
-            if contour[0, 0] - border_size < -1:
-                raise ValueError("Contour should not be inside the border.")
-            if contour[0, 0] - border_size > width:
-                raise ValueError("Contour should not be inside the border.")
             contour[0, 0] = compute.clamp(
                 contour[0, 0] - border_size, 0, width - 1
             )
-            if contour[0, 1] - border_size < -1:
-                raise ValueError("Contour should not be inside the border.")
-            if contour[0, 1] - border_size > height:
-                raise ValueError("Contour should not be inside the border.")
             contour[0, 1] = compute.clamp(
                 contour[0, 1] - border_size, 0, height - 1
             )
@@ -290,6 +282,7 @@ def __insert_border_in_mask(
     epsilon: Tuple[int, float],
     page_angle: float,
 ) -> None:
+    __pourcentage_white_allowed__ = 0.01
     epsilon_border, epsilon_angle = epsilon
     height, width = get_hw(threshold2)
     cnt2 = cnt[cnt[:, 0, 0] > epsilon_border]
@@ -377,9 +370,11 @@ def __insert_border_in_mask(
             )
         mask = cv2.drawContours(mask, [pts], 0, 255, -1)
         histogram = cv2.calcHist([threshold2], [0], mask, [2], [0, 256])
-        if 0.1 * histogram[0] > sum(histogram[1:]) or 0.1 * histogram[
-            -1
-        ] > sum(histogram[:-1]):
+        if __pourcentage_white_allowed__ * histogram[0] > sum(
+            histogram[1:]
+        ) or __pourcentage_white_allowed__ * histogram[-1] > sum(
+            histogram[:-1]
+        ):
             mask_border_only = cv2.drawContours(
                 mask_border_only, [pts], 0, (0), -1
             )
@@ -408,9 +403,11 @@ def __insert_border_in_mask(
             )
         mask = cv2.drawContours(mask, [pts], 0, 255, -1)
         histogram = cv2.calcHist([threshold2], [0], mask, [2], [0, 256])
-        if 0.1 * histogram[0] > sum(histogram[1:]) or 0.1 * histogram[
-            -1
-        ] > sum(histogram[:-1]):
+        if __pourcentage_white_allowed__ * histogram[0] > sum(
+            histogram[1:]
+        ) or __pourcentage_white_allowed__ * histogram[-1] > sum(
+            histogram[:-1]
+        ):
             mask_border_only = cv2.drawContours(
                 mask_border_only, [pts], 0, (0), -1
             )
@@ -419,14 +416,13 @@ def __insert_border_in_mask(
 def remove_black_border_in_image(
     gray_bordered: Any, page_angle: float, enable_debug: Optional[str]
 ) -> Any:
-    gray_bordered2 = cv2.bitwise_not(gray_bordered)
-    write_image_if(gray_bordered2, enable_debug, "_2a.png")
-    _, threshold = cv2.threshold(gray_bordered, 15, 255, cv2.THRESH_BINARY)
-    write_image_if(threshold, enable_debug, "_2b.png")
-    threshold2 = cv2.bitwise_not(threshold)
-    write_image_if(threshold2, enable_debug, "_2b2.png")
+    thresholdi = threshold_from_gaussian_histogram_black(gray_bordered)
+    _, threshold = cv2.threshold(
+        gray_bordered, thresholdi, 255, cv2.THRESH_BINARY_INV
+    )
+    write_image_if(threshold, enable_debug, "_2b2.png")
     contours, _ = cv2.findContours(
-        threshold2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
     if enable_debug is not None:
         image_contours = cv2.drawContours(
@@ -453,53 +449,88 @@ def remove_black_border_in_image(
         ):
             __insert_border_in_mask(
                 cnt,
-                threshold2,
+                threshold,
                 mask_border_only,
                 (__epsilon__, __angle_tolerance__),
                 page_angle,
             )
 
-    # Borders are in black.
+    # Borders are in black in mask.
     write_image_if(mask_border_only, enable_debug, "_2c.png")
-    res = cv2.bitwise_and(
-        gray_bordered2, gray_bordered2, mask=mask_border_only
+    return mask_border_only
+
+
+def apply_mask(image: Any, mask: Any) -> Any:
+    gray_bordered2 = cv2.bitwise_not(image)
+    gray_bordered3 = cv2.bitwise_and(
+        gray_bordered2, gray_bordered2, mask=mask
     )
-    write_image_if(res, enable_debug, "_2d.png")
-    gray_bordered2 = cv2.bitwise_not(res)
-    write_image_if(gray_bordered2, enable_debug, "_2e.png")
-    return gray_bordered2
+    gray_bordered4 = cv2.bitwise_not(gray_bordered3)
+    # Borders are in white in original image.
+    return gray_bordered4
 
 
 def erode_and_dilate(
-    image: Any, size: Tuple[int, int], iterations: int
+    image: Any, size: Tuple[int, int], iterations: int, reverse: bool = False
 ) -> Any:
-    eroded = cv2.erode(
-        image,
-        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, size),
-        iterations=iterations,
-    )
-    dilate = cv2.dilate(
-        eroded,
-        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, size),
-        iterations=iterations,
-    )
-    return dilate
+    start = int(reverse)
+    img = image
+    for i in range(2):
+        if (i + start) % 2 == 0:
+            img = cv2.erode(
+                img,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, size),
+                iterations=iterations,
+            )
+        else:
+            img = cv2.dilate(
+                img,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, size),
+                iterations=iterations,
+            )
+    return img
 
 
-def threshold_from_gaussian_histogram(
-    image: Any, pourcentage: float = 0.8
-) -> Any:
+def threshold_from_gaussian_histogram_white(
+    image: Any, pourcentage: float = 0.2, blur_kernel_size: int = 31
+) -> int:
     histogram = cv2.calcHist([image], [0], None, [256], [0, 256])
+    histogram_blur = cv2.GaussianBlur(
+        histogram,
+        (1, blur_kernel_size),
+        blur_kernel_size,
+        borderType=cv2.BORDER_REPLICATE,
+    )
     i = 255
-    for j in range(255, 0, -1):
-        if histogram[j][0] == 0:
+    extreme_min = histogram_blur[255][0]
+    for j in range(254, 0, -1):
+        if histogram_blur[j][0] < extreme_min:
+            extreme_min = histogram_blur[j][0]
+        else:
             i = j
             break
+    limit = extreme_min * (1 + pourcentage)
     for j in range(i, 0, -1):
-        if histogram[j][0] != 0:
+        if histogram_blur[j][0] > limit:
             i = j
             break
-    return int(pourcentage * i)
+    return i
+
+
+def threshold_from_gaussian_histogram_black(
+    image: Any, blur_kernel_size: int = 31
+) -> int:
+    histogram = cv2.calcHist([image], [0], None, [256], [0, 256])
+    histogram_blur = cv2.GaussianBlur(
+        histogram,
+        (1, blur_kernel_size),
+        blur_kernel_size,
+        borderType=cv2.BORDER_REPLICATE,
+    )
+    for i in range(1, 256):
+        if histogram_blur[i][0] < histogram_blur[i + 1][0]:
+            return i
+    return 255
 
 
 def gaussian_blur_wrap(histogram: Any, kernel_size: int) -> Any:
@@ -637,3 +668,19 @@ def bounding_rectangle(
             [[rectangle[0] + rectangle[2], rectangle[1]]],
         ]
     )
+
+
+def is_line_not_cross_images(
+    line: Tuple[int, int, int, int], images_mask: Any
+) -> bool:
+    line_x1, line_y1, line_x2, line_y2 = line
+    image_line = np.zeros(images_mask.shape, np.uint8)
+    cv2.line(
+        image_line,
+        (line_x1, line_y1),
+        (line_x2, line_y2),
+        (255, 255, 255),
+        1,
+    )
+    image_line = cv2.bitwise_and(images_mask, image_line)
+    return cv2.countNonZero(image_line) == 0
