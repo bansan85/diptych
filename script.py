@@ -99,7 +99,7 @@ class SeparatePage:
         # Enfin, on tourne.
         img_rotated = cv2ext.rotate_image(image, rotate_angle)
         if enable_debug is not None:
-            cv2.imwrite(
+            cv2ext.secure_write(
                 enable_debug + "_" + str(n_page) + "_5.png", img_rotated
             )
         return img_rotated
@@ -230,7 +230,7 @@ class SeparatePage:
     # Need a function to be able to override behavior
     # pylint: disable=no-self-use
     def save_final_page(self, filename: str, image: Any) -> None:
-        cv2.imwrite(filename, image)
+        cv2ext.secure_write(filename, image)
 
     def treat_file(
         self,

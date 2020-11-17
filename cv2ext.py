@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 
 import compute
+from exceptext import NotMyException
 
 if np.__version__.startswith("1.2"):
     # Add typing for numpy :
@@ -230,11 +231,16 @@ def add_border_to_match_size(
     return (top, bottom, left, right)
 
 
+def secure_write(filename: str, image: Any) -> None:
+    if not cv2.imwrite(filename, image):
+        raise NotMyException("Failed to write image " + filename)
+
+
 def write_image_if(
     image: Any, enable_debug: Optional[str], filename: str
 ) -> None:
     if enable_debug is not None:
-        cv2.imwrite(enable_debug + filename, image)
+        secure_write(enable_debug + filename, image)
 
 
 def __find_longest_lines_in_border(
@@ -462,9 +468,7 @@ def remove_black_border_in_image(
 
 def apply_mask(image: Any, mask: Any) -> Any:
     gray_bordered2 = cv2.bitwise_not(image)
-    gray_bordered3 = cv2.bitwise_and(
-        gray_bordered2, gray_bordered2, mask=mask
-    )
+    gray_bordered3 = cv2.bitwise_and(gray_bordered2, gray_bordered2, mask=mask)
     gray_bordered4 = cv2.bitwise_not(gray_bordered3)
     # Borders are in white in original image.
     return gray_bordered4

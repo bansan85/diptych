@@ -1,0 +1,2 @@
+class NotMyException(Exception):
+    pass

@@ -269,14 +269,18 @@ def found_data_try1(
         image2222 = cv2.drawContours(
             image2222, [contour_max], 0, (0, 255, 0), 3
         )
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_4.png", image2222)
+        cv2ext.secure_write(
+            enable_debug + "_" + str(n_page) + "_4.png", image2222
+        )
 
     # On garde le rectangle le plus grand.
     rect = cv2ext.get_polygon_from_contour(contour_max, 4)
 
     if enable_debug is not None:
         image22223 = cv2.drawContours(image2222, [rect], -1, (255, 0, 0), 3)
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_5.png", image22223)
+        cv2ext.secure_write(
+            enable_debug + "_" + str(n_page) + "_5.png", image22223
+        )
     # Si on n'a pas de rectangle, on essaie de trouver le contour de la
     # page avec les traits horizontaux et verticaux.
     if not compute.is_contour_rectangle(
@@ -392,7 +396,7 @@ def found_data_try2_find_edges(
                         (0, 0, 255),
                         1,
                     )
-            cv2.imwrite(
+            cv2ext.secure_write(
                 enable_debug + "_" + str(n_page) + "_" + str(i) + "_5d.png",
                 image_with_lines,
             )
@@ -705,7 +709,9 @@ def crop_around_page(
     if enable_debug is not None:
         image_cnt = cv2ext.convertion_en_couleur(image)
         cv2.drawContours(image_cnt, [rect], 0, (0, 0, 255), 3)
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_1_6.png", image_cnt)
+        cv2ext.secure_write(
+            enable_debug + "_" + str(n_page) + "_1_6.png", image_cnt
+        )
 
     x_crop1 = [rect[0, 0, 0], rect[1, 0, 0], rect[2, 0, 0], rect[3, 0, 0]]
     y_crop1 = [rect[0, 0, 1], rect[1, 0, 1], rect[2, 0, 1], rect[3, 0, 1]]
@@ -799,7 +805,7 @@ def crop_around_data(
         ncontour_good_size = True
 
     if enable_debug is not None:
-        cv2.imwrite(
+        cv2ext.secure_write(
             enable_debug + "_" + str(n_page) + "_9.png",
             image2222,
         )

@@ -168,10 +168,12 @@ def find_rotation(
                 (255, 0, 0),
                 1,
             )
-        cv2.imwrite(
+        cv2ext.secure_write(
             enable_debug + "_" + str(n_page) + "_4.png", image_with_lines
         )
-        cv2.imwrite(enable_debug + "_" + str(n_page) + "_4bbbb.png", img)
+        cv2ext.secure_write(
+            enable_debug + "_" + str(n_page) + "_4bbbb.png", img
+        )
 
     lines_filtered = list(
         filter(
@@ -189,7 +191,7 @@ def find_rotation(
                 (255, 0, 0),
                 1,
             )
-        cv2.imwrite(
+        cv2ext.secure_write(
             enable_debug + "_" + str(n_page) + "_4ccccc.png", image_with_lines
         )
 

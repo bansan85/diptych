@@ -148,7 +148,7 @@ def find_images(
         debug_image_contours = cv2.drawContours(
             cv2ext.convertion_en_couleur(image), contours, -1, (0, 0, 255), 3
         )
-        cv2.imwrite(enable_debug + "_8.png", debug_image_contours)
+        cv2ext.secure_write(enable_debug + "_8.png", debug_image_contours)
         debug_image_mask = np.zeros(image.shape, np.uint8)
     img_mask_erode = np.zeros(cv2ext.get_hw(image), np.uint8)
     big_images = filter(
@@ -183,9 +183,9 @@ def find_images(
         img_mask_erode = cv2.bitwise_or(img_mask_erode, img_mask_erodei)
 
     if enable_debug is not None:
-        cv2.imwrite(enable_debug + "_9.png", debug_image_contours)
-        cv2.imwrite(enable_debug + "_10.png", debug_image_mask)
-        cv2.imwrite(enable_debug + "_11.png", img_mask_erode)
+        cv2ext.secure_write(enable_debug + "_9.png", debug_image_contours)
+        cv2ext.secure_write(enable_debug + "_10.png", debug_image_mask)
+        cv2ext.secure_write(enable_debug + "_11.png", img_mask_erode)
 
     return img_mask_erode
 

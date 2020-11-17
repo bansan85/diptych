@@ -421,7 +421,7 @@ def __found_candidates_split_line_with_line(
         maxLineGap=xxx ** 2,
     )
     if enable_debug is not None:
-        cv2.imwrite(
+        cv2ext.secure_write(
             enable_debug + "_2_6.png",
             cv2ext.draw_lines_from_hough_lines(
                 image, list_lines_p, (0, 0, 255), 1
@@ -440,7 +440,7 @@ def __found_candidates_split_line_with_line(
         )
     )
     if enable_debug is not None:
-        cv2.imwrite(
+        cv2ext.secure_write(
             enable_debug + "_2_7.png",
             cv2ext.draw_lines_from_hough_lines(
                 image, lines_valid, (0, 0, 255), 1
@@ -453,7 +453,7 @@ def __found_candidates_split_line_with_line(
         )
     )
     if enable_debug is not None:
-        cv2.imwrite(
+        cv2ext.secure_write(
             enable_debug + "_2_8.png",
             cv2ext.draw_lines_from_hough_lines(
                 image, lines_valid2, (0, 0, 255), 1
@@ -598,7 +598,7 @@ def found_split_line_with_line(
                 (0, 0, 255),
                 1,
             )
-        cv2.imwrite(enable_debug + "_7.png", image_with_lines)
+        cv2ext.secure_write(enable_debug + "_7.png", image_with_lines)
 
     return angle_1, posx_1
 
@@ -641,7 +641,7 @@ def __found_candidates_split_line_with_wave(
         img_tmp = cv2.drawContours(
             img_tmp, contour, nb_rectangle, (0, 0, 255), 3
         )
-        cv2.imwrite(enable_debug + "_5.png", img_tmp)
+        cv2ext.secure_write(enable_debug + "_5.png", img_tmp)
 
     # Il faut au minimum 10 points pour détecter le décroché qui indique
     # la séparation entre deux pages.
@@ -671,7 +671,7 @@ def __found_candidates_split_line_with_wave(
                 )
                 for i in range(nb_rectangle):
                     cv2.drawContours(img_tmp, contour, i, (255, 0, 0), 10)
-                cv2.imwrite(
+                cv2ext.secure_write(
                     enable_debug + "_6_" + str(nloop) + ".png", img_tmp
                 )
             toppointsi: List[Tuple[int, int]] = []
@@ -751,7 +751,7 @@ def found_split_line_with_wave(
         img_tmp = cv2.drawContours(
             img_tmp, sorted_contours, 1, (0, 255, 0), 10
         )
-        cv2.imwrite(enable_debug + "_4b.png", img_tmp)
+        cv2ext.secure_write(enable_debug + "_4b.png", img_tmp)
 
     cv2ext.remove_border_in_contours(sorted_contours, size_border, image)
 
@@ -800,7 +800,7 @@ def found_split_line_with_wave(
             (0, 0, 255),
             5,
         )
-        cv2.imwrite(enable_debug + "_7.png", image_with_lines)
+        cv2ext.secure_write(enable_debug + "_7.png", image_with_lines)
     angle_ret, posx_ret = compute.get_angle_0_180_posx_safe(
         bottompoint, toppoint
     )
