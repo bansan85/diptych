@@ -100,7 +100,7 @@ class SeparatePage:
         img_rotated = cv2ext.rotate_image(image, rotate_angle)
         if enable_debug is not None:
             cv2ext.secure_write(
-                enable_debug + "_" + str(n_page) + "_5.png", img_rotated
+                enable_debug + "_" + str(n_page) + "_8.png", img_rotated
             )
         return img_rotated
 

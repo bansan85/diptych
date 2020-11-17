@@ -134,11 +134,15 @@ def find_rotation(
         apertureSize=parameters.canny.aperture_size,
     )
     cv2ext.write_image_if(canny, enable_debug, "_" + str(n_page) + "_3.png")
+    canny_filtered = cv2.bitwise_and(canny, cv2.bitwise_not(images_mask))
+    cv2ext.write_image_if(
+        canny_filtered, enable_debug, "_" + str(n_page) + "_4.png"
+    )
 
     # Détection des lignes.
     # La précision doit être de l'ordre de 0.05°
     list_lines = cv2.HoughLinesP(
-        canny,
+        canny_filtered,
         parameters.hough_lines.delta_rho,
         parameters.hough_lines.delta_tetha,
         parameters.hough_lines.threshold,
@@ -169,34 +173,12 @@ def find_rotation(
                 1,
             )
         cv2ext.secure_write(
-            enable_debug + "_" + str(n_page) + "_4.png", image_with_lines
+            enable_debug + "_" + str(n_page) + "_5.png", image_with_lines
         )
-        cv2ext.secure_write(
-            enable_debug + "_" + str(n_page) + "_4bbbb.png", img
-        )
-
-    lines_filtered = list(
-        filter(
-            lambda x: cv2ext.is_line_not_cross_images(x, images_mask), lines
-        )
-    )
-
-    if enable_debug is not None:
-        image_with_lines = cv2ext.convertion_en_couleur(image)
-        for line_x1, line_y1, line_x2, line_y2 in lines_filtered:
-            cv2.line(
-                image_with_lines,
-                (line_x1, line_y1),
-                (line_x2, line_y2),
-                (255, 0, 0),
-                1,
-            )
-        cv2ext.secure_write(
-            enable_debug + "_" + str(n_page) + "_4ccccc.png", image_with_lines
-        )
+        cv2ext.secure_write(enable_debug + "_" + str(n_page) + "_6.png", img)
 
     return found_angle_unskew_page(
-        lines_filtered,
+        lines,
         parameters.hough_lines.delta_tetha / np.pi * 180.0,
         approximate_angle,
     )

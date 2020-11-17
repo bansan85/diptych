@@ -411,9 +411,11 @@ def __found_candidates_split_line_with_line(
         apertureSize=param.canny.aperture_size,
     )
     cv2ext.write_image_if(canny, enable_debug, "_2_3.png")
+    canny_filtered = cv2.bitwise_and(canny, cv2.bitwise_not(images_mask))
+    cv2ext.write_image_if(canny_filtered, enable_debug, "_2_4.png")
 
     list_lines_p = cv2.HoughLinesP(
-        canny,
+        canny_filtered,
         param.hough_lines.delta_rho,
         param.hough_lines.delta_tetha,
         param.hough_lines.threshold,
@@ -446,21 +448,8 @@ def __found_candidates_split_line_with_line(
                 image, lines_valid, (0, 0, 255), 1
             ),
         )
-    lines_valid2 = list(
-        filter(
-            lambda x: cv2ext.is_line_not_cross_images(x[0], images_mask),
-            lines_valid,
-        )
-    )
-    if enable_debug is not None:
-        cv2ext.secure_write(
-            enable_debug + "_2_8.png",
-            cv2ext.draw_lines_from_hough_lines(
-                image, lines_valid2, (0, 0, 255), 1
-            ),
-        )
 
-    return list(map(lambda p: p[0], lines_valid2))
+    return list(map(lambda p: p[0], lines_valid))
 
 
 def __loop_to_find_best_mean_angle_pos(
