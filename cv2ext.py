@@ -13,7 +13,7 @@ if np.__version__.startswith("1.2"):
 
 
 def charge_image(fichier: str) -> Any:
-    return cv2.imread(fichier, flags=cv2.IMREAD_ANYDEPTH)
+    return cv2.imread(fichier, flags=cv2.IMREAD_UNCHANGED)
 
 
 def convertion_en_niveau_de_gris(image: Any) -> Any:
