@@ -84,7 +84,11 @@ def found_angle_unskew_page(
             1.0
             - 2.0
             * np.absolute(
-                compute.norm_cdf(x * delta_angle, approximate_angle, 10.0)
+                compute.norm_cdf(
+                    (x * delta_angle - approximate_angle + 45) % 90 - 45,
+                    0,
+                    10.0,
+                )
                 - 0.5
             )
         )
@@ -125,10 +129,12 @@ def find_rotation(
         iterations=parameters.erode.iterations,
     )
     cv2ext.write_image_if(eroded, enable_debug, "_" + str(n_page) + "_2.png")
+    eroded2 = eroded & 0b11100000
+    cv2ext.write_image_if(eroded2, enable_debug, "_" + str(n_page) + "_2a.png")
 
     # Aide à la détection des contours
     canny = cv2.Canny(
-        eroded,
+        eroded2,
         parameters.canny.minimum,
         parameters.canny.maximum,
         apertureSize=parameters.canny.aperture_size,
