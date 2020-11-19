@@ -134,7 +134,7 @@ class CropAroundDataInPageParameters:
         contour_area_min: float = 0.01 * 0.01
         contour_area_max: float = 1.0
         border: int = 10
-        skip_rectangle_closed_to_line: float = 5.0
+        skip_rectangle_closed_to_line: float = 1.0
         closed_to_edge: float = 0.02
 
     def __init__(self) -> None:
@@ -766,6 +766,19 @@ def crop_around_data(
     cv2ext.remove_border_in_contours(contours, 1, threshold)
     if enable_debug is not None:
         image2222 = cv2ext.convertion_en_couleur(page_gauche_0)
+        image2222 = cv2.rectangle(
+            image2222,
+            (
+                int(parameters.closed_to_edge * imgw),
+                int(parameters.closed_to_edge * imgh),
+            ),
+            (
+                int((1 - parameters.closed_to_edge) * imgw),
+                int((1 - parameters.closed_to_edge) * imgh),
+            ),
+            (255, 0, 0),
+            1
+        )
     ncontour_good_size = False
     first_cnt_all = int(cv2.contourArea(contours[0])) == (imgh - 1) * (
         imgw - 1
@@ -774,13 +787,13 @@ def crop_around_data(
     def is_border(contour: Any) -> bool:
         rectangle = cv2.boundingRect(contour)
         ratio = rectangle[3] / rectangle[2]
-        if ratio > parameters.skip_rectangle_closed_to_line and (
-            rectangle[0] < parameters.closed_to_edge * imgw
+        if ratio >= parameters.skip_rectangle_closed_to_line and (
+            rectangle[0] + rectangle[2] < parameters.closed_to_edge * imgw
             or rectangle[0] > (1 - parameters.closed_to_edge) * imgw
         ):
             return True
-        if ratio < 1 / parameters.skip_rectangle_closed_to_line and (
-            rectangle[1] < parameters.closed_to_edge * imgh
+        if ratio <= 1 / parameters.skip_rectangle_closed_to_line and (
+            rectangle[1] + rectangle[3] < parameters.closed_to_edge * imgh
             or rectangle[1] > (1 - parameters.closed_to_edge) * imgh
         ):
             return True
