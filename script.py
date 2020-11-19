@@ -44,7 +44,13 @@ class SeparatePage:
             parameters.delta_rho,
             parameters.delta_tetha,
         )
-        first = page.split.found_split_line_with_line(
+        (
+            angle_1,
+            posx_1,
+            histogram_length,
+            valid_lines,
+            ecart,
+        ) = page.split.found_split_line_with_line(
             image,
             self.__images_found,
             param1,
@@ -60,14 +66,16 @@ class SeparatePage:
         second = page.split.found_split_line_with_wave(
             image,
             param2,
-            first[0],
+            angle_1,
             compute.optional_concat(enable_debug, "_2"),
         )
 
         (
             self.__angle_split,
             pos_moy,
-        ) = page.split.find_best_split_in_all_candidates(first, second)
+        ) = page.split.find_best_split_in_all_candidates(
+            (angle_1, posx_1), second, histogram_length, valid_lines, ecart
+        )
 
         self.__output.print(
             ConstString.separation_double_page_angle(), self.__angle_split

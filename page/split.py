@@ -452,12 +452,9 @@ def __found_candidates_split_line_with_line(
     return list(map(lambda p: p[0], lines_valid))
 
 
-def __loop_to_find_best_mean_angle_pos(
-    histogram_posx_maxy: Any,
-    histogram_posx_miny: Any,
-    ecart: int,
-    valid_lines: List[Tuple[int, int, int, int]],
-) -> Tuple[float, int]:
+def __found_length_histogram(
+    histogram_posx_maxy: Any, histogram_posx_miny: Any, ecart: int
+) -> Any:
     if ecart % 2 == 0:
         ecart = ecart + 1
 
@@ -470,6 +467,15 @@ def __loop_to_find_best_mean_angle_pos(
         borderType=cv2.BORDER_REPLICATE,
     )
 
+    return histogram_posx_length_blur
+
+
+def __loop_to_find_best_mean_angle_pos(
+    histogram_posx_length_blur: Any,
+    ecart: int,
+    valid_lines: List[Tuple[int, int, int, int]],
+) -> Tuple[float, int, Any, List[Tuple[float, int]], int]:
+
     posx = np.argmax(histogram_posx_length_blur)
 
     all_angle_pos = list(
@@ -478,16 +484,27 @@ def __loop_to_find_best_mean_angle_pos(
             valid_lines,
         )
     )
-    valid_angle_pos = list(
+    valid_angle_pos1: List[Tuple[float, int]] = list(
         filter(
-            lambda x: x[1] is not None
-            and x[1] - ecart <= posx <= x[1] + ecart,
-            all_angle_pos,
+            lambda x: x[1] is not None,
+            all_angle_pos,  # type: ignore
         )
     )
-    angle_only = list(map(lambda x: x[0], valid_angle_pos))
+    valid_angle_pos2 = list(
+        filter(
+            lambda x: x[1] - ecart <= posx <= x[1] + ecart,
+            valid_angle_pos1,
+        )
+    )
+    angle_only = list(map(lambda x: x[0], valid_angle_pos2))
 
-    return (compute.mean_angle(angle_only), posx)
+    return (
+        compute.mean_angle(angle_only),
+        posx,
+        histogram_posx_length_blur,
+        valid_angle_pos1,
+        ecart,
+    )
 
 
 def __best_candidates_split_line_with_line(
@@ -495,7 +512,7 @@ def __best_candidates_split_line_with_line(
     width: int,
     height: int,
     epsilon_angle: float,
-) -> Tuple[float, int]:
+) -> Tuple[float, int, Any, List[Tuple[float, int]], int]:
     histogram_posx_miny = height * np.ones(width + 1)
     histogram_posx_maxy = np.zeros(width + 1)
     ecart = int(
@@ -516,9 +533,12 @@ def __best_candidates_split_line_with_line(
             for c in histogram_posx_maxy[pos - ecart : pos + ecart]
         ]
 
+    histogram_length = __found_length_histogram(
+        histogram_posx_maxy, histogram_posx_miny, ecart
+    )
+
     return __loop_to_find_best_mean_angle_pos(
-        histogram_posx_maxy,
-        histogram_posx_miny,
+        histogram_length,
         ecart,
         valid_lines,
     )
@@ -529,25 +549,21 @@ def found_split_line_with_line(
     images_found: Any,
     param: FoundSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
-) -> Tuple[float, int]:
+) -> Tuple[float, int, Any, List[Tuple[float, int]], int]:
     cv2ext.write_image_if(image, enable_debug, "_1.png")
 
-    valid_lines: List[Tuple[int, int, int, int]] = []
-
-    valid_lines.extend(
-        __found_candidates_split_line_with_line(
-            image,
-            images_found,
-            FindCandidatesSplitLineWithLineParameters(
-                param.blur_size,
-                param.canny,
-                param.hough_lines,
-                param.erode,
-                param.limit_rho,
-                param.limit_tetha,
-            ),
-            enable_debug,
-        )
+    valid_lines = __found_candidates_split_line_with_line(
+        image,
+        images_found,
+        FindCandidatesSplitLineWithLineParameters(
+            param.blur_size,
+            param.canny,
+            param.hough_lines,
+            param.erode,
+            param.limit_rho,
+            param.limit_tetha,
+        ),
+        enable_debug,
     )
 
     if len(valid_lines) == 0:
@@ -556,7 +572,13 @@ def found_split_line_with_line(
             "Failed to find candidates for the separator line.",
         )
 
-    (angle_1, posx_1) = __best_candidates_split_line_with_line(
+    (
+        angle_1,
+        posx_1,
+        histogram_length,
+        valid_lines_angle_pos,
+        ecart,
+    ) = __best_candidates_split_line_with_line(
         valid_lines,
         cv2ext.get_hw(image)[1],
         cv2ext.get_hw(image)[0],
@@ -589,7 +611,7 @@ def found_split_line_with_line(
             )
         cv2ext.secure_write(enable_debug + "_7.png", image_with_lines)
 
-    return angle_1, posx_1
+    return angle_1, posx_1, histogram_length, valid_lines_angle_pos, ecart
 
 
 def __found_candidates_split_line_with_wave_keep_interesting_points(
@@ -799,8 +821,28 @@ def found_split_line_with_wave(
 
 
 def find_best_split_in_all_candidates(
-    one: Tuple[float, int], two: Tuple[float, int]
+    one: Tuple[float, int],
+    two: Tuple[float, int],
+    histogram_length: Any,
+    valid_lines: List[Tuple[float, int]],
+    ecart: int,
 ) -> Tuple[float, int]:
-    angle_moy = (one[0] + two[0]) / 2
+    # Check if angle two is a top in histogram_length.
+    tops = compute.get_tops_indices_histogram(histogram_length)
+    tops.sort(key=lambda x: np.abs(two[1] - x))
+    # angle two is the most fiable.
+    if tops[0] - ecart <= two[1] <= tops[0] + ecart:
+        posx_moy = (tops[0] + two[1]) // 2
+        valid_lines_posx = list(
+            filter(
+                lambda x: posx_moy - ecart <= x[1] <= posx_moy + ecart,
+                valid_lines,
+            )
+        )
+        angle_moy = compute.mean_angle(
+            list(map(lambda x: x[0], valid_lines_posx))
+        )
+        return (angle_moy, posx_moy)
+    angle_moy = compute.mean_angle([one[0], two[0]])
     pos_moy = (one[1] + two[1]) // 2
     return (angle_moy, pos_moy)
