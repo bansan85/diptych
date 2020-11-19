@@ -664,6 +664,9 @@ def found_data_try2(
         compute.optional_concat(enable_debug, "_A_crop_" + str(n_page)),
     )
 
+    if np.all(images_mask == 0):
+        raise Exception("Failed to found images.")
+
     (
         lines_vertical_angle,
         lines_horizontal_angle,

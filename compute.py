@@ -251,7 +251,9 @@ def get_tops_indices_histogram(smooth: Any) -> List[int]:
     if smooth[0] > smooth[1]:
         retval.append(0)
     for i in range(1, len(smooth) - 1):
-        if smooth[i] > smooth[i - 1] and smooth[i] > smooth[i + 1]:
+        # One must be > and the other >= to detect the following top:
+        # 50, 51, 51, 51, 50
+        if smooth[i] > smooth[i - 1] and smooth[i] >= smooth[i + 1]:
             retval.append(i)
     if smooth[len(smooth) - 1] > smooth[len(smooth) - 2]:
         retval.append(len(smooth) - 1)
