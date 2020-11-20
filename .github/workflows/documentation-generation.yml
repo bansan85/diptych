@@ -1,0 +1,50 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: documentation
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SSH_KEY_TRAVIS_CI }}
+        # get with ssh-keyscan localhost
+        known_hosts: localhost ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCUWdBcM5OvIS/hYfBQkC6nKSuyoPfuYrc90aiTYZvNkKIVKDcTWHmgPJMllbP4GD8b5lBF1NPGde2iKO0d0K/7IIAI0/nAKYgKcu0b1JuF9m4lj7x8YWSGFSXg+EmU3IUBLr777jbok9mCLy1UO6I6Dmu/nNwy+Q8GCAbqtQodUF1fpavJeTIBnVBcGOkesUC/X1HIboCiBQl1etUj8Xip3eb41TVz7Eda2DUSEsot4g4SkYd6fnCve4c2hO2vGzeeMsdWOWaM/FZCBy6FBCYC15ta8dcAOBzkqM9/kPDxuR53qzjHoZhwLu4XWybd5J+4gmKlPkwQDSUwvCsVx5ax
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.7
+    - name: Install dependencies
+      run: bundle install
+    - name: Publish documentation
+      run: |
+        eval `ssh-agent`
+        ssh-add ~/.ssh/id_rsa
+        git clone --depth 1 ssh://git@github.com/bansan85/ocr-book-travis.git -b documentation
+        rm -Rf ocr-book-travis/{*.htm*,*.png}
+        cd doc
+        find . -name "*.asciidoc" -exec asciidoctor {} -D ../ocr-book-travis \;
+        cp *.png ../ocr-book-travis/
+        cd ..
+        cd ocr-book-travis
+        git config --global user.name "Travis"
+        git config --global user.email "travis-ci@le-garrec.fr"
+        git add .
+        if [ -n "$(git diff-index --name-only HEAD --)" ]; \
+        then \
+          git commit -m "${{ github.event.head_commit.message }}" -m "Update from $GITHUB_SHA"; \
+          git push || { echo "Failure git push" && exit 1; } \
+        fi
+        cd ..
