@@ -126,6 +126,7 @@ class FoundDataTry2Parameters:
 
 
 class CropAroundDataInPageParameters:
+    # pylint: disable=too-many-instance-attributes
     class Impl(types.SimpleNamespace):
         found_data_try1: FoundDataTry1Parameters = FoundDataTry1Parameters()
         found_data_try2: FoundDataTry2Parameters = FoundDataTry2Parameters()
@@ -135,7 +136,8 @@ class CropAroundDataInPageParameters:
         contour_area_max: float = 1.0
         border: int = 10
         skip_rectangle_closed_to_line: float = 1.0
-        closed_to_edge: float = 0.02
+        closed_to_edge_min: float = 0.015
+        closed_to_edge_max: float = 0.05
 
     def __init__(self) -> None:
         self.__param = CropAroundDataInPageParameters.Impl()
@@ -201,12 +203,20 @@ class CropAroundDataInPageParameters:
         self.__param.skip_rectangle_closed_to_line = val
 
     @property
-    def closed_to_edge(self) -> float:
-        return self.__param.closed_to_edge
+    def closed_to_edge_min(self) -> float:
+        return self.__param.closed_to_edge_min
 
-    @closed_to_edge.setter
-    def closed_to_edge(self, val: float) -> None:
-        self.__param.closed_to_edge = val
+    @closed_to_edge_min.setter
+    def closed_to_edge_min(self, val: float) -> None:
+        self.__param.closed_to_edge_min = val
+
+    @property
+    def closed_to_edge_max(self) -> float:
+        return self.__param.closed_to_edge_max
+
+    @closed_to_edge_max.setter
+    def closed_to_edge_max(self, val: float) -> None:
+        self.__param.closed_to_edge_max = val
 
     def init_default_values(
         self,
@@ -769,15 +779,28 @@ def crop_around_data(
         image2222 = cv2.rectangle(
             image2222,
             (
-                int(parameters.closed_to_edge * imgw),
-                int(parameters.closed_to_edge * imgh),
+                int(parameters.closed_to_edge_max * imgw),
+                int(parameters.closed_to_edge_max * imgh),
             ),
             (
-                int((1 - parameters.closed_to_edge) * imgw),
-                int((1 - parameters.closed_to_edge) * imgh),
+                int((1 - parameters.closed_to_edge_max) * imgw),
+                int((1 - parameters.closed_to_edge_max) * imgh),
             ),
             (255, 0, 0),
-            1
+            1,
+        )
+        image2222 = cv2.rectangle(
+            image2222,
+            (
+                int(parameters.closed_to_edge_min * imgw),
+                int(parameters.closed_to_edge_min * imgh),
+            ),
+            (
+                int((1 - parameters.closed_to_edge_min) * imgw),
+                int((1 - parameters.closed_to_edge_min) * imgh),
+            ),
+            (255, 0, 0),
+            1,
         )
     ncontour_good_size = False
     first_cnt_all = int(cv2.contourArea(contours[0])) == (imgh - 1) * (
@@ -788,13 +811,31 @@ def crop_around_data(
         rectangle = cv2.boundingRect(contour)
         ratio = rectangle[3] / rectangle[2]
         if ratio >= parameters.skip_rectangle_closed_to_line and (
-            rectangle[0] + rectangle[2] < parameters.closed_to_edge * imgw
-            or rectangle[0] > (1 - parameters.closed_to_edge) * imgw
+            (
+                (
+                    rectangle[0] < parameters.closed_to_edge_min * imgw
+                    and rectangle[0] + rectangle[2]
+                    < parameters.closed_to_edge_max * imgw
+                )
+                or (
+                    rectangle[0] > (1 - parameters.closed_to_edge_max) * imgw
+                    and rectangle[0] + rectangle[2]
+                    > (1 - parameters.closed_to_edge_min) * imgw
+                )
+            )
         ):
             return True
         if ratio <= 1 / parameters.skip_rectangle_closed_to_line and (
-            rectangle[1] + rectangle[3] < parameters.closed_to_edge * imgh
-            or rectangle[1] > (1 - parameters.closed_to_edge) * imgh
+            (
+                rectangle[1] < parameters.closed_to_edge_min * imgh
+                and rectangle[1] + rectangle[3]
+                < parameters.closed_to_edge_max * imgh
+            )
+            or (
+                rectangle[1] > (1 - parameters.closed_to_edge_max) * imgh
+                and rectangle[1] + rectangle[3]
+                > (1 - parameters.closed_to_edge_min) * imgh
+            )
         ):
             return True
         return False
