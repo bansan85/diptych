@@ -194,13 +194,13 @@ def find_dpi(
     imgw: int, imgh: int, width_paper_cm: float, height_paper_cm: float
 ) -> int:
     if (
-        imgw / 200 * 2.54 < width_paper_cm
-        and imgh / 200 * 2.54 < height_paper_cm
+        imgw / 200 * 2.54 < width_paper_cm * 1.1
+        and imgh / 200 * 2.54 < height_paper_cm * 1.1
     ):
         return 200
     if (
-        imgw / 300 * 2.54 < width_paper_cm
-        and imgh / 300 * 2.54 < height_paper_cm
+        imgw / 300 * 2.54 < width_paper_cm * 1.1
+        and imgh / 300 * 2.54 < height_paper_cm * 1.1
     ):
         return 300
     raise Exception("dpi", "non détecté")

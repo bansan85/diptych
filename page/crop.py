@@ -135,9 +135,10 @@ class CropAroundDataInPageParameters:
         contour_area_min: float = 0.01 * 0.01
         contour_area_max: float = 1.0
         border: int = 10
-        skip_rectangle_closed_to_line: float = 1.0
-        closed_to_edge_min: float = 0.015
-        closed_to_edge_max: float = 0.05
+        closed_to_edge_x_min: float = 0.03
+        closed_to_edge_x_max: float = 0.05
+        closed_to_edge_y_min: float = 0.02
+        closed_to_edge_y_max: float = 0.05
 
     def __init__(self) -> None:
         self.__param = CropAroundDataInPageParameters.Impl()
@@ -195,28 +196,36 @@ class CropAroundDataInPageParameters:
         self.__param.border = val
 
     @property
-    def skip_rectangle_closed_to_line(self) -> float:
-        return self.__param.skip_rectangle_closed_to_line
+    def closed_to_edge_x_min(self) -> float:
+        return self.__param.closed_to_edge_x_min
 
-    @skip_rectangle_closed_to_line.setter
-    def skip_rectangle_closed_to_line(self, val: float) -> None:
-        self.__param.skip_rectangle_closed_to_line = val
-
-    @property
-    def closed_to_edge_min(self) -> float:
-        return self.__param.closed_to_edge_min
-
-    @closed_to_edge_min.setter
-    def closed_to_edge_min(self, val: float) -> None:
-        self.__param.closed_to_edge_min = val
+    @closed_to_edge_x_min.setter
+    def closed_to_edge_x_min(self, val: float) -> None:
+        self.__param.closed_to_edge_x_min = val
 
     @property
-    def closed_to_edge_max(self) -> float:
-        return self.__param.closed_to_edge_max
+    def closed_to_edge_x_max(self) -> float:
+        return self.__param.closed_to_edge_x_max
 
-    @closed_to_edge_max.setter
-    def closed_to_edge_max(self, val: float) -> None:
-        self.__param.closed_to_edge_max = val
+    @closed_to_edge_x_max.setter
+    def closed_to_edge_x_max(self, val: float) -> None:
+        self.__param.closed_to_edge_x_max = val
+
+    @property
+    def closed_to_edge_y_min(self) -> float:
+        return self.__param.closed_to_edge_y_min
+
+    @closed_to_edge_y_min.setter
+    def closed_to_edge_y_min(self, val: float) -> None:
+        self.__param.closed_to_edge_y_min = val
+
+    @property
+    def closed_to_edge_y_max(self) -> float:
+        return self.__param.closed_to_edge_y_max
+
+    @closed_to_edge_y_max.setter
+    def closed_to_edge_y_max(self, val: float) -> None:
+        self.__param.closed_to_edge_y_max = val
 
     def init_default_values(
         self,
@@ -731,7 +740,7 @@ def crop_around_page(
     x_crop1.sort()
     y_crop1.sort()
 
-    return (x_crop1[1], x_crop1[2], y_crop1[1], y_crop1[2])
+    return (x_crop1[0], x_crop1[3], y_crop1[0], y_crop1[3])
 
 
 def crop_around_data(
@@ -774,31 +783,39 @@ def crop_around_data(
         threshold2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
     cv2ext.remove_border_in_contours(contours, 1, threshold)
+    big_rectangle = (
+        (
+            int(parameters.closed_to_edge_x_max * imgw),
+            int(parameters.closed_to_edge_y_max * imgh),
+        ),
+        (
+            int((1 - parameters.closed_to_edge_x_max) * imgw),
+            int((1 - parameters.closed_to_edge_y_max) * imgh),
+        ),
+    )
+    small_rectangle = (
+        (
+            int(parameters.closed_to_edge_x_min * imgw),
+            int(parameters.closed_to_edge_y_min * imgh),
+        ),
+        (
+            int((1 - parameters.closed_to_edge_x_min) * imgw),
+            int((1 - parameters.closed_to_edge_y_min) * imgh),
+        ),
+    )
     if enable_debug is not None:
         image2222 = cv2ext.convertion_en_couleur(page_gauche_0)
         image2222 = cv2.rectangle(
             image2222,
-            (
-                int(parameters.closed_to_edge_max * imgw),
-                int(parameters.closed_to_edge_max * imgh),
-            ),
-            (
-                int((1 - parameters.closed_to_edge_max) * imgw),
-                int((1 - parameters.closed_to_edge_max) * imgh),
-            ),
+            big_rectangle[0],
+            big_rectangle[1],
             (255, 0, 0),
             1,
         )
         image2222 = cv2.rectangle(
             image2222,
-            (
-                int(parameters.closed_to_edge_min * imgw),
-                int(parameters.closed_to_edge_min * imgh),
-            ),
-            (
-                int((1 - parameters.closed_to_edge_min) * imgw),
-                int((1 - parameters.closed_to_edge_min) * imgh),
-            ),
+            small_rectangle[0],
+            small_rectangle[1],
             (255, 0, 0),
             1,
         )
@@ -807,38 +824,32 @@ def crop_around_data(
         imgw - 1
     )
 
+    small_border = 255 * np.ones((imgh, imgw), dtype=np.uint8)
+    small_border = cv2.rectangle(
+        small_border,
+        small_rectangle[0],
+        small_rectangle[1],
+        0,
+        -1,
+    )
+    big_border = 255 * np.ones((imgh, imgw), dtype=np.uint8)
+    big_border = cv2.rectangle(
+        big_border,
+        big_rectangle[0],
+        big_rectangle[1],
+        0,
+        -1,
+    )
+
     def is_border(contour: Any) -> bool:
-        rectangle = cv2.boundingRect(contour)
-        ratio = rectangle[3] / rectangle[2]
-        if ratio >= parameters.skip_rectangle_closed_to_line and (
-            (
-                (
-                    rectangle[0] < parameters.closed_to_edge_min * imgw
-                    and rectangle[0] + rectangle[2]
-                    < parameters.closed_to_edge_max * imgw
-                )
-                or (
-                    rectangle[0] > (1 - parameters.closed_to_edge_max) * imgw
-                    and rectangle[0] + rectangle[2]
-                    > (1 - parameters.closed_to_edge_min) * imgw
-                )
-            )
-        ):
-            return True
-        if ratio <= 1 / parameters.skip_rectangle_closed_to_line and (
-            (
-                rectangle[1] < parameters.closed_to_edge_min * imgh
-                and rectangle[1] + rectangle[3]
-                < parameters.closed_to_edge_max * imgh
-            )
-            or (
-                rectangle[1] > (1 - parameters.closed_to_edge_max) * imgh
-                and rectangle[1] + rectangle[3]
-                > (1 - parameters.closed_to_edge_min) * imgh
-            )
-        ):
-            return True
-        return False
+        border = np.zeros((imgh, imgw), dtype=np.uint8)
+        cv2.drawContours(border, [contour], -1, 255, -1)
+        cnt_in_small = cv2.bitwise_and(small_border, border)
+        cnt_in_big = cv2.bitwise_and(big_border, border)
+
+        return cv2.countNonZero(cnt_in_small) != 0 and cv2.countNonZero(
+            cnt_in_big
+        ) == cv2.countNonZero(border)
 
     contours_listered = filter(
         lambda x: parameters.contour_area_min * imgh * imgw

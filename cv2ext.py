@@ -201,33 +201,27 @@ def add_border_to_match_size(
 
     marge_haute_px = crop[2]
     marge_basse_px = shape_wh[1] - 1 - crop[3]
-    marge_gauche_px = crop[0]
-    marge_droite_px = shape_wh[0] - 1 - crop[1]
-    if (
-        marge_gauche_px + width + marge_droite_px
-        < paper_size_wh_cm[0] / 2.54 * dpi
-    ):
-        pixels_manquant = paper_size_wh_cm[0] / 2.54 * dpi - width
-        left = int(pixels_manquant / 2.0)
-        right = int(pixels_manquant / 2.0)
-    else:
+
+    pixels_manquant = paper_size_wh_cm[0] / 2.54 * dpi - width
+    if pixels_manquant < 0:
         raise Exception("marge", "marge_gauche_px")
-    if (
-        marge_haute_px + height + marge_basse_px
-        < paper_size_wh_cm[1] / 2.54 * dpi
-    ):
-        pixels_manquant = paper_size_wh_cm[1] / 2.54 * dpi - height
-        # If no crop at the previous operation, add the same value to the
-        # top and the bottom
-        if marge_haute_px == 0 and marge_basse_px == 0:
-            marge_haute_px = 1
-            marge_basse_px = 1
-        pourcenthaut = marge_haute_px / (marge_haute_px + marge_basse_px)
-        top = int(pixels_manquant * pourcenthaut)
-        pourcentbas = marge_basse_px / (marge_haute_px + marge_basse_px)
-        bottom = int(pixels_manquant * pourcentbas)
-    else:
-        raise Exception("marge", "marge_gauche_px")
+    left = int(pixels_manquant / 2.0)
+    right = int(pixels_manquant / 2.0)
+
+    pixels_manquant = paper_size_wh_cm[1] / 2.54 * dpi - height
+    if pixels_manquant < 0:
+        raise Exception("marge", "marge_haute_px")
+
+    # If no crop at the previous operation, add the same value to the
+    # top and the bottom
+    if marge_haute_px == 0 and marge_basse_px == 0:
+        marge_haute_px = 1
+        marge_basse_px = 1
+    pourcenthaut = marge_haute_px / (marge_haute_px + marge_basse_px)
+    top = int(pixels_manquant * pourcenthaut)
+    pourcentbas = marge_basse_px / (marge_haute_px + marge_basse_px)
+    bottom = int(pixels_manquant * pourcentbas)
+
     return (top, bottom, left, right)
 
 
