@@ -472,7 +472,8 @@ def __found_length_histogram(
 
 def __loop_to_find_best_mean_angle_pos(
     histogram_posx_length_blur: Any,
-    ecart: int,
+    posx_ecart: int,
+    epsilon_angle: float,
     valid_lines: List[Tuple[int, int, int, int]],
 ) -> Tuple[float, int, Any, List[Tuple[float, int]], int]:
 
@@ -492,18 +493,42 @@ def __loop_to_find_best_mean_angle_pos(
     )
     valid_angle_pos2 = list(
         filter(
-            lambda x: x[1] - ecart <= posx <= x[1] + ecart,
+            lambda x: x[1] - posx_ecart <= posx <= x[1] + posx_ecart,
             valid_angle_pos1,
         )
     )
-    angle_only = list(map(lambda x: x[0], valid_angle_pos2))
+
+    # Divide value (posx and angle) by the ecart.
+    ecart_values = np.float32(
+        np.column_stack(
+            (
+                np.asarray((valid_angle_pos2))[:, 0]
+                / (epsilon_angle / np.pi * 180.0),
+                np.asarray((valid_angle_pos2))[:, 1] / posx_ecart,
+            )
+        )
+    )
+
+    __kmeans__ = 2
+    _, label, center = cv2.kmeans(
+        ecart_values,
+        __kmeans__,
+        None,
+        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
+        10,
+        cv2.KMEANS_RANDOM_CENTERS,
+    )
+    value_in_means = [sum(label.ravel() == x) for x in range(__kmeans__)]
+    sorted_zipped_lists = sorted(
+        zip(value_in_means, center), key=lambda x: x[0], reverse=True
+    )
 
     return (
-        compute.mean_angle(angle_only),
-        posx,
+        sorted_zipped_lists[0][1][0] * (epsilon_angle / np.pi * 180.0),
+        int(sorted_zipped_lists[0][1][1] * posx_ecart),
         histogram_posx_length_blur,
         valid_angle_pos1,
-        ecart,
+        posx_ecart,
     )
 
 
@@ -540,6 +565,7 @@ def __best_candidates_split_line_with_line(
     return __loop_to_find_best_mean_angle_pos(
         histogram_length,
         ecart,
+        epsilon_angle,
         valid_lines,
     )
 
