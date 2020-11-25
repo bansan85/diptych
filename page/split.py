@@ -680,7 +680,9 @@ def __found_candidates_split_line_with_wave(
     if enable_debug is not None:
         img_tmp = cv2.cvtColor(eroded, cv2.COLOR_GRAY2BGR)
         for i in range(nb_rectangle):
-            img_tmp = cv2.drawContours(img_tmp, contour, i, (255, 0, 0), 10)
+            img_tmp = cv2.drawContours(
+                img_tmp, contour, i, (255 * (1 - i), 255 * i, 0), 10
+            )
         img_tmp = cv2.drawContours(
             img_tmp, contour, nb_rectangle, (0, 0, 255), 3
         )
@@ -700,7 +702,9 @@ def __found_candidates_split_line_with_wave(
         nb_point_in_wave = 2
     toppoints = []
     bottompoints = []
+    cnt_i = 0
     for contour_i in list_of_contours:
+        cnt_i = cnt_i + 1
         npoints = 6
         for nloop in range(param.found_contour_iterations):
             polygon = cv2ext.get_polygon_from_contour(contour_i, npoints)
@@ -713,9 +717,17 @@ def __found_candidates_split_line_with_wave(
                     10,
                 )
                 for i in range(nb_rectangle):
-                    cv2.drawContours(img_tmp, contour, i, (255, 0, 0), 10)
+                    cv2.drawContours(
+                        img_tmp, contour, i, (255 * (1 - i), 255 * i, 0), 10
+                    )
                 cv2ext.secure_write(
-                    enable_debug + "_6_" + str(nloop) + ".png", img_tmp
+                    enable_debug
+                    + "_6_"
+                    + str(cnt_i)
+                    + "_"
+                    + str(nloop)
+                    + ".png",
+                    img_tmp,
                 )
             toppointsi: List[Tuple[int, int]] = []
             bottompointsi: List[Tuple[int, int]] = []
