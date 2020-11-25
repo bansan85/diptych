@@ -499,17 +499,23 @@ def __loop_to_find_best_mean_angle_pos(
     )
 
     # Divide value (posx and angle) by the ecart.
-    ecart_values = np.float32(
-        np.column_stack(
-            (
-                np.asarray((valid_angle_pos2))[:, 0]
-                / (epsilon_angle / np.pi * 180.0),
-                np.asarray((valid_angle_pos2))[:, 1] / posx_ecart,
-            )
+    ecart_values = np.column_stack(
+        (
+            np.asarray((valid_angle_pos2), dtype=np.float32)[:, 0]
+            / (10.0 * epsilon_angle / np.pi * 180.0),
+            np.asarray((valid_angle_pos2), dtype=np.float32)[:, 1]
+            / posx_ecart,
         )
     )
 
-    __kmeans__ = 2
+    if (
+        max(ecart_values[:, 0]) - min(ecart_values[:, 0]) < 3
+        and max(ecart_values[:, 1]) - min(ecart_values[:, 1]) < 3
+    ):
+        __kmeans__ = 1
+    else:
+        __kmeans__ = 2
+
     _, label, center = cv2.kmeans(
         ecart_values,
         __kmeans__,
@@ -524,7 +530,7 @@ def __loop_to_find_best_mean_angle_pos(
     )
 
     return (
-        sorted_zipped_lists[0][1][0] * (epsilon_angle / np.pi * 180.0),
+        sorted_zipped_lists[0][1][0] * (10.0 * epsilon_angle / np.pi * 180.0),
         int(sorted_zipped_lists[0][1][1] * posx_ecart),
         histogram_posx_length_blur,
         valid_angle_pos1,
