@@ -682,3 +682,38 @@ def is_line_not_cross_images(
     )
     image_line = cv2.bitwise_and(images_mask, image_line)
     return cv2.countNonZero(image_line) == 0
+
+
+def convert_polygon_with_fitline(
+    contours: Any, polygon: Any
+) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+    ret = []
+    contours_list = contours.tolist()
+    index_of_poly = [
+        contours_list.index([[polygon_i[0][0], polygon_i[0][1]]])
+        for polygon_i in polygon
+    ]
+    for idx1, idx2 in compute.iterator_zip_n_n_1(index_of_poly):
+        if idx1 < idx2:
+            points = contours[idx1 : idx2 + 1]
+        else:
+            points = np.concatenate((contours[idx1:], contours[0 : idx2 + 1]))
+
+        v_x, v_y, c_x, c_y = cv2.fitLine(points, cv2.DIST_L2, 0, 0.01, 0.01)
+
+        if abs(v_x) > abs(v_y):
+            min_x = min(points[:, 0, 0])
+            max_x = max(points[:, 0, 0])
+            lefty = int(((-c_x + min_x) * v_y / v_x) + c_y)
+            righty = int(((max_x - c_x) * v_y / v_x) + c_y)
+            line = ((min_x, lefty), (max_x, righty))
+        else:
+            min_y = min(points[:, 0, 1])
+            max_y = max(points[:, 0, 1])
+            topx = int(((-c_y + min_y) * v_x / v_y) + c_x)
+            bottomx = int(((max_y - c_y) * v_x / v_y) + c_x)
+            line = ((topx, min_y), (bottomx, max_y))
+
+        ret.append(line)
+
+    return ret

@@ -80,7 +80,6 @@ class FoundSplitLineWithLineParameters:
 class FindCandidatesSplitLineWithWaveParameters:
     class Impl(types.SimpleNamespace):
         rapport_rect1_rect2: float
-        found_contour_iterations: int
         wave_top: float
         wave_bottom: float
         wave_left: float
@@ -89,7 +88,6 @@ class FindCandidatesSplitLineWithWaveParameters:
     def __init__(  # pylint: disable=too-many-arguments
         self,
         rapport_rect1_rect2: float,
-        found_contour_iterations: int,
         wave_top: float,
         wave_bottom: float,
         wave_left: float,
@@ -97,7 +95,6 @@ class FindCandidatesSplitLineWithWaveParameters:
     ):
         self.__param = FindCandidatesSplitLineWithWaveParameters.Impl(
             rapport_rect1_rect2=rapport_rect1_rect2,
-            found_contour_iterations=found_contour_iterations,
             wave_top=wave_top,
             wave_bottom=wave_bottom,
             wave_left=wave_left,
@@ -113,16 +110,6 @@ class FindCandidatesSplitLineWithWaveParameters:
     @rapport_rect1_rect2.setter
     def rapport_rect1_rect2(self, val: float) -> None:
         self.__param.rapport_rect1_rect2 = val
-
-    @property
-    def found_contour_iterations(
-        self,
-    ) -> int:
-        return self.__param.found_contour_iterations
-
-    @found_contour_iterations.setter
-    def found_contour_iterations(self, val: int) -> None:
-        self.__param.found_contour_iterations = val
 
     @property
     def wave_top(self) -> float:
@@ -163,8 +150,6 @@ class FindCandidatesSplitLineWithWaveParameters:
     ) -> None:
         if key == "RapportRect1Rect2" and isinstance(value, float):
             self.rapport_rect1_rect2 = value
-        elif key == "FoundContourIterations" and isinstance(value, int):
-            self.found_contour_iterations = value
         elif key == "Top" and isinstance(value, float):
             self.wave_top = value
         elif key == "Bottom" and isinstance(value, float):
@@ -311,7 +296,6 @@ class SplitTwoWavesParameters:
         find_candidates: FindCandidatesSplitLineWithWaveParameters = (
             FindCandidatesSplitLineWithWaveParameters(
                 1.05,
-                10,
                 0.2,
                 0.8,
                 0.4,
@@ -663,13 +647,97 @@ def __found_candidates_split_line_with_wave_keep_interesting_points(
                 bottompointsi.append((point_x, point_y))
 
 
-def __found_candidates_split_line_with_wave(
+def __found_best_split_line_with_wave_n_contours(
+    contours: Any,
+    n_contours: Any,
+    image: Any,
+    enable_debug: Optional[str],
+) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    cnt_i = 0
+    split_lines = []
+    for contour_i in contours[0:n_contours]:
+        cnt_i = cnt_i + 1
+        polygon = cv2ext.get_polygon_from_contour(contour_i, 4)
+        if enable_debug is not None:
+            img_tmp = cv2.drawContours(
+                cv2ext.convertion_en_couleur(image),
+                [polygon],
+                0,
+                (0, 0, 255),
+                10,
+            )
+            for i in range(n_contours):
+                cv2.drawContours(
+                    img_tmp, contours, i, (255 * (1 - i), 255 * i, 0), 10
+                )
+            cv2ext.secure_write(
+                enable_debug + "_6_" + str(cnt_i) + ".png",
+                img_tmp,
+            )
+        lines = cv2ext.convert_polygon_with_fitline(contour_i, polygon)
+        lines_sorted_by_length = sorted(
+            lines,
+            key=lambda x: np.linalg.norm(
+                np.array((x[0][0], x[0][1])) - np.array((x[1][0], x[1][1]))
+            ),
+            reverse=True,
+        )
+        lines_two_longest = lines_sorted_by_length[0:2]
+        lines_sorted_by_distance_to_center = sorted(
+            lines_two_longest,
+            key=lambda x: np.linalg.norm(
+                np.array(((x[0][0] + x[1][0]) / 2, (x[0][1] + x[1][1]) / 2))
+                - np.array((image.shape[1] / 2, image.shape[0] / 2))
+            ),
+            reverse=False,
+        )
+        candidate1 = lines_sorted_by_distance_to_center[0]
+
+        # Check if it's only one contour
+        # because the contour is outside the two pages or
+        # because only one page is detected.
+        if n_contours == 1:
+            hull = cv2.convexHull(contour_i, returnPoints=False)
+            defects = cv2.convexityDefects(contour_i, hull)
+            sorted_defects = defects[np.argsort(-defects[:, 0, 3])]
+            candidate2: Tuple[Tuple[int, int], Tuple[int, int]] = (
+                tuple(contour_i[sorted_defects[0, 0, 2]][0]),  # type: ignore
+                tuple(contour_i[sorted_defects[1, 0, 2]][0]),
+            )
+
+            lines_two_longest = []
+            lines_two_longest.append(candidate1)
+            lines_two_longest.append(candidate2)
+
+            lines_sorted_by_distance_to_center = sorted(
+                lines_two_longest,
+                key=lambda x: np.linalg.norm(
+                    np.array(
+                        ((x[0][0] + x[1][0]) / 2, (x[0][1] + x[1][1]) / 2)
+                    )
+                    - np.array((image.shape[1] / 2, image.shape[0] / 2))
+                ),
+                reverse=False,
+            )
+            return lines_sorted_by_distance_to_center[0]
+
+        split_lines.append(candidate1)
+
+    return tuple(  # type: ignore
+        map(
+            lambda y: tuple(map(lambda z: int(sum(z) / len(z)), zip(*y))),
+            zip(*split_lines),
+        )
+    )
+
+
+def __found_best_split_line_with_wave(
     contour: Any,
     image: Any,
     eroded: Any,
     param: FindCandidatesSplitLineWithWaveParameters,
     enable_debug: Optional[str] = None,
-) -> Tuple[Any, Any]:
+) -> Tuple[Tuple[int, int], Tuple[int, int]]:
     nb_rectangle = (
         int(
             cv2.contourArea(contour[0]) / cv2.contourArea(contour[1])
@@ -688,65 +756,9 @@ def __found_candidates_split_line_with_wave(
         )
         cv2ext.secure_write(enable_debug + "_5.png", img_tmp)
 
-    # Il faut au minimum 10 points pour détecter le décroché qui indique
-    # la séparation entre deux pages.
-    if nb_rectangle == 1:
-        list_of_contours = [contour[0]]
-        # Si on a un seul contour pour la double page, la vague peut être
-        # caractérisée par 3 points.
-        nb_point_in_wave = 3
-    else:
-        list_of_contours = [contour[0], contour[1]]
-        # Si on a deux contours pour la double page, la vague ne peut être
-        # caractérisée que par 2 points.
-        nb_point_in_wave = 2
-    toppoints = []
-    bottompoints = []
-    cnt_i = 0
-    for contour_i in list_of_contours:
-        cnt_i = cnt_i + 1
-        npoints = 6
-        for nloop in range(param.found_contour_iterations):
-            polygon = cv2ext.get_polygon_from_contour(contour_i, npoints)
-            if enable_debug is not None:
-                img_tmp = cv2.drawContours(
-                    cv2ext.convertion_en_couleur(image),
-                    [polygon],
-                    0,
-                    (0, 0, 255),
-                    10,
-                )
-                for i in range(nb_rectangle):
-                    cv2.drawContours(
-                        img_tmp, contour, i, (255 * (1 - i), 255 * i, 0), 10
-                    )
-                cv2ext.secure_write(
-                    enable_debug
-                    + "_6_"
-                    + str(cnt_i)
-                    + "_"
-                    + str(nloop)
-                    + ".png",
-                    img_tmp,
-                )
-            toppointsi: List[Tuple[int, int]] = []
-            bottompointsi: List[Tuple[int, int]] = []
-            __found_candidates_split_line_with_wave_keep_interesting_points(
-                polygon, toppointsi, bottompointsi, param, image
-            )
-            # On filtre les points qui sont à peu près au centre (x/2) de
-            # l'image
-            # Est-ce qu'on a suffisamment de points ?
-            if (
-                len(toppointsi) >= nb_point_in_wave
-                and len(bottompointsi) >= nb_point_in_wave
-            ):
-                toppoints.append(toppointsi)
-                bottompoints.append(bottompointsi)
-                break
-            npoints = len(polygon) + 1
-
-    return (toppoints, bottompoints)
+    return __found_best_split_line_with_wave_n_contours(
+        contour, nb_rectangle, image, enable_debug
+    )
 
 
 def found_split_line_with_wave(
@@ -818,7 +830,7 @@ def found_split_line_with_wave(
         compute.optional_concat(enable_debug, "_4c_wave"),
     )
 
-    toppoints, bottompoints = __found_candidates_split_line_with_wave(
+    bottompoint, toppoint = __found_best_split_line_with_wave(
         cs2,
         image,
         erode_dilate,
@@ -826,26 +838,6 @@ def found_split_line_with_wave(
         enable_debug,
     )
 
-    if len(toppoints) == 0 or len(bottompoints) == 0:
-        raise Exception(
-            "Failed to found contour of the page.",
-            str(parameters.find_candidates.found_contour_iterations)
-            + " iterations",
-        )
-
-    # Le point de séparation des deux pages en haut et bas
-    maxtoppoints = list(map(lambda x: max(x, key=lambda x: x[1]), toppoints))
-    minbottompoints = list(
-        map(lambda x: min(x, key=lambda x: x[1]), bottompoints)
-    )
-    toppoint = (
-        sum(x for x, y in maxtoppoints) // len(maxtoppoints),
-        sum(y for x, y in maxtoppoints) // len(maxtoppoints),
-    )
-    bottompoint = (
-        sum(x for x, y in minbottompoints) // len(minbottompoints),
-        sum(y for x, y in minbottompoints) // len(minbottompoints),
-    )
     if enable_debug is not None:
         image_with_lines = cv2ext.convertion_en_couleur(image)
         cv2.line(
