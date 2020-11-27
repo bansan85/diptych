@@ -647,6 +647,39 @@ def __found_candidates_split_line_with_wave_keep_interesting_points(
                 bottompointsi.append((point_x, point_y))
 
 
+def __found_best_split_line_with_wave_hull(
+    contour: Any,
+) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    hull = cv2.convexHull(contour, returnPoints=False)
+    defects = cv2.convexityDefects(contour, hull)
+    sorted_defects = defects[np.argsort(-defects[:, 0, 3])]
+    point1 = contour[sorted_defects[0, 0, 2]][0]
+    point2 = np.array(
+        (
+            compute.get_perpendicular_throught_point(
+                contour[sorted_defects[0, 0, 0]][0],
+                contour[sorted_defects[0, 0, 1]][0],
+                contour[sorted_defects[0, 0, 2]][0],
+            )
+        )
+    )
+
+    possible_next_defect = sorted(
+        sorted_defects,
+        key=lambda x: np.abs(
+            np.cross(point2 - point1, point1 - contour[x[0, 2]][0])
+        )
+        / np.linalg.norm(point2 - point1),
+    )
+
+    candidate2: Tuple[Tuple[int, int], Tuple[int, int]] = (
+        tuple(contour[sorted_defects[0, 0, 2]][0]),  # type: ignore
+        tuple(contour[possible_next_defect[1][0, 2]][0]),
+    )
+
+    return candidate2
+
+
 def __found_best_split_line_with_wave_n_contours(
     contours: Any,
     n_contours: Any,
@@ -697,13 +730,9 @@ def __found_best_split_line_with_wave_n_contours(
         # because the contour is outside the two pages or
         # because only one page is detected.
         if n_contours == 1:
-            hull = cv2.convexHull(contour_i, returnPoints=False)
-            defects = cv2.convexityDefects(contour_i, hull)
-            sorted_defects = defects[np.argsort(-defects[:, 0, 3])]
-            candidate2: Tuple[Tuple[int, int], Tuple[int, int]] = (
-                tuple(contour_i[sorted_defects[0, 0, 2]][0]),  # type: ignore
-                tuple(contour_i[sorted_defects[1, 0, 2]][0]),
-            )
+            candidate2: Tuple[
+                Tuple[int, int], Tuple[int, int]
+            ] = __found_best_split_line_with_wave_hull(contour_i)
 
             lines_two_longest = []
             lines_two_longest.append(candidate1)

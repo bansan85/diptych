@@ -282,3 +282,22 @@ def mean_angle(liste: List[float]) -> float:
     if sin > 0:
         return np.arctan(sin / cos) / np.pi * 180.0
     return np.arctan(sin / cos) / np.pi * 180.0 + 360.0
+
+
+def get_perpendicular_throught_point(
+    line_start: Tuple[int, int],
+    line_end: Tuple[int, int],
+    point: Tuple[int, int],
+) -> Tuple[int, int]:
+    x_1, y_1 = line_start
+    x_2, y_2 = line_end
+    x_3, y_3 = point
+
+    k = ((y_2 - y_1) * (x_3 - x_1) - (x_2 - x_1) * (y_3 - y_1)) / (
+        (y_2 - y_1) ** 2 + (x_2 - x_1) ** 2
+    )
+
+    x_4 = x_3 - k * (y_2 - y_1)
+    y_4 = y_3 + k * (x_2 - x_1)
+
+    return (int(x_4), int(y_4))
