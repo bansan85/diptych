@@ -33,7 +33,7 @@ class SeparatePage:
         self.__images_found = page.find_images.find_images(
             image,
             parameters.find_images,
-            None,
+            0.0,
             compute.optional_concat(enable_debug, "_0"),
         )
         param1 = FoundSplitLineWithLineParameters(
@@ -48,7 +48,6 @@ class SeparatePage:
             angle_1,
             posx_1,
             histogram_length,
-            valid_lines,
             ecart,
         ) = page.split.found_split_line_with_line(
             image,
@@ -74,7 +73,11 @@ class SeparatePage:
             self.__angle_split,
             pos_moy,
         ) = page.split.find_best_split_in_all_candidates(
-            (angle_1, posx_1), second, histogram_length, valid_lines, ecart
+            (angle_1, posx_1),
+            second,
+            histogram_length,
+            param1.hough_lines.delta_tetha / np.pi * 180.0,
+            ecart,
         )
 
         self.__output.print(

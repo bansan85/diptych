@@ -9,6 +9,7 @@ from typing import (
     TypeVar,
     Dict,
     List,
+    Union
 )
 import sys
 import time
@@ -254,7 +255,10 @@ def get_tops_indices_histogram(smooth: Any) -> List[int]:
         # One must be > and the other >= to detect the following top:
         # 50, 51, 51, 51, 50
         if smooth[i] > smooth[i - 1] and smooth[i] >= smooth[i + 1]:
-            retval.append(i)
+            start = i
+            while i < len(smooth) and smooth[i] == smooth[i + 1]:
+                i = i + 1
+            retval.append((start + i) // 2)
     if smooth[len(smooth) - 1] > smooth[len(smooth) - 2]:
         retval.append(len(smooth) - 1)
     return retval
@@ -274,14 +278,38 @@ def is_angle_closed_to(
     return value >= angle1 or value <= angle2
 
 
-def mean_angle(liste: List[float]) -> float:
-    sin = sum(map(lambda x: np.sin(x / 180.0 * np.pi), liste)) / len(liste)
-    cos = sum(map(lambda x: np.cos(x / 180.0 * np.pi), liste)) / len(liste)
+def mean_angle(
+    liste: Union[List[float], Tuple[float, ...]],
+    weight: Optional[Union[List[float], Tuple[float, ...]]] = None,
+) -> float:
+    if weight is None:
+        sin = sum(map(lambda x: np.sin(x / 180.0 * np.pi), liste)) / len(liste)
+        cos = sum(map(lambda x: np.cos(x / 180.0 * np.pi), liste)) / len(liste)
+    else:
+        sin = sum(
+            [np.sin(x / 180.0 * np.pi) * y for x, y in zip(liste, weight)]
+        ) / sum(
+            weight  # type: ignore
+        )
+        cos = sum(
+            [np.cos(x / 180.0 * np.pi) * y for x, y in zip(liste, weight)]
+        ) / sum(
+            weight  # type: ignore
+        )
     if cos < 0:
         return np.arctan(sin / cos) / np.pi * 180.0 + 180.0
     if sin > 0:
         return np.arctan(sin / cos) / np.pi * 180.0
     return np.arctan(sin / cos) / np.pi * 180.0 + 360.0
+
+
+def mean_weight(
+    liste: Union[List[float], Tuple[float, ...]],
+    weight: Optional[Union[List[float], Tuple[float, ...]]] = None,
+) -> float:
+    if weight is None:
+        return sum(liste) / len(liste)
+    return sum([x * y for x, y in zip(liste, weight)]) / sum(weight)
 
 
 def get_perpendicular_throught_point(

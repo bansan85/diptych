@@ -1,8 +1,11 @@
 import types
 from typing import Union, Tuple, Any, Optional, List
+from itertools import chain
 
 import numpy as np
 import cv2
+from scipy.ndimage.filters import maximum_filter
+from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
 
 from parameters import ErodeParameters, CannyParameters, HoughLinesParameters
 from page.find_images import FindImageParameters
@@ -420,7 +423,7 @@ def __found_candidates_split_line_with_line(
                 param.limit_tetha,
                 90,
                 cv2ext.get_hw(blurimg)[1] // 2,
-                param.limit_rho,
+                cv2ext.get_hw(blurimg)[1] // 2,
             ),
             list_lines_p,
         )
@@ -436,88 +439,76 @@ def __found_candidates_split_line_with_line(
     return list(map(lambda p: p[0], lines_valid))
 
 
-def __found_length_histogram(
-    histogram_posx_maxy: Any, histogram_posx_miny: Any, ecart: int
-) -> Any:
-    if ecart % 2 == 0:
-        ecart = ecart + 1
-
-    histogram_posx_length = histogram_posx_maxy - histogram_posx_miny
-
-    histogram_posx_length_blur = cv2.GaussianBlur(
-        histogram_posx_length,
-        (1, ecart),
-        ecart,
-        borderType=cv2.BORDER_REPLICATE,
+def detect_peaks(image: Any) -> Any:
+    neighborhood = generate_binary_structure(2, 2)
+    local_max = maximum_filter(image, footprint=neighborhood) == image
+    background = image == 0
+    eroded_background = binary_erosion(
+        background, structure=neighborhood, border_value=1
     )
+    detected_peaks = local_max ^ eroded_background
 
-    return histogram_posx_length_blur
+    return detected_peaks
 
 
 def __loop_to_find_best_mean_angle_pos(
-    histogram_posx_length_blur: Any,
+    histogram_posx_length: Any,
     posx_ecart: int,
     epsilon_angle: float,
-    valid_lines: List[Tuple[int, int, int, int]],
-) -> Tuple[float, int, Any, List[Tuple[float, int]], int]:
-
-    posx = np.argmax(histogram_posx_length_blur)
-
-    all_angle_pos = list(
+) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
+    local_maximum = detect_peaks(histogram_posx_length)
+    local_maximum_pos_raw = np.where(local_maximum)
+    all_max_big_length = list(
         map(
-            lambda x: compute.get_angle_0_180_posx((x[0], x[1]), (x[2], x[3])),
-            valid_lines,
+            lambda x: (
+                x[0] * epsilon_angle,
+                x[1] * posx_ecart,
+                histogram_posx_length[x[0], x[1]],
+            ),
+            zip(local_maximum_pos_raw[0], local_maximum_pos_raw[1]),
         )
     )
-    valid_angle_pos1: List[Tuple[float, int]] = list(
-        filter(
-            lambda x: x[1] is not None,
-            all_angle_pos,  # type: ignore
+    all_posx = tuple(zip(*all_max_big_length))
+    moy_posx = (min(all_posx[1]) + max(all_posx[1])) // 2
+    best_angle = sorted(
+        all_max_big_length, key=lambda x: np.abs(x[1] - moy_posx)
+    )
+    best_angle_with_err = list(
+        map(
+            lambda x: (
+                x[0],
+                x[1],
+                x[2],
+                x[2]
+                * (
+                    1.0
+                    - 2.0
+                    * np.absolute(
+                        compute.norm_cdf(
+                            x[1],
+                            moy_posx,
+                            posx_ecart,
+                        )
+                        - 0.5
+                    )
+                ),
+            ),
+            best_angle,
         )
-    )
-    valid_angle_pos2 = list(
-        filter(
-            lambda x: x[1] - posx_ecart <= posx <= x[1] + posx_ecart,
-            valid_angle_pos1,
-        )
-    )
-
-    # Divide value (posx and angle) by the ecart.
-    ecart_values = np.column_stack(
-        (
-            np.asarray((valid_angle_pos2), dtype=np.float32)[:, 0]
-            / (10.0 * epsilon_angle / np.pi * 180.0),
-            np.asarray((valid_angle_pos2), dtype=np.float32)[:, 1]
-            / posx_ecart,
-        )
-    )
-
-    if (
-        max(ecart_values[:, 0]) - min(ecart_values[:, 0]) < 3
-        and max(ecart_values[:, 1]) - min(ecart_values[:, 1]) < 3
-    ):
-        __kmeans__ = 1
-    else:
-        __kmeans__ = 2
-
-    _, label, center = cv2.kmeans(
-        ecart_values,
-        __kmeans__,
-        None,
-        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
-        10,
-        cv2.KMEANS_RANDOM_CENTERS,
-    )
-    value_in_means = [sum(label.ravel() == x) for x in range(__kmeans__)]
-    sorted_zipped_lists = sorted(
-        zip(value_in_means, center), key=lambda x: x[0], reverse=True
     )
 
     return (
-        sorted_zipped_lists[0][1][0] * (10.0 * epsilon_angle / np.pi * 180.0),
-        int(sorted_zipped_lists[0][1][1] * posx_ecart),
-        histogram_posx_length_blur,
-        valid_angle_pos1,
+        compute.mean_angle(
+            list(zip(*best_angle_with_err))[0],
+            list(zip(*best_angle_with_err))[3],
+        ),
+        int(
+            compute.mean_weight(
+                list(zip(*best_angle_with_err))[1],
+                list(zip(*best_angle_with_err))[3],
+            )
+        ),
+        all_max_big_length,
         posx_ecart,
     )
 
@@ -527,36 +518,106 @@ def __best_candidates_split_line_with_line(
     width: int,
     height: int,
     epsilon_angle: float,
-) -> Tuple[float, int, Any, List[Tuple[float, int]], int]:
-    histogram_posx_miny = height * np.ones(width + 1)
-    histogram_posx_maxy = np.zeros(width + 1)
+) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
     ecart = int(
         np.ceil(
             np.tan(epsilon_angle) * np.linalg.norm(np.array((width, height)))
         )
     )
+
+    epsilon_angle_deg = epsilon_angle / np.pi * 180.0
+
+    histogram_size_angle = int(np.ceil(180.0 / epsilon_angle_deg))
+    histogram_size_posx = (width + ecart - 1) // ecart
+    histogram_miny = np.full(
+        (
+            histogram_size_angle,
+            histogram_size_posx,
+        ),
+        height,
+    )
+    histogram_maxy = np.zeros(
+        (
+            histogram_size_angle,
+            histogram_size_posx,
+        ),
+    )
+    __ecart__ = 2
     for point1_x, point1_y, point2_x, point2_y in valid_lines:
-        _, pos = compute.get_angle_0_180_posx_safe(
+        angle, pos = compute.get_angle_0_180_posx_safe(
             (point1_x, point1_y), (point2_x, point2_y)
         )
-        histogram_posx_miny[pos - ecart : pos + ecart] = [
-            min(c, point1_y, point2_y)
-            for c in histogram_posx_miny[pos - ecart : pos + ecart]
+        angle_round = int(np.round(angle / epsilon_angle_deg))
+        pos_round = int(np.round(pos / ecart))
+        histogram_miny[
+            angle_round - __ecart__ : angle_round + __ecart__,
+            pos_round - __ecart__ : pos_round + __ecart__,
+        ] = [
+            min(
+                min(
+                    chain.from_iterable(
+                        list(
+                            zip(
+                                *histogram_miny[
+                                    max(angle_round - __ecart__, 0) : min(
+                                        angle_round + __ecart__,
+                                        histogram_size_angle - 1,
+                                    ),
+                                    max(pos_round - __ecart__, 0) : min(
+                                        pos_round + __ecart__,
+                                        histogram_size_posx - 1,
+                                    ),
+                                ]
+                            )
+                        )
+                    )
+                ),
+                point1_y,
+                point2_y,
+            )
         ]
-        histogram_posx_maxy[pos - ecart : pos + ecart] = [
-            max(c, point1_y, point2_y)
-            for c in histogram_posx_maxy[pos - ecart : pos + ecart]
+        histogram_maxy[
+            angle_round - __ecart__ : angle_round + __ecart__,
+            pos_round - __ecart__ : pos_round + __ecart__,
+        ] = [
+            max(
+                max(
+                    chain.from_iterable(
+                        list(
+                            zip(
+                                *histogram_maxy[
+                                    max(angle_round - __ecart__, 0) : min(
+                                        angle_round + __ecart__,
+                                        histogram_size_angle - 1,
+                                    ),
+                                    max(pos_round - __ecart__, 0) : min(
+                                        pos_round + __ecart__,
+                                        histogram_size_posx - 1,
+                                    ),
+                                ]
+                            )
+                        )
+                    )
+                ),
+                point1_y,
+                point2_y,
+            )
         ]
 
-    histogram_length = __found_length_histogram(
-        histogram_posx_maxy, histogram_posx_miny, ecart
+    histogram_length = histogram_maxy - histogram_miny
+    histogram_length_clip = np.clip(histogram_length, 0, height)
+    histogram_length_clip_blur = cv2.GaussianBlur(
+        histogram_length_clip,
+        (1, 11),
+        11,
+        borderType=cv2.BORDER_REPLICATE,
     )
+    histogram_length_clip_int = histogram_length_clip_blur.astype(int)
 
     return __loop_to_find_best_mean_angle_pos(
-        histogram_length,
+        histogram_length_clip_int,
         ecart,
-        epsilon_angle,
-        valid_lines,
+        epsilon_angle_deg,
     )
 
 
@@ -565,7 +626,7 @@ def found_split_line_with_line(
     images_found: Any,
     param: FoundSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
-) -> Tuple[float, int, Any, List[Tuple[float, int]], int]:
+) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
     cv2ext.write_image_if(image, enable_debug, "_1.png")
 
     valid_lines = __found_candidates_split_line_with_line(
@@ -592,7 +653,6 @@ def found_split_line_with_line(
         angle_1,
         posx_1,
         histogram_length,
-        valid_lines_angle_pos,
         ecart,
     ) = __best_candidates_split_line_with_line(
         valid_lines,
@@ -627,7 +687,7 @@ def found_split_line_with_line(
             )
         cv2ext.secure_write(enable_debug + "_7.png", image_with_lines)
 
-    return angle_1, posx_1, histogram_length, valid_lines_angle_pos, ecart
+    return angle_1, posx_1, histogram_length, ecart
 
 
 def __found_candidates_split_line_with_wave_keep_interesting_points(
@@ -888,26 +948,45 @@ def found_split_line_with_wave(
 def find_best_split_in_all_candidates(
     one: Tuple[float, int],
     two: Tuple[float, int],
-    histogram_length: Any,
-    valid_lines: List[Tuple[float, int]],
-    ecart: int,
+    histogram_length: List[Tuple[float, int, int]],
+    ecart_angle: float,
+    ecart_posx: int,
 ) -> Tuple[float, int]:
+    if (
+        np.abs(one[0] - two[0]) < 10 * ecart_angle
+        and np.abs(one[1] - two[1]) < 2 * ecart_posx
+    ):
+        angle_moy = compute.mean_angle([one[0], two[0]])
+        pos_moy = (one[1] + two[1]) // 2
+        return (angle_moy, pos_moy)
+
     # Check if angle two is a top in histogram_length.
-    tops = compute.get_tops_indices_histogram(histogram_length)
-    tops.sort(key=lambda x: np.abs(two[1] - x))
-    # angle two is the most fiable.
-    if tops[0] - ecart <= two[1] <= tops[0] + ecart:
-        posx_moy = (tops[0] + two[1]) // 2
-        valid_lines_posx = list(
-            filter(
-                lambda x: posx_moy - ecart <= x[1] <= posx_moy + ecart,
-                valid_lines,
-            )
+    possible_line = list(
+        filter(
+            lambda x: np.abs(two[0] - x[0]) < 10 * ecart_angle
+            and np.abs(two[1] - x[1]) < 2 * ecart_posx,
+            histogram_length,
         )
-        angle_moy = compute.mean_angle(
-            list(map(lambda x: x[0], valid_lines_posx))
+    )
+
+    # posx of two is the most fiable.
+    if len(possible_line) != 0:
+        possible_line_transposed = list(zip(*possible_line))
+        # Compute mean of possible lines
+        angle_moy_one = compute.mean_angle(
+            possible_line_transposed[0], possible_line_transposed[2]
         )
-        return (angle_moy, posx_moy)
+        posx_moy_one = compute.mean_weight(
+            possible_line_transposed[1], possible_line_transposed[2]
+        )
+
+        # and return mean with two
+        return (
+            compute.mean_angle([angle_moy_one, two[0]]),
+            int((posx_moy_one + two[1]) / 2),
+        )
+
+    # No candidate ? Let's try a mean of the two results…
     angle_moy = compute.mean_angle([one[0], two[0]])
     pos_moy = (one[1] + two[1]) // 2
     return (angle_moy, pos_moy)
