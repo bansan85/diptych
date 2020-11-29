@@ -683,11 +683,26 @@ def __found_best_split_line_with_wave_hull(
             compute.get_angle_0_180(defect1[4], defect2[2]),
             compute.get_angle_0_180(defect2[2], defect2[4]),
         ]
-        mean_angle = compute.mean_angle(list_angle)
+        mean_angle = compute.mean_angle(list_angle) % 180.0
+        if 45 < mean_angle < 135:
+            x_s = data[1]
+            y_s = data[0]
+        else:
+            x_s = data[0]
+            y_s = data[1]
+
+        linres = scipy.stats.linregress(x_s, y_s)
+        # Don't use rvalue.
+        # With data ((3104, 3506, 441, 0), (2498, 2498, 2498, 2500))
+        # rvalue**2 = 0.427 but in reality, it's almost perfect.
+        error = sum(
+            [(linres[1] + x * linres[0] - y) ** 2 for x, y in zip(x_s, y_s)]
+        )
+
         candidates.append(
             (
                 data,
-                scipy.stats.linregress(data[0], data[1])[2] ** 2,
+                error,
                 defect1[3] + defect2[3],
                 sum([np.square(x - mean_angle) for x in list_angle])
                 / len(list_angle),
@@ -695,7 +710,7 @@ def __found_best_split_line_with_wave_hull(
         )
 
     keep_best_candidates = filter(
-        lambda x: x[1] > 0.98 and x[2] > 10000 and x[3] < 2, candidates
+        lambda x: x[1] < 10 and x[2] > 10000 and x[3] < 2, candidates
     )
     result_sorted_by_same_angle = sorted(
         keep_best_candidates, key=lambda x: x[3]
