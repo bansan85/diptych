@@ -432,7 +432,9 @@ def __loop_to_find_best_mean_angle_pos(
                         compute.norm_cdf(
                             x[1],
                             moy_posx,
-                            posx_ecart,
+                            max(
+                                posx_ecart, np.abs(best_angle[0][1] - moy_posx)
+                            ),
                         )
                         - 0.5
                     )
