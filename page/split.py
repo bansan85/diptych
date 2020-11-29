@@ -987,7 +987,5 @@ def find_best_split_in_all_candidates(
             int((posx_moy_one + two[1]) / 2),
         )
 
-    # No candidate ? Let's try a mean of the two results…
-    angle_moy = compute.mean_angle([one[0], two[0]])
-    pos_moy = (one[1] + two[1]) // 2
-    return (angle_moy, pos_moy)
+    # No candidate ? Maybe their is no line between the two waves.
+    return two
