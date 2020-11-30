@@ -639,7 +639,6 @@ def found_split_line_with_line(
 
 def __found_best_split_line_with_wave_hull(
     contour: Any,
-    h_w: Tuple[int, int],
 ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
     hull = cv2.convexHull(contour, returnPoints=False)
     defects = cv2.convexityDefects(contour, hull)
@@ -665,9 +664,6 @@ def __found_best_split_line_with_wave_hull(
     candidates = []
 
     for defect1, defect2 in combinations(defects_valid, 2):
-        if np.linalg.norm(defect1[2] - defect2[2]) < min(h_w) / 2:
-            continue
-
         data = list(
             zip(
                 *(
@@ -706,11 +702,13 @@ def __found_best_split_line_with_wave_hull(
                 defect1[3] + defect2[3],
                 sum([np.square(x - mean_angle) for x in list_angle])
                 / len(list_angle),
+                defect1[4],
+                defect2[4],
             )
         )
 
     keep_best_candidates = filter(
-        lambda x: x[1] < 10 and x[2] > 10000 and x[3] < 2, candidates
+        lambda x: x[1] < 200 and x[2] > 10000 and x[3] < 2, candidates
     )
     result_sorted_by_same_angle = sorted(
         keep_best_candidates, key=lambda x: x[3]
@@ -723,12 +721,16 @@ def __found_best_split_line_with_wave_hull(
 
     return (
         (
-            result_sorted_by_same_angle[0][0][0][1],
-            result_sorted_by_same_angle[0][0][1][1],
+            (
+                result_sorted_by_same_angle[0][4][0],
+                result_sorted_by_same_angle[0][4][1],
+            )
         ),
         (
-            result_sorted_by_same_angle[0][0][0][2],
-            result_sorted_by_same_angle[0][0][1][2],
+            (
+                result_sorted_by_same_angle[0][5][0],
+                result_sorted_by_same_angle[0][5][1],
+            )
         ),
     )
 
@@ -780,7 +782,7 @@ def __found_best_split_line_with_wave_n_contours(
                     10,
                 )
             cv2ext.secure_write(
-                enable_debug + "_6_" + str(cnt_i) + ".png",
+                enable_debug + "_6_" + str(cnt_i) + "_2.png",
                 image_with_lines,
             )
         lines_sorted_by_length = sorted(
@@ -807,9 +809,7 @@ def __found_best_split_line_with_wave_n_contours(
         if n_contours == 1:
             candidate2: Optional[
                 Tuple[Tuple[int, int], Tuple[int, int]]
-            ] = __found_best_split_line_with_wave_hull(
-                contour_i, cv2ext.get_hw(image)
-            )
+            ] = __found_best_split_line_with_wave_hull(contour_i)
 
             lines_two_longest = []
             lines_two_longest.append(candidate1)
