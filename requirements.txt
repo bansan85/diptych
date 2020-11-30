@@ -4,3 +4,4 @@ pip>=19.3
 opencv-python>=4
 numpy
 scipy
+pytesseract

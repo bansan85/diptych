@@ -9,6 +9,7 @@ from page.find_images import FindImageParameters
 import page.find_images
 import cv2ext
 import compute
+import ocr
 
 
 class FoundDataTry1Parameters:
@@ -842,14 +843,27 @@ def crop_around_data(
     )
 
     def is_border(contour: Any) -> bool:
-        border = np.zeros((imgh, imgw), dtype=np.uint8)
-        cv2.drawContours(border, [contour], -1, 255, -1)
-        cnt_in_small = cv2.bitwise_and(small_border, border)
-        cnt_in_big = cv2.bitwise_and(big_border, border)
+        border_gray = gray.copy()
+        border_threshold = cv2.bitwise_not(threshold)
+        border_mask = np.zeros((imgh, imgw), dtype=np.uint8)
+        cv2.drawContours(border_mask, [contour], -1, 255, -1)
+        border_threshold[border_mask == 0] = 0
+        border_gray[border_mask == 0] = 255
+        cnt_in_small = cv2.bitwise_and(small_border, border_threshold)
+        cnt_in_big = cv2.bitwise_and(big_border, border_threshold)
 
-        return cv2.countNonZero(cnt_in_small) != 0 and cv2.countNonZero(
-            cnt_in_big
-        ) == cv2.countNonZero(border)
+        all_in_border = cv2.countNonZero(
+            cnt_in_small
+        ) != 0 and cv2.countNonZero(cnt_in_big) == cv2.countNonZero(
+            border_threshold
+        )
+
+        if not all_in_border:
+            return False
+
+        ptx, pty, ptw, pth = cv2.boundingRect(contour)
+        image_text = border_gray[pty : pty + pth, ptx : ptx + ptw]
+        return not ocr.is_text(image_text)
 
     contours_listered = filter(
         lambda x: parameters.contour_area_min * imgh * imgw
