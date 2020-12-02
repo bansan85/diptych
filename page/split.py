@@ -735,12 +735,12 @@ def __found_best_split_line_with_wave_hull(
     )
 
 
-def __found_best_split_line_with_wave_n_contours(
+def __found_best_split_line_with_wave_n_contours(  # noqa
     contours: Any,
-    n_contours: Any,
+    n_contours: int,
     image: Any,
     enable_debug: Optional[str],
-) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
     cnt_i = 0
     split_lines = []
     for contour_i in contours[0:n_contours]:
@@ -765,42 +765,47 @@ def __found_best_split_line_with_wave_n_contours(
         lines, usefull_points = cv2ext.convert_polygon_with_fitline(
             contour_i, polygon
         )
-        if enable_debug is not None:
-            image_with_lines = cv2ext.convertion_en_couleur(image)
-            for line in lines:
-                cv2.line(
+        if len(lines) == 0 and len(usefull_points) == 0:
+            candidate1 = None
+        else:
+            if enable_debug is not None:
+                image_with_lines = cv2ext.convertion_en_couleur(image)
+                for line in lines:
+                    cv2.line(
+                        image_with_lines,
+                        line[0],
+                        line[1],
+                        (0, 0, 255),
+                        5,
+                    )
+                for point_i in usefull_points:
+                    image_with_lines[point_i[1], point_i[0]] = np.asarray(
+                        (255, 0, 0), dtype=np.uint8
+                    )
+                cv2ext.secure_write(
+                    enable_debug + "_6_" + str(cnt_i) + "_2.png",
                     image_with_lines,
-                    line[0],
-                    line[1],
-                    (0, 0, 255),
-                    5,
                 )
-            for point_i in usefull_points:
-                image_with_lines[point_i[1], point_i[0]] = np.asarray(
-                    (255, 0, 0), dtype=np.uint8
-                )
-            cv2ext.secure_write(
-                enable_debug + "_6_" + str(cnt_i) + "_2.png",
-                image_with_lines,
-            )
 
-        lines_sorted_by_length = sorted(
-            lines,
-            key=lambda x: np.linalg.norm(
-                np.array((x[0][0], x[0][1])) - np.array((x[1][0], x[1][1]))
-            ),
-            reverse=True,
-        )
-        lines_two_longest = lines_sorted_by_length[0:2]
-        lines_sorted_by_distance_to_center = sorted(
-            lines_two_longest,
-            key=lambda x: np.linalg.norm(
-                np.array(((x[0][0] + x[1][0]) / 2, (x[0][1] + x[1][1]) / 2))
-                - np.array((image.shape[1] / 2, image.shape[0] / 2))
-            ),
-            reverse=False,
-        )
-        candidate1 = lines_sorted_by_distance_to_center[0]
+            lines_sorted_by_length = sorted(
+                lines,
+                key=lambda x: np.linalg.norm(
+                    np.array((x[0][0], x[0][1])) - np.array((x[1][0], x[1][1]))
+                ),
+                reverse=True,
+            )
+            lines_two_longest = lines_sorted_by_length[0:2]
+            lines_sorted_by_distance_to_center = sorted(
+                lines_two_longest,
+                key=lambda x: np.linalg.norm(
+                    np.array(
+                        ((x[0][0] + x[1][0]) / 2, (x[0][1] + x[1][1]) / 2)
+                    )
+                    - np.array((image.shape[1] / 2, image.shape[0] / 2))
+                ),
+                reverse=False,
+            )
+            candidate1 = lines_sorted_by_distance_to_center[0]
 
         # Check if it's only one contour
         # because the contour is outside the two pages or
@@ -810,10 +815,12 @@ def __found_best_split_line_with_wave_n_contours(
                 Tuple[Tuple[int, int], Tuple[int, int]]
             ] = __found_best_split_line_with_wave_hull(contour_i)
 
-            lines_two_longest = []
-            lines_two_longest.append(candidate1)
-            if candidate2 is not None:
-                lines_two_longest.append(candidate2)
+            lines_two_longest = [
+                x for x in [candidate1, candidate2] if x is not None
+            ]
+
+            if len(lines_two_longest) == 0:
+                return None
 
             lines_sorted_by_distance_to_center = sorted(
                 lines_two_longest,
@@ -827,7 +834,8 @@ def __found_best_split_line_with_wave_n_contours(
             )
             return lines_sorted_by_distance_to_center[0]
 
-        split_lines.append(candidate1)
+        if candidate1 is not None:
+            split_lines.append(candidate1)
 
     return tuple(  # type: ignore
         map(
@@ -843,7 +851,7 @@ def __found_best_split_line_with_wave(
     eroded: Any,
     param: FindCandidatesSplitLineWithWaveParameters,
     enable_debug: Optional[str] = None,
-) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
     nb_rectangle = (
         int(
             cv2.contourArea(contour[0]) / cv2.contourArea(contour[1])
@@ -872,7 +880,7 @@ def found_split_line_with_wave(
     parameters: FoundSplitLineWithWave,
     page_angle: Optional[float],
     enable_debug: Optional[str] = None,
-) -> Tuple[float, int]:
+) -> Optional[Tuple[float, int]]:
     xxx = 7
     blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx), True)
     cv2ext.write_image_if(blurimg, enable_debug, "_0.png")
@@ -936,13 +944,18 @@ def found_split_line_with_wave(
         compute.optional_concat(enable_debug, "_4c_wave"),
     )
 
-    bottompoint, toppoint = __found_best_split_line_with_wave(
+    line_wave = __found_best_split_line_with_wave(
         cs2,
         image,
         erode_dilate,
         parameters.find_candidates,
         enable_debug,
     )
+
+    if line_wave is None:
+        return None
+
+    bottompoint, toppoint = line_wave
 
     if enable_debug is not None:
         image_with_lines = cv2ext.convertion_en_couleur(image)
@@ -964,11 +977,14 @@ def found_split_line_with_wave(
 
 def find_best_split_in_all_candidates(
     one: Tuple[float, int],
-    two: Tuple[float, int],
+    two: Optional[Tuple[float, int]],
     histogram_length: List[Tuple[float, int, int]],
     ecart_angle: float,
     ecart_posx: int,
 ) -> Tuple[float, int]:
+    if two is None:
+        return one
+
     if (
         np.abs(one[0] - two[0]) < 10 * ecart_angle
         and np.abs(one[1] - two[1]) < 2 * ecart_posx
@@ -978,13 +994,12 @@ def find_best_split_in_all_candidates(
         return (angle_moy, pos_moy)
 
     # Check if angle two is a top in histogram_length.
-    possible_line = list(
-        filter(
-            lambda x: np.abs(two[0] - x[0]) < 10 * ecart_angle
-            and np.abs(two[1] - x[1]) < 2 * ecart_posx,
-            histogram_length,
-        )
-    )
+    possible_line = [
+        x
+        for x in histogram_length
+        if np.abs(two[0] - x[0]) < 10 * ecart_angle
+        and np.abs(two[1] - x[1]) < 2 * ecart_posx
+    ]
 
     # posx of two is the most fiable.
     if len(possible_line) != 0:

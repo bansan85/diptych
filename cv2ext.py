@@ -742,6 +742,8 @@ def convert_polygon_with_fitline(
     ret_points = []
 
     __max_iterations__ = 5
+    __max_ecart__ = 50
+    __min_valid_ecart__ = 70
 
     for idx1, idx2 in compute.iterator_zip_n_n_1(index_of_poly):
         if idx1 < idx2:
@@ -773,6 +775,27 @@ def convert_polygon_with_fitline(
 
         if len(new_points) == 0:
             continue
+
+        all_perpendicular_distances = [
+            compute.get_distance_line_point(
+                (line_res[2][0], line_res[3][0]),
+                (
+                    line_res[2][0] + line_res[0][0],
+                    line_res[3][0] + line_res[1][0],
+                ),
+                (x[0][0], x[0][1]),
+            )
+            for x in new_points
+        ]
+        valid_distances = list(
+            filter(lambda x: x < __max_ecart__, all_perpendicular_distances)
+        )
+
+        if (
+            len(valid_distances) * 100 / len(all_perpendicular_distances)
+            < __min_valid_ecart__
+        ):
+            return ([], [])
 
         v_x, v_y, c_x, c_y = line_res
 

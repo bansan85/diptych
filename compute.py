@@ -336,9 +336,9 @@ def get_perpendicular_throught_point(
 
 
 def get_distance_line_point(
-    line_start: Tuple[int, int],
-    line_end: Tuple[int, int],
-    point: Tuple[int, int],
+    line_start: Tuple[AnyNumber, AnyNumber],
+    line_end: Tuple[AnyNumber, AnyNumber],
+    point: Tuple[AnyNumber, AnyNumber],
 ) -> float:
     x_1, y_1 = line_start
     x_2, y_2 = line_end
