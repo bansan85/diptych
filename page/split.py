@@ -735,6 +735,7 @@ def __found_best_split_line_with_wave_hull(
     )
 
 
+# pylint: disable=too-many-branches
 def __found_best_split_line_with_wave_n_contours(  # noqa
     contours: Any,
     n_contours: int,
@@ -795,44 +796,64 @@ def __found_best_split_line_with_wave_n_contours(  # noqa
                 reverse=True,
             )
             lines_two_longest = lines_sorted_by_length[0:2]
+            lines_two_longest_with_distance = [
+                (
+                    x[0],
+                    x[1],
+                    compute.get_distance_line_point(
+                        x[0], x[1], ((image.shape[1] / 2, image.shape[0] / 2))
+                    ),
+                )
+                for x in lines_two_longest
+            ]
+            # Keep only line that are closed to the center.
+            # The line is supposed to split a page in two.
             lines_sorted_by_distance_to_center = sorted(
-                lines_two_longest,
-                key=lambda x: np.linalg.norm(
-                    np.array(
-                        ((x[0][0] + x[1][0]) / 2, (x[0][1] + x[1][1]) / 2)
-                    )
-                    - np.array((image.shape[1] / 2, image.shape[0] / 2))
+                filter(
+                    lambda x: x[2] < min(image.shape[1], image.shape[0]) / 4,
+                    lines_two_longest_with_distance,
                 ),
+                key=lambda x: x[2],
                 reverse=False,
             )
-            candidate1 = lines_sorted_by_distance_to_center[0]
+            if len(lines_sorted_by_distance_to_center) == 0:
+                candidate1 = None
+            else:
+                candidate1 = (
+                    lines_sorted_by_distance_to_center[0][0],
+                    lines_sorted_by_distance_to_center[0][1],
+                )
 
         # Check if it's only one contour
         # because the contour is outside the two pages or
         # because only one page is detected.
         if n_contours == 1:
-            candidate2: Optional[
-                Tuple[Tuple[int, int], Tuple[int, int]]
-            ] = __found_best_split_line_with_wave_hull(contour_i)
+            candidate2 = __found_best_split_line_with_wave_hull(contour_i)
 
-            lines_two_longest = [
-                x for x in [candidate1, candidate2] if x is not None
+            lines_two_longest_2 = [
+                (
+                    x[0],
+                    x[1],
+                    compute.get_distance_line_point(
+                        x[0], x[1], ((image.shape[1] / 2, image.shape[0] / 2))
+                    ),
+                )
+                for x in [candidate1, candidate2]
+                if x is not None
             ]
 
-            if len(lines_two_longest) == 0:
+            if len(lines_two_longest_2) == 0:
                 return None
 
-            lines_sorted_by_distance_to_center = sorted(
-                lines_two_longest,
-                key=lambda x: np.linalg.norm(
-                    np.array(
-                        ((x[0][0] + x[1][0]) / 2, (x[0][1] + x[1][1]) / 2)
-                    )
-                    - np.array((image.shape[1] / 2, image.shape[0] / 2))
-                ),
+            lines_sorted_by_distance_to_center_2 = sorted(
+                lines_two_longest_2,
+                key=lambda x: x[2],
                 reverse=False,
             )
-            return lines_sorted_by_distance_to_center[0]
+            return (
+                lines_sorted_by_distance_to_center_2[0][0],
+                lines_sorted_by_distance_to_center_2[0][1],
+            )
 
         if candidate1 is not None:
             split_lines.append(candidate1)
