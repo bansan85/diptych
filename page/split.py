@@ -762,7 +762,9 @@ def __found_best_split_line_with_wave_n_contours(
                 enable_debug + "_6_" + str(cnt_i) + "_1.png",
                 img_tmp,
             )
-        lines = cv2ext.convert_polygon_with_fitline(contour_i, polygon)
+        lines, usefull_points = cv2ext.convert_polygon_with_fitline(
+            contour_i, polygon
+        )
         if enable_debug is not None:
             image_with_lines = cv2ext.convertion_en_couleur(image)
             for line in lines:
@@ -773,18 +775,15 @@ def __found_best_split_line_with_wave_n_contours(
                     (0, 0, 255),
                     5,
                 )
-            for i in range(n_contours):
-                cv2.drawContours(
-                    image_with_lines,
-                    contours,
-                    i,
-                    (255 * (1 - i), 255 * i, 0),
-                    10,
+            for point_i in usefull_points:
+                image_with_lines[point_i[1], point_i[0]] = np.asarray(
+                    (255, 0, 0), dtype=np.uint8
                 )
             cv2ext.secure_write(
                 enable_debug + "_6_" + str(cnt_i) + "_2.png",
                 image_with_lines,
             )
+
         lines_sorted_by_length = sorted(
             lines,
             key=lambda x: np.linalg.norm(
@@ -901,7 +900,7 @@ def found_split_line_with_wave(
 
     # On cherche tous les contours
     contours, _ = cv2.findContours(
-        threshold1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        threshold1, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
     )
     # pour ne garder que le plus grand. Normalement, cela doit être celui
     # qui fait le contour des pages

@@ -9,7 +9,7 @@ from typing import (
     TypeVar,
     Dict,
     List,
-    Union
+    Union,
 )
 import sys
 import time
@@ -18,6 +18,7 @@ import numpy as np
 from scipy.stats import norm
 
 _T = TypeVar("_T")
+AnyNumber = TypeVar("AnyNumber", int, float)
 
 if np.__version__.startswith("1.2"):
     # Add typing for numpy :
@@ -313,10 +314,10 @@ def mean_weight(
 
 
 def get_perpendicular_throught_point(
-    line_start: Tuple[int, int],
-    line_end: Tuple[int, int],
-    point: Tuple[int, int],
-) -> Tuple[int, int]:
+    line_start: Tuple[AnyNumber, AnyNumber],
+    line_end: Tuple[AnyNumber, AnyNumber],
+    point: Tuple[AnyNumber, AnyNumber],
+) -> Tuple[AnyNumber, AnyNumber]:
     x_1, y_1 = line_start
     x_2, y_2 = line_end
     x_3, y_3 = point
@@ -328,4 +329,33 @@ def get_perpendicular_throught_point(
     x_4 = x_3 - k * (y_2 - y_1)
     y_4 = y_3 + k * (x_2 - x_1)
 
+    if isinstance(x_1, float):
+        return (x_4, y_4)  # type: ignore
+
     return (int(x_4), int(y_4))
+
+
+def get_distance_line_point(
+    line_start: Tuple[int, int],
+    line_end: Tuple[int, int],
+    point: Tuple[int, int],
+) -> float:
+    x_1, y_1 = line_start
+    x_2, y_2 = line_end
+    x_0, y_0 = point
+
+    return np.abs(
+        (y_1 - y_2) * x_0 + (x_2 - x_1) * y_0 + x_1 * y_2 - x_2 * y_1
+    ) / np.sqrt((y_2 - y_1) ** 2 + (x_2 - x_1) ** 2)
+
+
+def hash_djb2_n_3(data: Any) -> int:
+    retval = 5381
+
+    for data_1 in data:
+        for data_2 in data_1:
+            for data_3 in data_2:
+                # force int to avoid overflow warning from np.int32
+                retval = ((retval << 5) + retval) + int(data_3)
+
+    return retval & 0xFFFFFFFF

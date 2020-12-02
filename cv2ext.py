@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Tuple, Optional, Dict
 
 import cv2
 import numpy as np
@@ -684,22 +684,97 @@ def is_line_not_cross_images(
     return cv2.countNonZero(image_line) == 0
 
 
+def remove_perpendicular_multiples_points(
+    line_res: Tuple[float, float, float, float], points: Any
+) -> Any:
+    v_x, v_y, c_x, c_y = line_res
+
+    points_dict: Dict[int, List[Any]] = {}
+    for point_i in points:
+        projection = compute.get_perpendicular_throught_point(
+            (c_x, c_y), (c_x + v_x, c_y + v_y), point_i[0]
+        )
+        length = int(
+            np.linalg.norm(
+                np.array((c_x, c_y)) - np.array((projection[0], projection[1]))
+            )
+        )
+        angle = np.arctan2(projection[0] - c_x, projection[1] - c_y)
+        if angle == 0.0:
+            angle = -1
+        angle_sign = int(np.sign(angle))
+        points_dict[length * angle_sign] = points_dict.get(
+            length * angle_sign, []
+        )
+        points_dict[length * angle_sign].append(point_i)
+
+    criteria = (
+        cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+        10,
+        1.0,
+    )
+    flags = cv2.KMEANS_RANDOM_CENTERS
+    __max_distance__ = 5
+    for key in list(points_dict):
+        if len(points_dict[key]) > 1:
+            _, _, centers = cv2.kmeans(
+                np.float32(points_dict[key]), 2, None, criteria, 10, flags
+            )
+            if np.linalg.norm(centers[1] - centers[0]) > __max_distance__:
+                del points_dict[key]
+
+    list_new_points = []
+    for key in list(points_dict):
+        list_new_points.append(points_dict[key][0])
+
+    return np.asarray(list_new_points)
+
+
 def convert_polygon_with_fitline(
     contours: Any, polygon: Any
-) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+) -> Tuple[List[Tuple[Tuple[int, int], Tuple[int, int]]], List[Any]]:
     ret = []
     contours_list = contours.tolist()
     index_of_poly = [
         contours_list.index([[polygon_i[0][0], polygon_i[0][1]]])
         for polygon_i in polygon
     ]
+    ret_points = []
+
+    __max_iterations__ = 5
+
     for idx1, idx2 in compute.iterator_zip_n_n_1(index_of_poly):
         if idx1 < idx2:
             points = contours[idx1 : idx2 + 1]
         else:
             points = np.concatenate((contours[idx1:], contours[0 : idx2 + 1]))
 
-        v_x, v_y, c_x, c_y = cv2.fitLine(points, cv2.DIST_L2, 0, 0.01, 0.01)
+        new_points = points
+        all_checksum: List[int] = []
+        checksum = compute.hash_djb2_n_3(new_points)
+        while checksum not in all_checksum:
+            all_checksum.append(checksum)
+            line_res = cv2.fitLine(new_points, cv2.DIST_L2, 0, 0.01, 0.01)
+            new_points = remove_perpendicular_multiples_points(
+                (
+                    line_res[0][0],
+                    line_res[1][0],
+                    line_res[2][0],
+                    line_res[3][0],
+                ),
+                points,
+            )
+            if len(all_checksum) == __max_iterations__:
+                break
+
+            if len(new_points) == 0:
+                break
+            checksum = compute.hash_djb2_n_3(new_points)
+
+        if len(new_points) == 0:
+            continue
+
+        v_x, v_y, c_x, c_y = line_res
 
         if abs(v_x) > abs(v_y):
             min_x = min(points[:, 0, 0])
@@ -714,6 +789,8 @@ def convert_polygon_with_fitline(
             bottomx = int(((max_y - c_y) * v_x / v_y) + c_x)
             line = ((topx, min_y), (bottomx, max_y))
 
+        for point in new_points:
+            ret_points.append(point[0])
         ret.append(line)
 
-    return ret
+    return (ret, ret_points)
