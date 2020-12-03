@@ -286,13 +286,13 @@ class SeparatePage:
         (image1b, crop1, imgw1, imgh1) = self.crop_around_data_in_page(
             image1a,
             1,
-            parameters.crop_around_data_in_page,
+            parameters.crop_around_data_in_page.set_pos_inside_right(),
             compute.optional_str(enable_debug, filename + "_5"),
         )
         (image2b, crop2, imgw2, imgh2) = self.crop_around_data_in_page(
             image2a,
             2,
-            parameters.crop_around_data_in_page,
+            parameters.crop_around_data_in_page.set_pos_inside_left(),
             compute.optional_str(enable_debug, filename + "_5"),
         )
 

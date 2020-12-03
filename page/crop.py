@@ -1,5 +1,7 @@
 from typing import Any, Optional, Tuple, List, Dict, Union
 import types
+from enum import Enum
+from copy import deepcopy
 
 import numpy as np
 import cv2
@@ -127,6 +129,11 @@ class FoundDataTry2Parameters:
 
 
 class CropAroundDataInPageParameters:
+    class PositionInside(Enum):
+        UNKNOWN = 0
+        LEFT = 1
+        RIGHT = 2
+
     # pylint: disable=too-many-instance-attributes
     class Impl(types.SimpleNamespace):
         found_data_try1: FoundDataTry1Parameters = FoundDataTry1Parameters()
@@ -136,8 +143,10 @@ class CropAroundDataInPageParameters:
         contour_area_min: float = 0.01 * 0.01
         contour_area_max: float = 1.0
         border: int = 10
-        closed_to_edge_x_min: float = 0.03
-        closed_to_edge_x_max: float = 0.05
+        closed_to_edge_x_inside_edge_min: float = 0.025
+        closed_to_edge_x_inside_edge_max: float = 0.05
+        closed_to_edge_x_outside_edge_min: float = 0.05
+        closed_to_edge_x_outside_edge_max: float = 0.10
         closed_to_edge_y_min: float = 0.02
         closed_to_edge_y_max: float = 0.05
 
@@ -197,20 +206,36 @@ class CropAroundDataInPageParameters:
         self.__param.border = val
 
     @property
-    def closed_to_edge_x_min(self) -> float:
-        return self.__param.closed_to_edge_x_min
+    def closed_to_edge_x_inside_edge_min(self) -> float:
+        return self.__param.closed_to_edge_x_inside_edge_min
 
-    @closed_to_edge_x_min.setter
-    def closed_to_edge_x_min(self, val: float) -> None:
-        self.__param.closed_to_edge_x_min = val
+    @closed_to_edge_x_inside_edge_min.setter
+    def closed_to_edge_x_inside_edge_min(self, val: float) -> None:
+        self.__param.closed_to_edge_x_inside_edge_min = val
 
     @property
-    def closed_to_edge_x_max(self) -> float:
-        return self.__param.closed_to_edge_x_max
+    def closed_to_edge_x_inside_edge_max(self) -> float:
+        return self.__param.closed_to_edge_x_inside_edge_max
 
-    @closed_to_edge_x_max.setter
-    def closed_to_edge_x_max(self, val: float) -> None:
-        self.__param.closed_to_edge_x_max = val
+    @closed_to_edge_x_inside_edge_max.setter
+    def closed_to_edge_x_inside_edge_max(self, val: float) -> None:
+        self.__param.closed_to_edge_x_inside_edge_max = val
+
+    @property
+    def closed_to_edge_x_outside_edge_min(self) -> float:
+        return self.__param.closed_to_edge_x_outside_edge_min
+
+    @closed_to_edge_x_outside_edge_min.setter
+    def closed_to_edge_x_outside_edge_min(self, val: float) -> None:
+        self.__param.closed_to_edge_x_outside_edge_min = val
+
+    @property
+    def closed_to_edge_x_outside_edge_max(self) -> float:
+        return self.__param.closed_to_edge_x_outside_edge_max
+
+    @closed_to_edge_x_outside_edge_max.setter
+    def closed_to_edge_x_outside_edge_max(self, val: float) -> None:
+        self.__param.closed_to_edge_x_outside_edge_max = val
 
     @property
     def closed_to_edge_y_min(self) -> float:
@@ -227,6 +252,16 @@ class CropAroundDataInPageParameters:
     @closed_to_edge_y_max.setter
     def closed_to_edge_y_max(self, val: float) -> None:
         self.__param.closed_to_edge_y_max = val
+
+    def set_pos_inside_left(self) -> Any:
+        retval = deepcopy(self)
+        retval.pos = self.PositionInside.LEFT
+        return retval
+
+    def set_pos_inside_right(self) -> Any:
+        retval = deepcopy(self)
+        retval.pos = self.PositionInside.RIGHT
+        return retval
 
     def init_default_values(
         self,
@@ -253,6 +288,66 @@ class CropAroundDataInPageParameters:
             self.border = value
         else:
             raise Exception("Invalid property.", key)
+
+    def get_big_rectangle(
+        self, imgw: int, imgh: int
+    ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+        if self.pos == self.PositionInside.LEFT:
+            return (
+                (
+                    int(self.closed_to_edge_x_inside_edge_max * imgw),
+                    int(self.closed_to_edge_y_max * imgh),
+                ),
+                (
+                    int((1 - self.closed_to_edge_x_outside_edge_max) * imgw),
+                    int((1 - self.closed_to_edge_y_max) * imgh),
+                ),
+            )
+
+        if self.pos == self.PositionInside.RIGHT:
+            return (
+                (
+                    int(self.closed_to_edge_x_outside_edge_max * imgw),
+                    int(self.closed_to_edge_y_max * imgh),
+                ),
+                (
+                    int((1 - self.closed_to_edge_x_inside_edge_max) * imgw),
+                    int((1 - self.closed_to_edge_y_max) * imgh),
+                ),
+            )
+
+        raise Exception("PositionInside is unknown")
+
+    def get_small_rectangle(
+        self, imgw: int, imgh: int
+    ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+        if self.pos == self.PositionInside.LEFT:
+            return (
+                (
+                    int(self.closed_to_edge_x_inside_edge_min * imgw),
+                    int(self.closed_to_edge_y_min * imgh),
+                ),
+                (
+                    int((1 - self.closed_to_edge_x_outside_edge_min) * imgw),
+                    int((1 - self.closed_to_edge_y_min) * imgh),
+                ),
+            )
+
+        if self.pos == self.PositionInside.RIGHT:
+            return (
+                (
+                    int(self.closed_to_edge_x_outside_edge_min * imgw),
+                    int(self.closed_to_edge_y_min * imgh),
+                ),
+                (
+                    int((1 - self.closed_to_edge_x_inside_edge_min) * imgw),
+                    int((1 - self.closed_to_edge_y_min) * imgh),
+                ),
+            )
+
+        raise Exception("PositionInside is unknown")
+
+    pos: PositionInside = PositionInside.UNKNOWN
 
 
 def found_data_try1(
@@ -784,26 +879,8 @@ def crop_around_data(
         threshold2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
     cv2ext.remove_border_in_contours(contours, 1, threshold)
-    big_rectangle = (
-        (
-            int(parameters.closed_to_edge_x_max * imgw),
-            int(parameters.closed_to_edge_y_max * imgh),
-        ),
-        (
-            int((1 - parameters.closed_to_edge_x_max) * imgw),
-            int((1 - parameters.closed_to_edge_y_max) * imgh),
-        ),
-    )
-    small_rectangle = (
-        (
-            int(parameters.closed_to_edge_x_min * imgw),
-            int(parameters.closed_to_edge_y_min * imgh),
-        ),
-        (
-            int((1 - parameters.closed_to_edge_x_min) * imgw),
-            int((1 - parameters.closed_to_edge_y_min) * imgh),
-        ),
-    )
+    big_rectangle = parameters.get_big_rectangle(imgw, imgh)
+    small_rectangle = parameters.get_small_rectangle(imgw, imgh)
     if enable_debug is not None:
         image2222 = cv2ext.convertion_en_couleur(page_gauche_0)
         image2222 = cv2.rectangle(
