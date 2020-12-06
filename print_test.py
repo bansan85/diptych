@@ -26,7 +26,7 @@ class PrintTest(PrintInterface):
         values_to_check: Dict[
             str, Union[Tuple[str, int, int], Tuple[str, float, float]]
         ],
-    ):
+    ) -> None:
         """Constructor for test purpose.
 
         You tell to the print instance the value expected for each key.

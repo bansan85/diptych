@@ -32,7 +32,7 @@ class FoundSplitLineWithLineParameters:
         hough_lines: HoughLinesParameters,
         limit_rho: int,
         limit_tetha: float,
-    ):
+    ) -> None:
         self.__param = FoundSplitLineWithLineParameters.Impl(
             blur_size=blur_size,
             erode=erode,
@@ -88,7 +88,7 @@ class FindCandidatesSplitLineWithWaveParameters:
     def __init__(
         self,
         rapport_rect1_rect2: float,
-    ):
+    ) -> None:
         self.__param = FindCandidatesSplitLineWithWaveParameters.Impl(
             rapport_rect1_rect2=rapport_rect1_rect2,
         )
@@ -127,7 +127,7 @@ class FoundSplitLineWithWave:
         erode: ErodeParameters,
         find_images: FindImageParameters,
         find_candidates: FindCandidatesSplitLineWithWaveParameters,
-    ):
+    ) -> None:
         self.__param = FoundSplitLineWithWave.Impl(
             blur_size=blur_size,
             erode=erode,
@@ -175,7 +175,7 @@ class FindCandidatesSplitLineWithLineParameters:
         erode: ErodeParameters,
         limit_rho: int,
         limit_tetha: float,
-    ):
+    ) -> None:
         self.__param = FindCandidatesSplitLineWithLineParameters.Impl(
             blur_size=blur_size,
             canny=canny,

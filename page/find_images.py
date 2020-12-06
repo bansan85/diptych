@@ -22,7 +22,7 @@ class FindImageParameters:
         kernel_morphology_size: Tuple[int, int],
         blur_black_white: Tuple[int, int],
         min_area: float,
-    ):
+    ) -> None:
         self.__param = FindImageParameters.Impl(
             erode_size=erode_size,
             kernel_blur_size=kernel_blur_size,

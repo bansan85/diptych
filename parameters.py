@@ -7,7 +7,7 @@ class ErodeParameters:
         size: Tuple[int, int]
         iterations: int
 
-    def __init__(self, size: Tuple[int, int], iterations: int):
+    def __init__(self, size: Tuple[int, int], iterations: int) -> None:
         self.__param = ErodeParameters.Impl(size=size, iterations=iterations)
 
     @property
@@ -45,7 +45,7 @@ class CannyParameters:
         maximum: int
         aperture_size: int
 
-    def __init__(self, minimum: int, maximum: int, aperture_size: int):
+    def __init__(self, minimum: int, maximum: int, aperture_size: int) -> None:
         self.__param = CannyParameters.Impl(
             minimum=minimum, maximum=maximum, aperture_size=aperture_size
         )
@@ -104,7 +104,7 @@ class HoughLinesParameters:
         threshold: int,
         min_line_length: int,
         max_line_gap: int,
-    ):
+    ) -> None:
         self.__param = HoughLinesParameters.Impl(
             delta_rho=delta_rho,
             delta_tetha=delta_tetha,
