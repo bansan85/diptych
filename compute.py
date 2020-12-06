@@ -1,7 +1,6 @@
 import itertools
 import math
 from typing import (
-    Any,
     Iterable,
     Iterator,
     Optional,
@@ -11,7 +10,6 @@ from typing import (
     List,
     Union,
 )
-import sys
 import time
 
 import numpy as np
@@ -19,12 +17,6 @@ from scipy.stats import norm
 
 _T = TypeVar("_T")
 AnyNumber = TypeVar("AnyNumber", int, float)
-
-if np.__version__.startswith("1.2"):
-    # Add typing for numpy :
-    # from numpy.typing import ArrayLike.
-    # For the moment, they are all Any.
-    raise Exception("numpy now support ArrayLike with numpy.typing")
 
 
 def get_angle__180_180(
@@ -146,7 +138,7 @@ def iterator_zip_n_n_2(iteration: Iterable[_T]) -> Iterator[Tuple[_T, _T]]:
     return zip(iteration, iterator)
 
 
-def is_contour_rectangle(rectangle: Any, tolerance: float) -> bool:
+def is_contour_rectangle(rectangle: np.ndarray, tolerance: float) -> bool:
     if len(rectangle) != 4:
         return False
 
@@ -193,7 +185,7 @@ def convert_line_to_contour(
     line1: Tuple[Tuple[int, int], Tuple[int, int]],
     line2: Tuple[Tuple[int, int], Tuple[int, int]],
     line3: Tuple[Tuple[int, int], Tuple[int, int]],
-) -> Any:
+) -> np.ndarray:
     point1_x, point1_y = line_intersection(line0, line2)
     point2_x, point2_y = line_intersection(line0, line3)
     point3_x, point3_y = line_intersection(line1, line2)
@@ -214,7 +206,7 @@ def convert_line_to_contour(
     return np.asarray(list_of_points)
 
 
-def clamp(num: Any, min_value: Any, max_value: Any) -> Any:
+def clamp(num: int, min_value: int, max_value: int) -> int:
     return max(min(num, max_value), min_value)
 
 
@@ -257,12 +249,12 @@ def optional_str(condition: bool, string: str) -> Optional[str]:
 
 
 def get_timestamp_ns() -> int:
-    if sys.version_info < (3, 7):
-        return np.int64(time.time() * 1000000000.0)
-    return time.time_ns()  # pylint: disable=no-member,useless-suppression
+    return time.time_ns()
 
 
-def get_top_histogram(smooth: Any, histogram: Dict[int, _T]) -> List[_T]:
+def get_top_histogram(
+    smooth: np.ndarray, histogram: Dict[int, _T]
+) -> List[_T]:
     retval: List[_T] = []
     if smooth[0] > smooth[1]:
         retval.append(find_closed_value(histogram, 0))
@@ -274,7 +266,7 @@ def get_top_histogram(smooth: Any, histogram: Dict[int, _T]) -> List[_T]:
     return retval
 
 
-def get_tops_indices_histogram(smooth: Any) -> List[int]:
+def get_tops_indices_histogram(smooth: np.ndarray) -> List[int]:
     retval: List[int] = []
     if smooth[0] > smooth[1]:
         retval.append(0)
@@ -379,7 +371,7 @@ def get_distance_line_point(
     ) / np.sqrt((y_2 - y_1) ** 2 + (x_2 - x_1) ** 2)
 
 
-def hash_djb2_n_3(data: Any) -> int:
+def hash_djb2_n_3(data: np.ndarray) -> int:
     retval = 5381
 
     for data_1 in data:

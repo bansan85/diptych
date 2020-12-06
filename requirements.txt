@@ -2,6 +2,6 @@
 # https://pypi.org/project/opencv-python/
 pip>=19.3
 opencv-python>=4
-numpy
+numpy>=1.20rc1
 scipy
 pytesseract

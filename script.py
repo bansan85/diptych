@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union, Tuple
+from typing import Dict, Optional, Union, Tuple
 
 import cv2
 import numpy as np
@@ -26,10 +26,10 @@ class SeparatePage:
     # en bas de la reliure.
     def split_two_waves(
         self,
-        image: Any,
+        image: np.ndarray,
         parameters: SplitTwoWavesParameters,
         enable_debug: Optional[str],
-    ) -> Tuple[Any, Any]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         self.__images_found = page.find_images.find_images(
             image,
             parameters.find_images,
@@ -97,11 +97,11 @@ class SeparatePage:
 
     def unskew_page(
         self,
-        image: Any,
+        image: np.ndarray,
         n_page: int,
         parameters: UnskewPageParameters,
         enable_debug: Optional[str],
-    ) -> Any:
+    ) -> np.ndarray:
         rotate_angle = page.unskew.find_rotation(
             image, n_page, parameters, self.__angle_split - 90.0, enable_debug
         )
@@ -117,11 +117,11 @@ class SeparatePage:
 
     def crop_around_data_in_page(
         self,
-        image: Any,
+        image: np.ndarray,
         n_page: int,
         parameters: CropAroundDataInPageParameters,
         enable_debug: Optional[str],
-    ) -> Tuple[Any, Tuple[int, int, int, int], int, int]:
+    ) -> Tuple[np.ndarray, Tuple[int, int, int, int], int, int]:
         crop_rect_size = page.crop.crop_around_page(
             image, n_page, parameters, self.__angle_split - 90.0, enable_debug
         )
@@ -198,11 +198,11 @@ class SeparatePage:
 
     def uncrop_to_fit_size(
         self,
-        image: Any,
+        image: np.ndarray,
         n_page: int,
         size_wh: Tuple[int, int],
         crop: Tuple[int, int, int, int],
-    ) -> Any:
+    ) -> np.ndarray:
         dpi = compute.find_dpi(size_wh[0], size_wh[1], 21.0, 29.7)
         self.__output.print(ConstString.image_dpi(n_page), dpi)
         recadre = cv2ext.add_border_to_match_size(
@@ -240,13 +240,15 @@ class SeparatePage:
 
     # Need a function to be able to override behavior
     # pylint: disable=no-self-use
-    def save_final_page(self, filename: str, image: Any) -> None:
+    def save_final_page(self, filename: str, image: np.ndarray) -> None:
         cv2ext.secure_write(filename, image)
 
     def treat_file(
         self,
         filename: str,
-        dict_test: Optional[Dict[str, Any]] = None,
+        dict_test: Optional[
+            Dict[str, Union[Tuple[str, int, int], Tuple[str, float, float]]]
+        ] = None,
         dict_default_values: Optional[
             Dict[str, Union[int, float, Tuple[int, int]]]
         ] = None,
@@ -306,7 +308,7 @@ class SeparatePage:
 
     __output: PrintInterface
     __angle_split: float
-    __images_found: Any
+    __images_found: np.ndarray
 
 
 def get_absolute_from_current_path(root: str, filename: str) -> str:
@@ -316,7 +318,9 @@ def get_absolute_from_current_path(root: str, filename: str) -> str:
 def treat_file(
     sep: SeparatePage,
     filename: str,
-    dict_test: Optional[Dict[str, Any]] = None,
+    dict_test: Optional[
+        Dict[str, Union[Tuple[str, int, int], Tuple[str, float, float]]]
+    ] = None,
     dict_default_values: Optional[
         Dict[str, Union[int, float, Tuple[int, int]]]
     ] = None,

@@ -1,5 +1,5 @@
 import types
-from typing import Union, Tuple, Any, Optional
+from typing import Union, Tuple, Optional, List
 import numpy as np
 import cv2
 
@@ -62,8 +62,8 @@ class UnskewPageParameters:
 
 
 def found_angle_unskew_page(
-    lines: Any, delta_angle: float, approximate_angle: float
-) -> Any:
+    lines: List[np.ndarray], delta_angle: float, approximate_angle: float
+) -> float:
     histogram = np.zeros(int(np.ceil(90 / delta_angle)) + 1)
     for line in lines:
         angle = (
@@ -103,7 +103,7 @@ def found_angle_unskew_page(
 
 
 def find_rotation(
-    image: Any,
+    image: np.ndarray,
     n_page: int,
     parameters: UnskewPageParameters,
     approximate_angle: float,

@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict
 
 import cv2
 import numpy as np
@@ -6,25 +6,21 @@ import numpy as np
 import compute
 from exceptext import NotMyException
 
-if np.__version__.startswith("1.2"):
-    # Add typing for numpy :
-    # from numpy.typing import ArrayLike.
-    # For the moment, they are all Any.
-    raise Exception("numpy now support ArrayLike with numpy.typing")
 
-
-def charge_image(fichier: str) -> Any:
+def charge_image(fichier: str) -> np.ndarray:
     return cv2.imread(fichier, flags=cv2.IMREAD_UNCHANGED)
 
 
-def convertion_en_niveau_de_gris(image: Any) -> Any:
+def convertion_en_niveau_de_gris(image: np.ndarray) -> np.ndarray:
     # Already a 8 bit image.
     if image.ndim == 2:
         return image
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 
-def get_polygon_from_contour(contour: Any, number_of_vertices: int) -> Any:
+def get_polygon_from_contour(
+    contour: np.ndarray, number_of_vertices: int
+) -> np.ndarray:
     min_e = 0
     max_e = 1
     max_stagnation = 10
@@ -34,7 +30,7 @@ def get_polygon_from_contour(contour: Any, number_of_vertices: int) -> Any:
     epsilon = (min_e + max_e) / 2
     epislon_step_dichotomy = (max_e - min_e) / 2
     n_stagnation = 0
-    contour_max: List[Any] = []
+    contour_max = np.zeros(0)
     last_contour_size = 0
 
     while True:
@@ -52,7 +48,7 @@ def get_polygon_from_contour(contour: Any, number_of_vertices: int) -> Any:
             epsilon = (min_e + max_e) / 2
             epislon_step_dichotomy = (max_e - min_e) / 2
             n_stagnation = 0
-            contour_max = []
+            contour_max = np.zeros(0)
             last_contour_size = 0
             continue
         epislon_step_dichotomy = epislon_step_dichotomy / 2
@@ -78,7 +74,9 @@ def get_polygon_from_contour(contour: Any, number_of_vertices: int) -> Any:
         last_contour_size = len(contour_i)
 
 
-def remove_error(data: Any, absolute_error: Any) -> Any:
+def remove_error(
+    data: np.ndarray, absolute_error: Tuple[float, ...]
+) -> np.ndarray:
     if len(data) == 1:
         return data
     _, label, _ = cv2.kmeans(
@@ -107,8 +105,8 @@ def remove_error(data: Any, absolute_error: Any) -> Any:
 
 
 def get_polygon_from_contour_hough_lines(
-    contour: Any, number_of_vertices: int, image_src: Any
-) -> Optional[Any]:
+    contour: np.ndarray, number_of_vertices: int, image_src: np.ndarray
+) -> Optional[np.ndarray]:
     image = np.zeros(get_hw(image_src), dtype=np.uint8)
     image = cv2.drawContours(image, [contour], -1, 255, 1)
 
@@ -266,7 +264,7 @@ def get_polygon_from_contour_hough_lines(
         np.abs(y - x)
         for x, y in compute.iterator_zip_n_n_1(list(zip(*lines_sorted))[2])
     ]
-    i = np.argmin(ecart)
+    i = int(np.argmin(ecart))
     if ecart[i] > ecart[(i - 1) % 4] - 5 or ecart[i] > ecart[(i + 1) % 4] - 5:
         return None
     lines_i = compute.convert_line_to_contour(
@@ -282,7 +280,7 @@ def get_polygon_from_contour_hough_lines(
     return lines_i2
 
 
-def rotate_image(image: Any, angle_deg: float) -> Any:
+def rotate_image(image: np.ndarray, angle_deg: float) -> np.ndarray:
     image_center = tuple(np.array(image.shape[1::-1]) / 2)
     rot_mat = cv2.getRotationMatrix2D(image_center, angle_deg, 1.0)
     result = cv2.warpAffine(
@@ -291,7 +289,9 @@ def rotate_image(image: Any, angle_deg: float) -> Any:
     return result
 
 
-def crop_rectangle(image: Any, crop: Tuple[int, int, int, int]) -> Any:
+def crop_rectangle(
+    image: np.ndarray, crop: Tuple[int, int, int, int]
+) -> np.ndarray:
     return image[
         compute.clamp(crop[2], 0, len(image) - 1) : compute.clamp(
             crop[3], 0, len(image) - 1
@@ -302,7 +302,7 @@ def crop_rectangle(image: Any, crop: Tuple[int, int, int, int]) -> Any:
     ]
 
 
-def number_channels(image: Any) -> int:
+def number_channels(image: np.ndarray) -> int:
     if image.ndim == 2:
         return 1
     if image.ndim == 3:
@@ -310,29 +310,23 @@ def number_channels(image: Any) -> int:
     raise Exception("Failed to found the number of channels.")
 
 
-def is_black_white(image: Any) -> bool:
-    if number_channels(image) != 1:
-        return False
-    hist = cv2.calcHist([image], [0], None, [256], [0, 256])
-    return sum(hist[1:255]) < 1
-
-
 def force_image_to_be_grayscale(
-    image: Any, blur_kernel_size: Tuple[int, int], force_blur: bool
-) -> Any:
+    image: np.ndarray, blur_kernel_size: Tuple[int, int]
+) -> np.ndarray:
     if number_channels(image) == 1:
         one_channel_image = image.copy()
     else:
         one_channel_image = convertion_en_niveau_de_gris(image)
 
-    if force_blur or is_black_white(one_channel_image):
-        return cv2.blur(one_channel_image, blur_kernel_size)
-    return one_channel_image
+    return cv2.blur(one_channel_image, blur_kernel_size)
 
 
 def draw_lines_from_hough_lines(
-    image: Any, lines: Any, color: Any, width: int
-) -> Any:
+    image: np.ndarray,
+    lines: np.ndarray,
+    color: Tuple[int, int, int],
+    width: int,
+) -> np.ndarray:
     image_with_lines = convertion_en_couleur(image)
     for line in lines:
         for point1_x, point1_y, point2_x, point2_y in line:
@@ -346,16 +340,16 @@ def draw_lines_from_hough_lines(
     return image_with_lines
 
 
-def get_area(image: Any) -> int:
+def get_area(image: np.ndarray) -> int:
     return image.shape[0] * image.shape[1]
 
 
-def get_hw(image: Any) -> Tuple[int, int]:
+def get_hw(image: np.ndarray) -> Tuple[int, int]:
     return (image.shape[0], image.shape[1])
 
 
 def remove_border_in_contours(
-    contours: Any, border_size: int, image: Any
+    contours: List[np.ndarray], border_size: int, image: np.ndarray
 ) -> None:
     height, width = get_hw(image)
     for cnt in contours:
@@ -368,7 +362,9 @@ def remove_border_in_contours(
             )
 
 
-def split_image(image: Any, angle: float, posx: int) -> Tuple[Any, Any]:
+def split_image(
+    image: np.ndarray, angle: float, posx: int
+) -> Tuple[np.ndarray, np.ndarray]:
     height, width = get_hw(image)
 
     toppoint = (posx, 0)
@@ -386,7 +382,9 @@ def split_image(image: Any, angle: float, posx: int) -> Tuple[Any, Any]:
             [0, height - 1],
         ]
     )
-    mask2 = cv2.drawContours(mask, np.int32([pts]), 0, 255, -1)
+    mask2 = cv2.drawContours(
+        mask, np.asarray([pts], dtype=np.int32), 0, 255, -1
+    )
     page_gauche = image.copy()
     page_droite = image.copy()
     # On applique le masque
@@ -406,7 +404,7 @@ def split_image(image: Any, angle: float, posx: int) -> Tuple[Any, Any]:
     return page_gauche_0, page_droite_0
 
 
-def convertion_en_couleur(image: Any) -> Any:
+def convertion_en_couleur(image: np.ndarray) -> np.ndarray:
     # Already a 8 bit image.
     if image.ndim == 2:
         return cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
@@ -414,12 +412,12 @@ def convertion_en_couleur(image: Any) -> Any:
 
 
 def add_border_to_match_size(
-    image: Any,
+    image: np.ndarray,
     paper_size_wh_cm: Tuple[float, float],
     crop: Tuple[int, int, int, int],
     shape_wh: Tuple[int, int],
     dpi: int,
-) -> Any:
+) -> Tuple[int, int, int, int]:
     height, width = get_hw(image)
 
     marge_haute_px = crop[2]
@@ -448,20 +446,20 @@ def add_border_to_match_size(
     return (top, bottom, left, right)
 
 
-def secure_write(filename: str, image: Any) -> None:
+def secure_write(filename: str, image: np.ndarray) -> None:
     if not cv2.imwrite(filename, image):
         raise NotMyException("Failed to write image " + filename)
 
 
 def write_image_if(
-    image: Any, enable_debug: Optional[str], filename: str
+    image: np.ndarray, enable_debug: Optional[str], filename: str
 ) -> None:
     if enable_debug is not None:
         secure_write(enable_debug + filename, image)
 
 
 def __find_longest_lines_in_border(
-    shape: Tuple[int, int], epsilon: int, cnt: Any
+    shape: Tuple[int, int], epsilon: int, cnt: np.ndarray
 ) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
     height, width = shape
     left_top = height
@@ -499,9 +497,9 @@ def __find_longest_lines_in_border(
 
 
 def __insert_border_in_mask(
-    cnt: Any,
-    threshold2: Any,
-    mask_border_only: Any,
+    cnt: np.ndarray,
+    threshold2: np.ndarray,
+    mask_border_only: np.ndarray,
     epsilon: Tuple[int, float],
     page_angle: float,
 ) -> None:
@@ -637,8 +635,8 @@ def __insert_border_in_mask(
 
 
 def remove_black_border_in_image(
-    gray_bordered: Any, page_angle: float, enable_debug: Optional[str]
-) -> Any:
+    gray_bordered: np.ndarray, page_angle: float, enable_debug: Optional[str]
+) -> np.ndarray:
     thresholdi = threshold_from_gaussian_histogram_black(gray_bordered)
     _, threshold = cv2.threshold(
         gray_bordered, thresholdi, 255, cv2.THRESH_BINARY_INV
@@ -683,7 +681,7 @@ def remove_black_border_in_image(
     return mask_border_only
 
 
-def apply_mask(image: Any, mask: Any) -> Any:
+def apply_mask(image: np.ndarray, mask: np.ndarray) -> np.ndarray:
     gray_bordered2 = cv2.bitwise_not(image)
     gray_bordered3 = cv2.bitwise_and(gray_bordered2, gray_bordered2, mask=mask)
     gray_bordered4 = cv2.bitwise_not(gray_bordered3)
@@ -692,8 +690,11 @@ def apply_mask(image: Any, mask: Any) -> Any:
 
 
 def erode_and_dilate(
-    image: Any, size: Tuple[int, int], iterations: int, reverse: bool = False
-) -> Any:
+    image: np.ndarray,
+    size: Tuple[int, int],
+    iterations: int,
+    reverse: bool = False,
+) -> np.ndarray:
     start = int(reverse)
     img = image
     for i in range(2):
@@ -713,7 +714,7 @@ def erode_and_dilate(
 
 
 def threshold_from_gaussian_histogram_white(
-    image: Any, pourcentage: float = 0.2, blur_kernel_size: int = 31
+    image: np.ndarray, pourcentage: float = 0.2, blur_kernel_size: int = 31
 ) -> int:
     histogram = cv2.calcHist([image], [0], None, [256], [0, 256])
     histogram_blur = cv2.GaussianBlur(
@@ -739,7 +740,7 @@ def threshold_from_gaussian_histogram_white(
 
 
 def threshold_from_gaussian_histogram_black(
-    image: Any, blur_kernel_size: int = 31
+    image: np.ndarray, blur_kernel_size: int = 31
 ) -> int:
     histogram = cv2.calcHist([image], [0], None, [256], [0, 256])
     histogram_blur = cv2.GaussianBlur(
@@ -754,7 +755,7 @@ def threshold_from_gaussian_histogram_black(
     return 255
 
 
-def gaussian_blur_wrap(histogram: Any, kernel_size: int) -> Any:
+def gaussian_blur_wrap(histogram: np.ndarray, kernel_size: int) -> np.ndarray:
     histogram_wrap = np.concatenate(
         [
             histogram[-kernel_size:],
@@ -772,8 +773,8 @@ def gaussian_blur_wrap(histogram: Any, kernel_size: int) -> Any:
 
 
 def apply_brightness_contrast(
-    input_img: Any, brightness: int = 0, contrast: int = 0
-) -> Any:
+    input_img: np.ndarray, brightness: int = 0, contrast: int = 0
+) -> np.ndarray:
     if brightness != 0:
         if brightness > 0:
             shadow = brightness
@@ -807,7 +808,7 @@ def bounding_rectangle(
         List[Tuple[Tuple[int, int], Tuple[int, int]]],
     ],
     flags: Tuple[List[bool], List[bool], List[bool], List[bool]],
-) -> Any:
+) -> np.ndarray:
     mask = 255 * np.ones(shape, dtype=np.uint8)
     lines_vertical_angle, lines_horizontal_angle = lines
 
@@ -827,7 +828,9 @@ def bounding_rectangle(
                 [0, shape[0] - 1],
             ]
         )
-        mask = cv2.drawContours(mask, np.int32([pts]), 0, (0), -1)
+        mask = cv2.drawContours(
+            mask, np.asarray([pts], dtype=np.int32), 0, (0), -1
+        )
 
     for line, flag in zip(lines_vertical_angle, flags[1]):
         if not flag:
@@ -845,7 +848,9 @@ def bounding_rectangle(
                 [shape[1] - 1, shape[0] - 1],
             ]
         )
-        mask = cv2.drawContours(mask, np.int32([pts]), 0, (0), -1)
+        mask = cv2.drawContours(
+            mask, np.asarray([pts], dtype=np.int32), 0, (0), -1
+        )
 
     for line, flag in zip(lines_horizontal_angle, flags[2]):
         if not flag:
@@ -861,7 +866,9 @@ def bounding_rectangle(
                 [shape[1] - 1, 0],
             ]
         )
-        mask = cv2.drawContours(mask, np.int32([pts]), 0, (0), -1)
+        mask = cv2.drawContours(
+            mask, np.asarray([pts], dtype=np.int32), 0, (0), -1
+        )
 
     for line, flag in zip(lines_horizontal_angle, flags[3]):
         if not flag:
@@ -877,7 +884,9 @@ def bounding_rectangle(
                 [shape[1] - 1, shape[0] - 1],
             ]
         )
-        mask = cv2.drawContours(mask, np.int32([pts]), 0, (0), -1)
+        mask = cv2.drawContours(
+            mask, np.asarray([pts], dtype=np.int32), 0, (0), -1
+        )
 
     rectangle = cv2.boundingRect(mask)
 
@@ -891,28 +900,12 @@ def bounding_rectangle(
     )
 
 
-def is_line_not_cross_images(
-    line: Tuple[int, int, int, int], images_mask: Any
-) -> bool:
-    line_x1, line_y1, line_x2, line_y2 = line
-    image_line = np.zeros(images_mask.shape, np.uint8)
-    cv2.line(
-        image_line,
-        (line_x1, line_y1),
-        (line_x2, line_y2),
-        (255, 255, 255),
-        1,
-    )
-    image_line = cv2.bitwise_and(images_mask, image_line)
-    return cv2.countNonZero(image_line) == 0
-
-
 def remove_perpendicular_multiples_points(
-    line_res: Tuple[float, float, float, float], points: Any
-) -> Any:
+    line_res: Tuple[float, float, float, float], points: np.ndarray
+) -> np.ndarray:
     v_x, v_y, c_x, c_y = line_res
 
-    points_dict: Dict[int, List[Any]] = {}
+    points_dict: Dict[int, List[np.ndarray]] = {}
     for point_i in points:
         projection = compute.get_perpendicular_throught_point(
             (c_x, c_y), (c_x + v_x, c_y + v_y), point_i[0]
@@ -941,7 +934,12 @@ def remove_perpendicular_multiples_points(
     for key in list(points_dict):
         if len(points_dict[key]) > 1:
             _, _, centers = cv2.kmeans(
-                np.float32(points_dict[key]), 2, None, criteria, 10, flags
+                np.array(points_dict[key], dtype=np.float32),
+                2,
+                None,
+                criteria,
+                10,
+                flags,
             )
             if np.linalg.norm(centers[1] - centers[0]) > __max_distance__:
                 del points_dict[key]
@@ -954,8 +952,8 @@ def remove_perpendicular_multiples_points(
 
 
 def convert_polygon_with_fitline(
-    contours: Any, polygon: Any
-) -> Tuple[List[Tuple[Tuple[int, int], Tuple[int, int]]], List[Any]]:
+    contours: np.ndarray, polygon: np.ndarray
+) -> Tuple[List[Tuple[Tuple[int, int], Tuple[int, int]]], List[np.ndarray]]:
     ret = []
     contours_list = contours.tolist()
     index_of_poly = [

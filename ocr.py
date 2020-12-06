@@ -1,9 +1,8 @@
-from typing import Any
-
 import pytesseract
+import numpy as np
 
 
-def is_text(image: Any) -> bool:
+def is_text(image: np.ndarray) -> bool:
     data = pytesseract.image_to_data(
         image, output_type=pytesseract.Output.DICT
     )

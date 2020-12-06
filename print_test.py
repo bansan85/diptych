@@ -2,7 +2,7 @@
 """
 
 import copy
-from typing import Any, Dict, Union, Optional
+from typing import Dict, Union, Optional, Tuple
 import unittest
 
 from print_interface import PrintInterface
@@ -21,7 +21,12 @@ class PrintTest(PrintInterface):
 
     __last_msg_assert: Optional[str]
 
-    def __init__(self, values_to_check: Dict[str, Any]):
+    def __init__(
+        self,
+        values_to_check: Dict[
+            str, Union[Tuple[str, int, int], Tuple[str, float, float]]
+        ],
+    ):
         """Constructor for test purpose.
 
         You tell to the print instance the value expected for each key.
@@ -36,7 +41,8 @@ class PrintTest(PrintInterface):
             - third : the value of difference of pourcentage used by the
                 previous argumment.
 
-            values_to_check (Dict[str, Any]): a list of key, value association.
+            values_to_check (Dict[str, Union[Tuple[str, int, int],
+                Tuple[str, float, float]]]): a list of key, value association.
         """
         self.__values = copy.deepcopy(values_to_check)
         self.__test = unittest.TestCase()

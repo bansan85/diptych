@@ -1,5 +1,5 @@
 import types
-from typing import Union, Tuple, Any, Optional, List
+from typing import Union, Tuple, Optional, List
 from itertools import chain, combinations
 
 import numpy as np
@@ -326,13 +326,13 @@ class SplitTwoWavesParameters:
 
 
 def __found_candidates_split_line_with_line(
-    image: Any,
-    images_mask: Any,
+    image: np.ndarray,
+    images_mask: np.ndarray,
     param: FindCandidatesSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
 ) -> List[Tuple[int, int, int, int]]:
     xxx = 7
-    blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx), True)
+    blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
     cv2ext.write_image_if(blurimg, enable_debug, "_2_1.png")
     erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), xxx)
     cv2ext.write_image_if(erode_dilate, enable_debug, "_2_2.png")
@@ -361,16 +361,18 @@ def __found_candidates_split_line_with_line(
                 image, list_lines_p, (0, 0, 255), 1
             ),
         )
-    lines_valid = list(
-        filter(
-            lambda x: compute.keep_angle_pos_closed_to_target(
-                x[0],
-                param.limit_tetha,
-                90,
-                cv2ext.get_hw(blurimg)[1] // 2,
-                cv2ext.get_hw(blurimg)[1] // 2,
-            ),
-            list_lines_p,
+    lines_valid = np.asarray(
+        list(
+            filter(
+                lambda x: compute.keep_angle_pos_closed_to_target(
+                    x[0],
+                    param.limit_tetha,
+                    90,
+                    cv2ext.get_hw(blurimg)[1] // 2,
+                    cv2ext.get_hw(blurimg)[1] // 2,
+                ),
+                list_lines_p,
+            )
         )
     )
     if enable_debug is not None:
@@ -384,7 +386,7 @@ def __found_candidates_split_line_with_line(
     return list(map(lambda p: p[0], lines_valid))
 
 
-def detect_peaks(image: Any) -> Any:
+def detect_peaks(image: np.ndarray) -> np.ndarray:
     neighborhood = generate_binary_structure(2, 2)
     local_max = maximum_filter(image, footprint=neighborhood) == image
     background = image == 0
@@ -397,7 +399,7 @@ def detect_peaks(image: Any) -> Any:
 
 
 def __loop_to_find_best_mean_angle_pos(
-    histogram_posx_length: Any,
+    histogram_posx_length: np.ndarray,
     posx_ecart: int,
     epsilon_angle: float,
 ) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
@@ -569,8 +571,8 @@ def __best_candidates_split_line_with_line(
 
 
 def found_split_line_with_line(
-    image: Any,
-    images_found: Any,
+    image: np.ndarray,
+    images_found: np.ndarray,
     param: FoundSplitLineWithLineParameters,
     enable_debug: Optional[str] = None,
 ) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
@@ -638,7 +640,7 @@ def found_split_line_with_line(
 
 
 def __found_best_split_line_with_wave_hull(
-    contour: Any,
+    contour: np.ndarray,
 ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
     hull = cv2.convexHull(contour, returnPoints=False)
     defects = cv2.convexityDefects(contour, hull)
@@ -675,9 +677,15 @@ def __found_best_split_line_with_wave_hull(
             )
         )
         list_angle = [
-            compute.get_angle_0_180(defect1[2], defect1[4]),
-            compute.get_angle_0_180(defect1[4], defect2[2]),
-            compute.get_angle_0_180(defect2[2], defect2[4]),
+            compute.get_angle_0_180(
+                (defect1[2][0], defect1[2][1]), (defect1[4][0], defect1[4][1])
+            ),
+            compute.get_angle_0_180(
+                (defect1[4][0], defect1[4][1]), (defect2[2][0], defect2[2][1])
+            ),
+            compute.get_angle_0_180(
+                (defect2[2][0], defect2[2][1]), (defect2[4][0], defect2[4][1])
+            ),
         ]
         mean_angle = compute.mean_angle(list_angle) % 180.0
         if 45 < mean_angle < 135:
@@ -737,9 +745,9 @@ def __found_best_split_line_with_wave_hull(
 
 # pylint: disable=too-many-branches
 def __found_best_split_line_with_wave_n_contours(  # noqa
-    contours: Any,
+    contours: List[np.ndarray],
     n_contours: int,
-    image: Any,
+    image: np.ndarray,
     enable_debug: Optional[str],
 ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
     cnt_i = 0
@@ -871,9 +879,9 @@ def __found_best_split_line_with_wave_n_contours(  # noqa
 
 
 def __found_best_split_line_with_wave(
-    contour: Any,
-    image: Any,
-    eroded: Any,
+    contour: List[np.ndarray],
+    image: np.ndarray,
+    eroded: np.ndarray,
     param: FindCandidatesSplitLineWithWaveParameters,
     enable_debug: Optional[str] = None,
 ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
@@ -901,13 +909,13 @@ def __found_best_split_line_with_wave(
 
 
 def found_split_line_with_wave(
-    image: Any,
+    image: np.ndarray,
     parameters: FoundSplitLineWithWave,
     page_angle: Optional[float],
     enable_debug: Optional[str] = None,
 ) -> Optional[Tuple[float, int]]:
     xxx = 7
-    blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx), True)
+    blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
     cv2ext.write_image_if(blurimg, enable_debug, "_0.png")
     erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), xxx)
     cv2ext.write_image_if(erode_dilate, enable_debug, "_1.png")

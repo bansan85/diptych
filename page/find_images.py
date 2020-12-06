@@ -1,5 +1,5 @@
 import types
-from typing import Tuple, Optional, Any, List
+from typing import Tuple, Optional, List
 
 import numpy as np
 
@@ -73,16 +73,16 @@ class FindImageParameters:
 
 
 def find_images(
-    image: Any,
+    image: np.ndarray,
     param: FindImageParameters,
     page_angle: Optional[float],
     enable_debug: Optional[str],
-) -> Any:
+) -> np.ndarray:
     __internal_border__ = 20
     xxx = 7
 
     cv2ext.write_image_if(image, enable_debug, "_1a.png")
-    gray = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx), True)
+    gray = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
     cv2ext.write_image_if(gray, enable_debug, "_1b.png")
     blurimg_bc = cv2ext.erode_and_dilate(gray, (xxx, xxx), xxx)
     cv2ext.write_image_if(blurimg_bc, enable_debug, "_1c.png")
@@ -94,7 +94,7 @@ def find_images(
         image_no_border = cv2ext.apply_mask(image, mask)
         cv2ext.write_image_if(image_no_border, enable_debug, "_2d.png")
         gray2 = cv2ext.force_image_to_be_grayscale(
-            image_no_border, (xxx, xxx), True
+            image_no_border, (xxx, xxx)
         )
         cv2ext.write_image_if(gray2, enable_debug, "_2e.png")
         blurimg_bc2 = cv2ext.erode_and_dilate(gray2, (xxx, xxx), xxx, True)
@@ -191,31 +191,32 @@ def find_images(
 
 
 def remove_points_inside_images_in_contours(
-    contours: Any,
-    image: Any,
+    contours: List[np.ndarray],
+    image: np.ndarray,
     param: FindImageParameters,
     page_angle: Optional[float],
     enable_debug: Optional[str],
-) -> List[Any]:
+) -> List[np.ndarray]:
     mask_with_images = find_images(image, param, page_angle, enable_debug)
 
     contours_filtered = []
     for contour_i in contours:
         # keep point only outside of images found with find_images.
-        csi = list(
-            filter(
-                lambda point_ij: mask_with_images[
-                    point_ij[0][1], point_ij[0][0]
-                ]
-                == 0,
-                contour_i,
+        csi = np.asarray(
+            list(
+                filter(
+                    lambda point_ij: mask_with_images[
+                        point_ij[0][1], point_ij[0][0]
+                    ]
+                    == 0,
+                    contour_i,
+                )
             )
         )
         if len(csi) == 0:
             continue
-        csi_array = np.ndarray((len(csi), 1, 2), dtype=np.int32)
-        csi_array[:, 0, :] = csi[:][:]
-        contours_filtered.append(csi_array)
+        csi.reshape((len(csi), 1, 2))
+        contours_filtered.append(csi)
         # Keep only the 3 biggest contours :
         # Two in case of one contour for each page.
         # The third in just for debug.

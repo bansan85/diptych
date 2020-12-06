@@ -1,4 +1,5 @@
-from typing import Any, Optional, Tuple, List, Dict, Union
+from __future__ import annotations
+from typing import Optional, Tuple, List, Dict, Union
 import types
 from enum import Enum
 from copy import deepcopy
@@ -253,12 +254,12 @@ class CropAroundDataInPageParameters:
     def closed_to_edge_y_max(self, val: float) -> None:
         self.__param.closed_to_edge_y_max = val
 
-    def set_pos_inside_left(self) -> Any:
+    def set_pos_inside_left(self) -> CropAroundDataInPageParameters:
         retval = deepcopy(self)
         retval.pos = self.PositionInside.LEFT
         return retval
 
-    def set_pos_inside_right(self) -> Any:
+    def set_pos_inside_right(self) -> CropAroundDataInPageParameters:
         retval = deepcopy(self)
         retval.pos = self.PositionInside.RIGHT
         return retval
@@ -351,11 +352,11 @@ class CropAroundDataInPageParameters:
 
 
 def found_data_try1(
-    image: Any,
+    image: np.ndarray,
     n_page: int,
     param: FoundDataTry1Parameters,
     enable_debug: Optional[str] = None,
-) -> Optional[Any]:
+) -> Optional[np.ndarray]:
     gray = cv2ext.convertion_en_niveau_de_gris(image)
     eroded = cv2.erode(
         gray,
@@ -412,12 +413,12 @@ def found_data_try1(
 
 
 def found_data_try2_find_edges(
-    image: Any,
+    image: np.ndarray,
     n_page: int,
     param: FoundDataTry2Parameters,
     enable_debug: Optional[str] = None,
-) -> List[Any]:
-    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size, True)
+) -> List[np.ndarray]:
+    blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size)
 
     liste_lines = []
     for i in range(2):
@@ -533,7 +534,7 @@ def found_data_try2_find_edges(
 
 
 def found_data_try2_filter_edges(
-    liste_lines: List[Any], images_mask: Any
+    liste_lines: List[np.ndarray], images_mask: np.ndarray
 ) -> Tuple[
     List[Tuple[Tuple[int, int], Tuple[int, int]]],
     List[Tuple[Tuple[int, int], Tuple[int, int]]],
@@ -650,8 +651,8 @@ def found_data_try2_is_contour_around_images(
     zone: Tuple[int, int, int, int],
     lines_vertical_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
     lines_horizontal_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
-    images_mask: Any,
-) -> Optional[Any]:
+    images_mask: np.ndarray,
+) -> Optional[np.ndarray]:
     cnti = compute.convert_line_to_contour(
         lines_vertical_angle[zone[0]],
         lines_vertical_angle[zone[1]],
@@ -672,9 +673,8 @@ def found_data_try2_is_contour_around_images(
 def found_data_try2_find_smallest_rectangular_with_all_images_inside(
     lines_vertical_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
     lines_horizontal_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
-    images_mask: Any,
-) -> Any:
-
+    images_mask: np.ndarray,
+) -> np.ndarray:
     # Keep the smallest rectangle that have inside all images.
     flag_v_min: List[bool] = []
     for v_i in range(len(lines_vertical_angle)):
@@ -741,12 +741,12 @@ def found_data_try2_find_smallest_rectangular_with_all_images_inside(
 
 
 def found_data_try2(
-    image: Any,
+    image: np.ndarray,
     n_page: int,
     param: FoundDataTry2Parameters,
     page_angle: float,
     enable_debug: Optional[str] = None,
-) -> Any:
+) -> np.ndarray:
     liste_lines = found_data_try2_find_edges(
         image, n_page, param, enable_debug
     )
@@ -786,7 +786,7 @@ def found_data_try2(
 
 
 def crop_around_page(
-    image: Any,
+    image: np.ndarray,
     n_page: int,
     parameters: CropAroundDataInPageParameters,
     page_angle: float,
@@ -819,11 +819,11 @@ def crop_around_page(
 
 
 def crop_around_data(
-    page_gauche_0: Any,
+    page_gauche_0: np.ndarray,
     n_page: int,
     parameters: CropAroundDataInPageParameters,
     enable_debug: Optional[str] = None,
-) -> Optional[Any]:
+) -> Optional[Tuple[int, int, int, int]]:
     # On enlève les bordures noirs sur le bord des pages.
     imgh, imgw = cv2ext.get_hw(page_gauche_0)
     min_x, min_y = imgw, imgh
@@ -898,7 +898,7 @@ def crop_around_data(
         -1,
     )
 
-    def is_border(contour: Any) -> bool:
+    def is_border(contour: np.ndarray) -> bool:
         border_gray = gray.copy()
         border_threshold = cv2.bitwise_not(threshold)
         border_mask = np.zeros((imgh, imgw), dtype=np.uint8)
