@@ -389,7 +389,12 @@ def found_data_try1(
         )
 
     # On garde le rectangle le plus grand.
-    rect = cv2ext.get_polygon_from_contour(contour_max, 4)
+    rect = cv2ext.get_polygon_from_contour_hough_lines(
+        contour_max, 4, image
+    )
+
+    if rect is None:
+        return None
 
     if enable_debug is not None:
         image22223 = cv2.drawContours(image2222, [rect], -1, (255, 0, 0), 3)
@@ -641,39 +646,13 @@ def found_data_try2_remove_duplicated_edges(
     return lines_vertical_angle_keep, lines_horizontal_angle_keep
 
 
-def convert_line_to_contour(
-    line0: Tuple[Tuple[int, int], Tuple[int, int]],
-    line1: Tuple[Tuple[int, int], Tuple[int, int]],
-    line2: Tuple[Tuple[int, int], Tuple[int, int]],
-    line3: Tuple[Tuple[int, int], Tuple[int, int]],
-) -> Any:
-    point1_x, point1_y = compute.line_intersection(line0, line2)
-    point2_x, point2_y = compute.line_intersection(line0, line3)
-    point3_x, point3_y = compute.line_intersection(line1, line2)
-    point4_x, point4_y = compute.line_intersection(line1, line3)
-
-    xmoy = (point1_x + point2_x + point3_x + point4_x) // 4
-    ymoy = (point1_y + point2_y + point3_y + point4_y) // 4
-    list_of_points = [
-        [point1_x, point1_y],
-        [point2_x, point2_y],
-        [point3_x, point3_y],
-        [point4_x, point4_y],
-    ]
-
-    list_of_points.sort(
-        key=lambda x: compute.get_angle__180_180((xmoy, ymoy), (x[0], x[1]))
-    )
-    return np.asarray(list_of_points)
-
-
 def found_data_try2_is_contour_around_images(
     zone: Tuple[int, int, int, int],
     lines_vertical_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
     lines_horizontal_angle: List[Tuple[Tuple[int, int], Tuple[int, int]]],
     images_mask: Any,
 ) -> Optional[Any]:
-    cnti = convert_line_to_contour(
+    cnti = compute.convert_line_to_contour(
         lines_vertical_angle[zone[0]],
         lines_vertical_angle[zone[1]],
         lines_horizontal_angle[zone[2]],

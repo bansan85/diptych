@@ -42,7 +42,19 @@ def get_polygon_from_contour(contour: Any, number_of_vertices: int) -> Any:
             contour, epsilon * arc_length_contour, True
         )
         if len(contour_i) == number_of_vertices:
-            return contour_i
+            if (
+                0.9
+                <= cv2.contourArea(contour_i) / cv2.contourArea(contour)
+                <= 1 / 0.9
+            ):
+                return contour_i
+            number_of_vertices = number_of_vertices + 1
+            epsilon = (min_e + max_e) / 2
+            epislon_step_dichotomy = (max_e - min_e) / 2
+            n_stagnation = 0
+            contour_max = []
+            last_contour_size = 0
+            continue
         epislon_step_dichotomy = epislon_step_dichotomy / 2
         if len(contour_i) > number_of_vertices:
             epsilon = epsilon + epislon_step_dichotomy
@@ -66,6 +78,210 @@ def get_polygon_from_contour(contour: Any, number_of_vertices: int) -> Any:
         last_contour_size = len(contour_i)
 
 
+def remove_error(data: Any, absolute_error: Any) -> Any:
+    if len(data) == 1:
+        return data
+    _, label, _ = cv2.kmeans(
+        data,
+        2,
+        None,
+        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
+        10,
+        cv2.KMEANS_RANDOM_CENTERS,
+    )
+    ravel = [
+        data[label.ravel() == x]
+        for x in range(max(label)[0] - min(label)[0] + 1)
+    ]
+    mean1 = [np.mean(x) for x in list(zip(*ravel[0]))]
+    mean2 = [np.mean(x) for x in list(zip(*ravel[1]))]
+    effective_error = [
+        np.abs(x[0] - x[1]) - x[2]
+        for x in list(zip(mean1, mean2, absolute_error))
+    ]
+    if max(effective_error) < 0:
+        return data
+    ravel_sorted = sorted(ravel, key=len, reverse=True)
+
+    return ravel_sorted[0]
+
+
+def get_polygon_from_contour_hough_lines(
+    contour: Any, number_of_vertices: int, image_src: Any
+) -> Optional[Any]:
+    image = np.zeros(get_hw(image_src), dtype=np.uint8)
+    image = cv2.drawContours(image, [contour], -1, 255, 1)
+
+    lines_i = cv2.HoughLinesP(
+        image,
+        1,
+        0.05 / 180.0 * np.pi,
+        30,
+        minLineLength=100,
+        maxLineGap=30,
+    )
+
+    angle_pos = np.asarray(
+        (
+            [
+                np.asarray(
+                    (
+                        compute.line_xy_to_polar(
+                            ((x[0][0], x[0][1]), (x[0][2], x[0][3]))
+                        )
+                    ),
+                    dtype=np.float32,
+                )
+                for x in lines_i
+            ]
+        ),
+        dtype=np.float32,
+    )
+
+    angle_pos_kmeans = np.asarray(
+        (
+            [
+                np.asarray(
+                    (
+                        np.cos(((x[0] + 360) % 360) / 180.0 * np.pi * 2),
+                        np.sin(((x[0] + 360) % 180) / 180.0 * np.pi * 2),
+                        x[1] / min(get_hw(image_src)),
+                    ),
+                    dtype=np.float32,
+                )
+                for x in angle_pos
+            ]
+        ),
+        dtype=np.float32,
+    )
+
+    _, label, _ = cv2.kmeans(
+        angle_pos_kmeans,
+        number_of_vertices,
+        None,
+        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
+        10,
+        cv2.KMEANS_RANDOM_CENTERS,
+    )
+    ravel = [
+        angle_pos[label.ravel() == x]
+        for x in range(max(label)[0] - min(label)[0] + 1)
+    ]
+    ravel_filter = [
+        remove_error(x, (0.05 * 180, 0.05 * min(get_hw(image_src))))
+        for x in ravel
+    ]
+
+    ravel_pre_mean = [
+        np.asarray(
+            [
+                np.asarray(
+                    (np.cos(y / 180.0 * np.pi), np.sin(y / 180.0 * np.pi)),
+                    dtype=np.float32,
+                )
+                for y in list(zip(*x))[0]
+            ],
+            dtype=np.float32,
+        )
+        for x in ravel_filter
+    ]
+    ravel_pre_mean_2 = [
+        cv2.kmeans(
+            x,
+            2,
+            None,
+            (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
+            10,
+            cv2.KMEANS_RANDOM_CENTERS,
+        )
+        if len(x) >= 2
+        else (0.0, np.asarray([[0]], dtype=np.int32), x)
+        for x in ravel_pre_mean
+    ]
+    ravel_pre_mean_label = [
+        [x[y[1].ravel() == z] for z in range(max(y[1])[0] - min(y[1])[0] + 1)]
+        for x, y in zip(ravel_pre_mean, ravel_pre_mean_2)
+    ]
+    ravel_pre_mean_3 = [
+        [compute.mean_angle([compute.atan2(x[0], x[1]) for x in z]) for z in y]
+        for y in ravel_pre_mean_label
+    ]
+    ravel_pre_mean_4 = [
+        compute.angle_between(x[0], x[1] - 180 - 10, x[1] - 180 + 10)
+        if len(x) == 2
+        else False
+        for x in ravel_pre_mean_3
+    ]
+
+    ravel_mean = [
+        (
+            compute.mean_angle([((a + 360) % 360) for a in list(zip(*x))[0]]),
+            np.mean(list(zip(*x))[1]),
+        )
+        if not y
+        else (
+            compute.mean_angle(
+                [
+                    a
+                    if compute.angle_between(a, z[0] - 10, z[0] + 10)
+                    else ((a + 180) % 360)
+                    for a in list(zip(*x))[0]
+                ]
+            ),
+            np.mean(
+                [
+                    b if compute.angle_between(a, z[0] - 10, z[0] + 10) else -b
+                    for a, b in x
+                ]
+            ),
+        )
+        for x, y, z in list(
+            zip(ravel_filter, ravel_pre_mean_4, ravel_pre_mean_3)
+        )
+    ]
+    ravel_points = [
+        (
+            (
+                0 + x[1] * np.cos(x[0] / 180.0 * np.pi),
+                0 + x[1] * np.sin(x[0] / 180.0 * np.pi),
+            ),
+            x[0],
+        )
+        for x in ravel_mean
+    ]
+    ravel_lines = [
+        (
+            x[0],
+            (
+                x[0][0] + 1000 * np.cos((x[1] + 90) / 180.0 * np.pi),
+                x[0][1] + 1000 * np.sin((x[1] + 90) / 180.0 * np.pi),
+            ),
+            x[1],
+        )
+        for x in ravel_points
+    ]
+
+    lines_sorted = sorted(ravel_lines, key=lambda x: x[2])
+    ecart = [
+        np.abs(y - x)
+        for x, y in compute.iterator_zip_n_n_1(list(zip(*lines_sorted))[2])
+    ]
+    i = np.argmin(ecart)
+    if ecart[i] > ecart[(i - 1) % 4] - 5 or ecart[i] > ecart[(i + 1) % 4] - 5:
+        return None
+    lines_i = compute.convert_line_to_contour(
+        (lines_sorted[i % 4][0], lines_sorted[i % 4][1]),
+        (lines_sorted[(i + 1) % 4][0], lines_sorted[(i + 1) % 4][1]),
+        (lines_sorted[(i + 2) % 4][0], lines_sorted[(i + 2) % 4][1]),
+        (lines_sorted[(i + 3) % 4][0], lines_sorted[(i + 3) % 4][1]),
+    )
+    lines_i2 = np.asarray(
+        ([lines_i[0]], [lines_i[1]], [lines_i[2]], [lines_i[3]])
+    )
+
+    return lines_i2
+
+
 def rotate_image(image: Any, angle_deg: float) -> Any:
     image_center = tuple(np.array(image.shape[1::-1]) / 2)
     rot_mat = cv2.getRotationMatrix2D(image_center, angle_deg, 1.0)
@@ -76,7 +292,14 @@ def rotate_image(image: Any, angle_deg: float) -> Any:
 
 
 def crop_rectangle(image: Any, crop: Tuple[int, int, int, int]) -> Any:
-    return image[crop[2] : crop[3], crop[0] : crop[1]]
+    return image[
+        compute.clamp(crop[2], 0, len(image) - 1) : compute.clamp(
+            crop[3], 0, len(image) - 1
+        ),
+        compute.clamp(crop[0], 0, len(image[0]) - 1) : compute.clamp(
+            crop[1], 0, len(image[0]) - 1
+        ),
+    ]
 
 
 def number_channels(image: Any) -> int:

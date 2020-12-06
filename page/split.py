@@ -801,7 +801,9 @@ def __found_best_split_line_with_wave_n_contours(  # noqa
                     x[0],
                     x[1],
                     compute.get_distance_line_point(
-                        x[0], x[1], ((image.shape[1] / 2, image.shape[0] / 2))
+                        x[0],
+                        x[1],
+                        ((image.shape[1] / 2, image.shape[0] / 2)),
                     ),
                 )
                 for x in lines_two_longest
@@ -835,7 +837,9 @@ def __found_best_split_line_with_wave_n_contours(  # noqa
                     x[0],
                     x[1],
                     compute.get_distance_line_point(
-                        x[0], x[1], ((image.shape[1] / 2, image.shape[0] / 2))
+                        x[0],
+                        x[1],
+                        ((image.shape[1] / 2, image.shape[0] / 2)),
                     ),
                 )
                 for x in [candidate1, candidate2]

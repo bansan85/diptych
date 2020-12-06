@@ -188,6 +188,32 @@ def line_intersection(
     return int(point_x), int(point_y)
 
 
+def convert_line_to_contour(
+    line0: Tuple[Tuple[int, int], Tuple[int, int]],
+    line1: Tuple[Tuple[int, int], Tuple[int, int]],
+    line2: Tuple[Tuple[int, int], Tuple[int, int]],
+    line3: Tuple[Tuple[int, int], Tuple[int, int]],
+) -> Any:
+    point1_x, point1_y = line_intersection(line0, line2)
+    point2_x, point2_y = line_intersection(line0, line3)
+    point3_x, point3_y = line_intersection(line1, line2)
+    point4_x, point4_y = line_intersection(line1, line3)
+
+    xmoy = (point1_x + point2_x + point3_x + point4_x) // 4
+    ymoy = (point1_y + point2_y + point3_y + point4_y) // 4
+    list_of_points = [
+        [point1_x, point1_y],
+        [point2_x, point2_y],
+        [point3_x, point3_y],
+        [point4_x, point4_y],
+    ]
+
+    list_of_points.sort(
+        key=lambda x: get_angle__180_180((xmoy, ymoy), (x[0], x[1]))
+    )
+    return np.asarray(list_of_points)
+
+
 def clamp(num: Any, min_value: Any, max_value: Any) -> Any:
     return max(min(num, max_value), min_value)
 
@@ -279,6 +305,14 @@ def is_angle_closed_to(
     return value >= angle1 or value <= angle2
 
 
+def atan2(cosinus: float, sinus: float) -> float:
+    if cosinus < 0:
+        return np.arctan(sinus / cosinus) / np.pi * 180.0 + 180.0
+    if sinus > 0:
+        return np.arctan(sinus / cosinus) / np.pi * 180.0
+    return np.arctan(sinus / cosinus) / np.pi * 180.0 + 360.0
+
+
 def mean_angle(
     liste: Union[List[float], Tuple[float, ...]],
     weight: Optional[Union[List[float], Tuple[float, ...]]] = None,
@@ -297,11 +331,7 @@ def mean_angle(
         ) / sum(
             weight  # type: ignore
         )
-    if cos < 0:
-        return np.arctan(sin / cos) / np.pi * 180.0 + 180.0
-    if sin > 0:
-        return np.arctan(sin / cos) / np.pi * 180.0
-    return np.arctan(sin / cos) / np.pi * 180.0 + 360.0
+    return atan2(cos, sin)
 
 
 def mean_weight(
@@ -359,3 +389,33 @@ def hash_djb2_n_3(data: Any) -> int:
                 retval = ((retval << 5) + retval) + int(data_3)
 
     return retval & 0xFFFFFFFF
+
+
+def angle_two_lines(
+    line1: Tuple[Tuple[int, int], Tuple[int, int]],
+    line2: Tuple[Tuple[int, int], Tuple[int, int]],
+) -> float:
+    angle1 = np.arctan2(line1[0][1] - line1[1][1], line1[0][0] - line1[1][0])
+    angle2 = np.arctan2(line2[0][1] - line2[1][1], line2[0][0] - line2[1][0])
+    return angle1 - angle2
+
+
+def line_xy_to_polar(
+    line: Tuple[Tuple[int, int], Tuple[int, int]]
+) -> Tuple[float, float]:
+    point = get_perpendicular_throught_point(line[0], line[1], (0, 0))
+
+    angle = get_angle__180_180(point, (0, 0))
+    distance = np.sqrt(point[0] ** 2 + point[1] ** 2)
+
+    return (angle, distance)
+
+
+def angle_between(value: float, value_min: float, value_max: float) -> float:
+    value = value % 360
+    value_min = value_min % 360
+    value_max = value_max % 360
+
+    if value_min < value_max:
+        return value_min <= value <= value_max
+    return value_min <= value or value <= value_max
