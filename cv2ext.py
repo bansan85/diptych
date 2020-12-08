@@ -458,7 +458,7 @@ def write_image_if(
         secure_write(enable_debug + filename, image)
 
 
-def __find_longest_lines_in_border(
+def find_longest_lines_in_border(
     shape: Tuple[int, int], epsilon: int, cnt: np.ndarray
 ) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
     height, width = shape
@@ -496,7 +496,7 @@ def __find_longest_lines_in_border(
     )
 
 
-def __insert_border_in_mask(
+def insert_border_in_mask(
     cnt: np.ndarray,
     threshold2: np.ndarray,
     mask_border_only: np.ndarray,
@@ -632,53 +632,6 @@ def __insert_border_in_mask(
             mask_border_only = cv2.drawContours(
                 mask_border_only, [pts], 0, (0), -1
             )
-
-
-def remove_black_border_in_image(
-    gray_bordered: np.ndarray, page_angle: float, enable_debug: Optional[str]
-) -> np.ndarray:
-    thresholdi = threshold_from_gaussian_histogram_black(gray_bordered)
-    _, threshold = cv2.threshold(
-        gray_bordered, thresholdi, 255, cv2.THRESH_BINARY_INV
-    )
-    write_image_if(threshold, enable_debug, "_2b2.png")
-    contours, _ = cv2.findContours(
-        threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-    )
-    if enable_debug is not None:
-        image_contours = cv2.drawContours(
-            convertion_en_couleur(gray_bordered), contours, -1, (0, 0, 255), 3
-        )
-        write_image_if(image_contours, enable_debug, "_2b3.png")
-    __epsilon__ = 5
-    mask_border_only = 255 * np.ones(shape=gray_bordered.shape, dtype=np.uint8)
-    height, width = get_hw(gray_bordered)
-    __angle_tolerance__ = 3.0
-    for cnt in contours:
-        (
-            (left_top, left_bottom),
-            (right_top, right_bottom),
-            (top_left, top_right),
-            (bottom_left, bottom_right),
-        ) = __find_longest_lines_in_border((height, width), __epsilon__, cnt)
-
-        if (
-            left_bottom - left_top > 0
-            or top_right - top_left > 0
-            or right_bottom - right_top > 0
-            or bottom_right - bottom_left > 0
-        ):
-            __insert_border_in_mask(
-                cnt,
-                threshold,
-                mask_border_only,
-                (__epsilon__, __angle_tolerance__),
-                page_angle,
-            )
-
-    # Borders are in black in mask.
-    write_image_if(mask_border_only, enable_debug, "_2c.png")
-    return mask_border_only
 
 
 def apply_mask(image: np.ndarray, mask: np.ndarray) -> np.ndarray:

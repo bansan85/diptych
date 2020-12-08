@@ -13,6 +13,7 @@ import page.find_images
 import cv2ext
 import compute
 import ocr
+from debug_image import DebugImage, inc_debug
 
 
 class FoundDataTry1Parameters:
@@ -351,11 +352,11 @@ class CropAroundDataInPageParameters:
     pos: PositionInside = PositionInside.UNKNOWN
 
 
+@inc_debug
 def found_data_try1(
     image: np.ndarray,
-    n_page: int,
     param: FoundDataTry1Parameters,
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> Optional[np.ndarray]:
     gray = cv2ext.convertion_en_niveau_de_gris(image)
     eroded = cv2.erode(
@@ -363,45 +364,36 @@ def found_data_try1(
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, param.erode.size),
         iterations=param.erode.iterations,
     )
-    cv2ext.write_image_if(eroded, enable_debug, "_" + str(n_page) + "_2.png")
+    debug.image(eroded, DebugImage.Level.DEBUG)
     _, threshold = cv2.threshold(
         eroded,
         param.threshold,
         255,
         cv2.THRESH_BINARY,
     )
-    cv2ext.write_image_if(
-        threshold, enable_debug, "_" + str(n_page) + "_3.png"
-    )
+    debug.image(threshold, DebugImage.Level.DEBUG)
     # On récupère le contour le plus grand.
     contours, _ = cv2.findContours(
         threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
     contour_max = max(contours, key=cv2.contourArea)
-    if enable_debug is not None:
-        image2222 = cv2.drawContours(
-            cv2ext.convertion_en_couleur(image), contours, -1, (0, 0, 255), 3
-        )
-        image2222 = cv2.drawContours(
-            image2222, [contour_max], 0, (0, 255, 0), 3
-        )
-        cv2ext.secure_write(
-            enable_debug + "_" + str(n_page) + "_4.png", image2222
-        )
+    image2222 = cv2.drawContours(
+        cv2ext.convertion_en_couleur(image), contours, -1, (0, 0, 255), 3
+    )
+    image2222 = cv2.drawContours(image2222, [contour_max], 0, (0, 255, 0), 3)
+    debug.image(image2222, DebugImage.Level.DEBUG)
 
     # On garde le rectangle le plus grand.
-    rect = cv2ext.get_polygon_from_contour_hough_lines(
-        contour_max, 4, image
-    )
+    rect = cv2ext.get_polygon_from_contour_hough_lines(contour_max, 4, image)
 
     if rect is None:
         return None
 
-    if enable_debug is not None:
-        image22223 = cv2.drawContours(image2222, [rect], -1, (255, 0, 0), 3)
-        cv2ext.secure_write(
-            enable_debug + "_" + str(n_page) + "_5.png", image22223
-        )
+    debug.image_lazy(
+        lambda: cv2.drawContours(image2222, [rect], -1, (255, 0, 0), 3),
+        DebugImage.Level.DEBUG,
+    )
+
     # Si on n'a pas de rectangle, on essaie de trouver le contour de la
     # page avec les traits horizontaux et verticaux.
     if not compute.is_contour_rectangle(
@@ -412,11 +404,11 @@ def found_data_try1(
     return rect
 
 
+@inc_debug
 def found_data_try2_find_edges(
     image: np.ndarray,
-    n_page: int,
     param: FoundDataTry2Parameters,
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> List[np.ndarray]:
     blurimg = cv2ext.force_image_to_be_grayscale(image, param.blur_size)
 
@@ -438,18 +430,10 @@ def found_data_try2_find_edges(
             morpho_mode2 = cv2.MORPH_OPEN
 
             blurimg_bc = cv2ext.apply_brightness_contrast(blurimg, -96, 64)
-            cv2ext.write_image_if(
-                blurimg_bc,
-                enable_debug,
-                "_" + str(n_page) + "_" + str(i) + "_5_.png",
-            )
+            debug.image(blurimg_bc, DebugImage.Level.DEBUG)
             blurimg2 = cv2.equalizeHist(blurimg_bc)
 
-        cv2ext.write_image_if(
-            blurimg2,
-            enable_debug,
-            "_" + str(n_page) + "_" + str(i) + "_5a.png",
-        )
+        debug.image(blurimg2, DebugImage.Level.DEBUG)
 
         _, threshold = cv2.threshold(
             blurimg2,
@@ -458,11 +442,7 @@ def found_data_try2_find_edges(
             cv2.THRESH_BINARY,
         )
 
-        cv2ext.write_image_if(
-            threshold,
-            enable_debug,
-            "_" + str(n_page) + "_" + str(i) + "_5b.png",
-        )
+        debug.image(threshold, DebugImage.Level.DEBUG)
 
         morpho1 = cv2.morphologyEx(
             threshold,
@@ -471,11 +451,7 @@ def found_data_try2_find_edges(
                 cv2.MORPH_ELLIPSE, param.kernel_morpho_size
             ),
         )
-        cv2ext.write_image_if(
-            morpho1,
-            enable_debug,
-            "_" + str(n_page) + "_" + str(i) + "_5b1.png",
-        )
+        debug.image(morpho1, DebugImage.Level.DEBUG)
         morpho2 = cv2.morphologyEx(
             morpho1,
             morpho_mode2,
@@ -483,20 +459,14 @@ def found_data_try2_find_edges(
                 cv2.MORPH_ELLIPSE, param.kernel_morpho_size
             ),
         )
-        cv2ext.write_image_if(
-            morpho2,
-            enable_debug,
-            "_" + str(n_page) + "_" + str(i) + "_5b2.png",
-        )
+        debug.image(morpho2, DebugImage.Level.DEBUG)
         canny = cv2.Canny(
             morpho2,
             canny_param_i.minimum,
             canny_param_i.maximum,
             apertureSize=canny_param_i.aperture_size,
         )
-        cv2ext.write_image_if(
-            canny, enable_debug, "_" + str(n_page) + "_" + str(i) + "_5c.png"
-        )
+        debug.image(canny, DebugImage.Level.DEBUG)
         lines_i = cv2.HoughLinesP(
             canny,
             hough_lines_param_i.delta_rho,
@@ -506,21 +476,22 @@ def found_data_try2_find_edges(
             maxLineGap=hough_lines_param_i.max_line_gap,
         )
         liste_lines.extend(lines_i)
-        if enable_debug is not None:
-            image_with_lines = cv2ext.convertion_en_couleur(image)
+
+        def image_with_lines() -> np.ndarray:
+            retval = cv2ext.convertion_en_couleur(image)
             for line in lines_i:
                 for point1_x, point1_y, point2_x, point2_y in line:
                     cv2.line(
-                        image_with_lines,
+                        retval,
                         (point1_x, point1_y),
                         (point2_x, point2_y),
                         (0, 0, 255),
                         1,
                     )
-            cv2ext.secure_write(
-                enable_debug + "_" + str(n_page) + "_" + str(i) + "_5d.png",
-                image_with_lines,
-            )
+            return retval
+
+        debug.image_lazy(image_with_lines, DebugImage.Level.DEBUG)
+
     height, width = cv2ext.get_hw(image)
     liste_lines.append(np.array([[0, 0, 0, height - 1]], dtype=int))
     liste_lines.append(np.array([[0, 0, width - 1, 0]], dtype=int))
@@ -740,22 +711,20 @@ def found_data_try2_find_smallest_rectangular_with_all_images_inside(
     )
 
 
+@inc_debug
 def found_data_try2(
     image: np.ndarray,
-    n_page: int,
     param: FoundDataTry2Parameters,
     page_angle: float,
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> np.ndarray:
-    liste_lines = found_data_try2_find_edges(
-        image, n_page, param, enable_debug
-    )
+    liste_lines = found_data_try2_find_edges(image, param, debug)
 
     images_mask = page.find_images.find_images(
         image,
         param.find_images,
         page_angle,
-        compute.optional_concat(enable_debug, "_A_crop_" + str(n_page)),
+        debug,
     )
 
     if np.all(images_mask == 0):
@@ -785,30 +754,28 @@ def found_data_try2(
     )
 
 
+@inc_debug
 def crop_around_page(
     image: np.ndarray,
-    n_page: int,
     parameters: CropAroundDataInPageParameters,
     page_angle: float,
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> Tuple[int, int, int, int]:
-    cv2ext.write_image_if(image, enable_debug, "_" + str(n_page) + "_1.png")
+    debug.image(image, DebugImage.Level.DEBUG)
 
-    rect = page.crop.found_data_try1(
-        image, n_page, parameters.found_data_try1, enable_debug
-    )
+    rect = page.crop.found_data_try1(image, parameters.found_data_try1, debug)
 
     if rect is None:
         rect = page.crop.found_data_try2(
-            image, n_page, parameters.found_data_try2, page_angle, enable_debug
+            image, parameters.found_data_try2, page_angle, debug
         )
 
-    if enable_debug is not None:
-        image_cnt = cv2ext.convertion_en_couleur(image)
-        cv2.drawContours(image_cnt, [rect], 0, (0, 0, 255), 3)
-        cv2ext.secure_write(
-            enable_debug + "_" + str(n_page) + "_1_6.png", image_cnt
-        )
+    debug.image_lazy(
+        lambda: cv2.drawContours(
+            cv2ext.convertion_en_couleur(image), [rect], 0, (0, 0, 255), 3
+        ),
+        DebugImage.Level.DEBUG,
+    )
 
     x_crop1 = [rect[0, 0, 0], rect[1, 0, 0], rect[2, 0, 0], rect[3, 0, 0]]
     y_crop1 = [rect[0, 0, 1], rect[1, 0, 1], rect[2, 0, 1], rect[3, 0, 1]]
@@ -818,11 +785,11 @@ def crop_around_page(
     return (x_crop1[0], x_crop1[3], y_crop1[0], y_crop1[3])
 
 
+@inc_debug
 def crop_around_data(
     page_gauche_0: np.ndarray,
-    n_page: int,
     parameters: CropAroundDataInPageParameters,
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> Optional[Tuple[int, int, int, int]]:
     # On enlève les bordures noirs sur le bord des pages.
     imgh, imgw = cv2ext.get_hw(page_gauche_0)
@@ -834,7 +801,7 @@ def crop_around_data(
     dilated = cv2ext.erode_and_dilate(
         gray, parameters.dilate_size, parameters.dilate_size[0]
     )
-    cv2ext.write_image_if(dilated, enable_debug, "_" + str(n_page) + "_7.png")
+    debug.image(dilated, DebugImage.Level.DEBUG)
 
     _, threshold = cv2.threshold(
         dilated,
@@ -842,9 +809,7 @@ def crop_around_data(
         255,
         cv2.THRESH_BINARY,
     )
-    cv2ext.write_image_if(
-        threshold, enable_debug, "_" + str(n_page) + "_8.png"
-    )
+    debug.image(threshold, DebugImage.Level.DEBUG)
     threshold2 = cv2.copyMakeBorder(
         threshold,
         1,
@@ -860,22 +825,21 @@ def crop_around_data(
     cv2ext.remove_border_in_contours(contours, 1, threshold)
     big_rectangle = parameters.get_big_rectangle(imgw, imgh)
     small_rectangle = parameters.get_small_rectangle(imgw, imgh)
-    if enable_debug is not None:
-        image2222 = cv2ext.convertion_en_couleur(page_gauche_0)
-        image2222 = cv2.rectangle(
-            image2222,
-            big_rectangle[0],
-            big_rectangle[1],
-            (255, 0, 0),
-            1,
-        )
-        image2222 = cv2.rectangle(
-            image2222,
-            small_rectangle[0],
-            small_rectangle[1],
-            (255, 0, 0),
-            1,
-        )
+    image2222 = cv2ext.convertion_en_couleur(page_gauche_0)
+    image2222 = cv2.rectangle(
+        image2222,
+        big_rectangle[0],
+        big_rectangle[1],
+        (255, 0, 0),
+        1,
+    )
+    image2222 = cv2.rectangle(
+        image2222,
+        small_rectangle[0],
+        small_rectangle[1],
+        (255, 0, 0),
+        1,
+    )
     ncontour_good_size = False
     first_cnt_all = int(cv2.contourArea(contours[0])) == (imgh - 1) * (
         imgw - 1
@@ -934,19 +898,14 @@ def crop_around_data(
     )
     for cnt, _ in contours_listered:
         (point_x, point_y, width, height) = cv2.boundingRect(cnt)
-        if enable_debug is not None:
-            cv2.drawContours(image2222, [cnt], -1, (0, 0, 255), 3)
+        cv2.drawContours(image2222, [cnt], -1, (0, 0, 255), 3)
         min_x = min(point_x, min_x)
         max_x = max(point_x + width, max_x)
         min_y = min(point_y, min_y)
         max_y = max(point_y + height, max_y)
         ncontour_good_size = True
 
-    if enable_debug is not None:
-        cv2ext.secure_write(
-            enable_debug + "_" + str(n_page) + "_9.png",
-            image2222,
-        )
+    debug.image(image2222, DebugImage.Level.DEBUG)
 
     if not ncontour_good_size:
         return None

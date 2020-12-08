@@ -13,6 +13,7 @@ from page.find_images import FindImageParameters
 import page.find_images
 import cv2ext
 import compute
+from debug_image import DebugImage, inc_debug
 
 
 class FoundSplitLineWithLineParameters:
@@ -329,22 +330,22 @@ def __found_candidates_split_line_with_line(
     image: np.ndarray,
     images_mask: np.ndarray,
     param: FindCandidatesSplitLineWithLineParameters,
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> List[Tuple[int, int, int, int]]:
     xxx = 7
     blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
-    cv2ext.write_image_if(blurimg, enable_debug, "_2_1.png")
+    debug.image(blurimg, DebugImage.Level.DEBUG)
     erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), xxx)
-    cv2ext.write_image_if(erode_dilate, enable_debug, "_2_2.png")
+    debug.image(erode_dilate, DebugImage.Level.DEBUG)
     canny = cv2.Canny(
         erode_dilate,
         param.canny.minimum,
         param.canny.maximum,
         apertureSize=param.canny.aperture_size,
     )
-    cv2ext.write_image_if(canny, enable_debug, "_2_3.png")
+    debug.image(canny, DebugImage.Level.DEBUG)
     canny_filtered = cv2.bitwise_and(canny, cv2.bitwise_not(images_mask))
-    cv2ext.write_image_if(canny_filtered, enable_debug, "_2_4.png")
+    debug.image(canny_filtered, DebugImage.Level.DEBUG)
 
     list_lines_p = cv2.HoughLinesP(
         canny_filtered,
@@ -354,13 +355,12 @@ def __found_candidates_split_line_with_line(
         minLineLength=param.hough_lines.min_line_length,
         maxLineGap=xxx ** 2,
     )
-    if enable_debug is not None:
-        cv2ext.secure_write(
-            enable_debug + "_2_6.png",
-            cv2ext.draw_lines_from_hough_lines(
-                image, list_lines_p, (0, 0, 255), 1
-            ),
-        )
+    debug.image(
+        cv2ext.draw_lines_from_hough_lines(
+            image, list_lines_p, (0, 0, 255), 1
+        ),
+        DebugImage.Level.DEBUG,
+    )
     lines_valid = np.asarray(
         list(
             filter(
@@ -375,13 +375,10 @@ def __found_candidates_split_line_with_line(
             )
         )
     )
-    if enable_debug is not None:
-        cv2ext.secure_write(
-            enable_debug + "_2_7.png",
-            cv2ext.draw_lines_from_hough_lines(
-                image, lines_valid, (0, 0, 255), 1
-            ),
-        )
+    debug.image(
+        cv2ext.draw_lines_from_hough_lines(image, lines_valid, (0, 0, 255), 1),
+        DebugImage.Level.DEBUG,
+    )
 
     return list(map(lambda p: p[0], lines_valid))
 
@@ -570,13 +567,14 @@ def __best_candidates_split_line_with_line(
     )
 
 
+@inc_debug
 def found_split_line_with_line(
     image: np.ndarray,
     images_found: np.ndarray,
     param: FoundSplitLineWithLineParameters,
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
-    cv2ext.write_image_if(image, enable_debug, "_1.png")
+    debug.image(image, DebugImage.Level.DEBUG)
 
     valid_lines = __found_candidates_split_line_with_line(
         image,
@@ -589,7 +587,7 @@ def found_split_line_with_line(
             param.limit_rho,
             param.limit_tetha,
         ),
-        enable_debug,
+        debug,
     )
 
     if len(valid_lines) == 0:
@@ -617,10 +615,10 @@ def found_split_line_with_line(
         height - 1,
     )
 
-    if enable_debug is not None:
-        image_with_lines = cv2ext.convertion_en_couleur(image)
+    def image_with_lines() -> np.ndarray:
+        retval = cv2ext.convertion_en_couleur(image)
         cv2.line(
-            image_with_lines,
+            retval,
             (point_1a[0], point_1a[1]),
             (point_1b[0], point_1b[1]),
             (255, 0, 0),
@@ -628,13 +626,15 @@ def found_split_line_with_line(
         )
         for line in valid_lines:
             cv2.line(
-                image_with_lines,
+                retval,
                 (line[0], line[1]),
                 (line[2], line[3]),
                 (0, 0, 255),
                 1,
             )
-        cv2ext.secure_write(enable_debug + "_7.png", image_with_lines)
+        return retval
+
+    debug.image_lazy(image_with_lines, DebugImage.Level.TOP)
 
     return angle_1, posx_1, histogram_length, ecart
 
@@ -743,20 +743,20 @@ def __found_best_split_line_with_wave_hull(
     )
 
 
-# pylint: disable=too-many-branches
 def __found_best_split_line_with_wave_n_contours(  # noqa
     contours: List[np.ndarray],
     n_contours: int,
     image: np.ndarray,
-    enable_debug: Optional[str],
+    debug: DebugImage,
 ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
     cnt_i = 0
     split_lines = []
     for contour_i in contours[0:n_contours]:
         cnt_i = cnt_i + 1
         polygon = cv2ext.get_polygon_from_contour(contour_i, 4)
-        if enable_debug is not None:
-            img_tmp = cv2.drawContours(
+
+        def img_tmp() -> np.ndarray:
+            retval = cv2.drawContours(
                 cv2ext.convertion_en_couleur(image),
                 [polygon],
                 0,
@@ -765,36 +765,35 @@ def __found_best_split_line_with_wave_n_contours(  # noqa
             )
             for i in range(n_contours):
                 cv2.drawContours(
-                    img_tmp, contours, i, (255 * (1 - i), 255 * i, 0), 10
+                    retval, contours, i, (255 * (1 - i), 255 * i, 0), 10
                 )
-            cv2ext.secure_write(
-                enable_debug + "_6_" + str(cnt_i) + "_1.png",
-                img_tmp,
-            )
+            return retval
+
+        debug.image_lazy(img_tmp, DebugImage.Level.DEBUG)
         lines, usefull_points = cv2ext.convert_polygon_with_fitline(
             contour_i, polygon
         )
         if len(lines) == 0 and len(usefull_points) == 0:
             candidate1 = None
         else:
-            if enable_debug is not None:
-                image_with_lines = cv2ext.convertion_en_couleur(image)
+
+            def image_with_lines() -> np.ndarray:
+                retval = cv2ext.convertion_en_couleur(image)
                 for line in lines:
                     cv2.line(
-                        image_with_lines,
+                        retval,
                         line[0],
                         line[1],
                         (0, 0, 255),
                         5,
                     )
                 for point_i in usefull_points:
-                    image_with_lines[point_i[1], point_i[0]] = np.asarray(
+                    retval[point_i[1], point_i[0]] = np.asarray(
                         (255, 0, 0), dtype=np.uint8
                     )
-                cv2ext.secure_write(
-                    enable_debug + "_6_" + str(cnt_i) + "_2.png",
-                    image_with_lines,
-                )
+                return retval
+
+            debug.image_lazy(image_with_lines, DebugImage.Level.DEBUG)
 
             lines_sorted_by_length = sorted(
                 lines,
@@ -883,7 +882,7 @@ def __found_best_split_line_with_wave(
     image: np.ndarray,
     eroded: np.ndarray,
     param: FindCandidatesSplitLineWithWaveParameters,
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
     nb_rectangle = (
         int(
@@ -892,33 +891,34 @@ def __found_best_split_line_with_wave(
         )
         + 1
     )
-    if enable_debug is not None:
-        img_tmp = cv2.cvtColor(eroded, cv2.COLOR_GRAY2BGR)
+
+    def img_tmp() -> np.ndarray:
+        retval = cv2.cvtColor(eroded, cv2.COLOR_GRAY2BGR)
         for i in range(nb_rectangle):
-            img_tmp = cv2.drawContours(
-                img_tmp, contour, i, (255 * (1 - i), 255 * i, 0), 10
+            retval = cv2.drawContours(
+                retval, contour, i, (255 * (1 - i), 255 * i, 0), 10
             )
-        img_tmp = cv2.drawContours(
-            img_tmp, contour, nb_rectangle, (0, 0, 255), 3
-        )
-        cv2ext.secure_write(enable_debug + "_5.png", img_tmp)
+        return cv2.drawContours(retval, contour, nb_rectangle, (0, 0, 255), 3)
+
+    debug.image_lazy(img_tmp, DebugImage.Level.DEBUG)
 
     return __found_best_split_line_with_wave_n_contours(
-        contour, nb_rectangle, image, enable_debug
+        contour, nb_rectangle, image, debug
     )
 
 
+@inc_debug
 def found_split_line_with_wave(
     image: np.ndarray,
     parameters: FoundSplitLineWithWave,
     page_angle: Optional[float],
-    enable_debug: Optional[str] = None,
+    debug: DebugImage,
 ) -> Optional[Tuple[float, int]]:
     xxx = 7
     blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
-    cv2ext.write_image_if(blurimg, enable_debug, "_0.png")
+    debug.image(blurimg, DebugImage.Level.DEBUG)
     erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), xxx)
-    cv2ext.write_image_if(erode_dilate, enable_debug, "_1.png")
+    debug.image(erode_dilate, DebugImage.Level.DEBUG)
     size_border = 20
     eroded_bordered = cv2.copyMakeBorder(
         erode_dilate,
@@ -929,15 +929,15 @@ def found_split_line_with_wave(
         cv2.BORDER_CONSTANT,
         value=[0],
     )
-    cv2ext.write_image_if(eroded_bordered, enable_debug, "_2.png")
+    debug.image(eroded_bordered, DebugImage.Level.DEBUG)
     dilated = cv2.dilate(
         eroded_bordered,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (xxx, xxx)),
     )
-    cv2ext.write_image_if(dilated, enable_debug, "_3.png")
+    debug.image(dilated, DebugImage.Level.DEBUG)
     thresholdi = cv2ext.threshold_from_gaussian_histogram_white(dilated)
     _, threshold1 = cv2.threshold(dilated, thresholdi, 255, cv2.THRESH_BINARY)
-    cv2ext.write_image_if(threshold1, enable_debug, "_4.png")
+    debug.image(threshold1, DebugImage.Level.DEBUG)
 
     # On cherche tous les contours
     contours, _ = cv2.findContours(
@@ -957,15 +957,22 @@ def found_split_line_with_wave(
         key=lambda x: np.maximum(cv2.contourArea(x), 1),
         reverse=True,
     )
-    if enable_debug is not None:
-        img_tmp = cv2.cvtColor(eroded_bordered, cv2.COLOR_GRAY2BGR)
-        img_tmp = cv2.drawContours(
-            img_tmp, sorted_contours, 0, (255, 0, 0), 10
-        )
-        img_tmp = cv2.drawContours(
-            img_tmp, sorted_contours, 1, (0, 255, 0), 10
-        )
-        cv2ext.secure_write(enable_debug + "_4b.png", img_tmp)
+    debug.image_lazy(
+        lambda: cv2.drawContours(
+            cv2.drawContours(
+                cv2.cvtColor(eroded_bordered, cv2.COLOR_GRAY2BGR),
+                sorted_contours,
+                0,
+                (255, 0, 0),
+                10,
+            ),
+            sorted_contours,
+            1,
+            (0, 255, 0),
+            10,
+        ),
+        DebugImage.Level.DEBUG,
+    )
 
     cv2ext.remove_border_in_contours(sorted_contours, size_border, image)
 
@@ -974,7 +981,7 @@ def found_split_line_with_wave(
         image,
         parameters.find_images,
         None if page_angle is None else page_angle - 90.0,
-        compute.optional_concat(enable_debug, "_4c_wave"),
+        debug,
     )
 
     line_wave = __found_best_split_line_with_wave(
@@ -982,7 +989,7 @@ def found_split_line_with_wave(
         image,
         erode_dilate,
         parameters.find_candidates,
-        enable_debug,
+        debug,
     )
 
     if line_wave is None:
@@ -990,16 +997,17 @@ def found_split_line_with_wave(
 
     bottompoint, toppoint = line_wave
 
-    if enable_debug is not None:
-        image_with_lines = cv2ext.convertion_en_couleur(image)
-        cv2.line(
-            image_with_lines,
+    debug.image_lazy(
+        lambda: cv2.line(
+            cv2ext.convertion_en_couleur(image),
             toppoint,
             bottompoint,
             (0, 0, 255),
             5,
-        )
-        cv2ext.secure_write(enable_debug + "_7.png", image_with_lines)
+        ),
+        DebugImage.Level.TOP,
+    )
+
     angle_ret, posx_ret = compute.get_angle_0_180_posx_safe(
         bottompoint, toppoint
     )

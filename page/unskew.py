@@ -1,5 +1,5 @@
 import types
-from typing import Union, Tuple, Optional, List
+from typing import Union, Tuple, List
 import numpy as np
 import cv2
 
@@ -8,6 +8,7 @@ import cv2ext
 from page.find_images import FindImageParameters
 import page.find_images
 import compute
+from debug_image import DebugImage
 
 
 class UnskewPageParameters:
@@ -104,20 +105,17 @@ def found_angle_unskew_page(
 
 def find_rotation(
     image: np.ndarray,
-    n_page: int,
     parameters: UnskewPageParameters,
     approximate_angle: float,
-    enable_debug: Optional[str],
+    debug: DebugImage,
 ) -> float:
-    cv2ext.write_image_if(image, enable_debug, "_" + str(n_page) + "_1.png")
+    debug.image(image, DebugImage.Level.DEBUG)
 
     images_mask = page.find_images.find_images(
         image,
         parameters.find_images,
         approximate_angle,
-        compute.optional_concat(
-            enable_debug, "_" + str(n_page) + "_1______.png"
-        ),
+        debug,
     )
 
     img_gauche = cv2ext.convertion_en_niveau_de_gris(image)
@@ -128,9 +126,9 @@ def find_rotation(
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, parameters.erode.size),
         iterations=parameters.erode.iterations,
     )
-    cv2ext.write_image_if(eroded, enable_debug, "_" + str(n_page) + "_2.png")
+    debug.image(eroded, DebugImage.Level.DEBUG)
     eroded2 = eroded & 0b11100000
-    cv2ext.write_image_if(eroded2, enable_debug, "_" + str(n_page) + "_2a.png")
+    debug.image(eroded2, DebugImage.Level.DEBUG)
 
     # Aide à la détection des contours
     canny = cv2.Canny(
@@ -139,11 +137,9 @@ def find_rotation(
         parameters.canny.maximum,
         apertureSize=parameters.canny.aperture_size,
     )
-    cv2ext.write_image_if(canny, enable_debug, "_" + str(n_page) + "_3.png")
+    debug.image(canny, DebugImage.Level.DEBUG)
     canny_filtered = cv2.bitwise_and(canny, cv2.bitwise_not(images_mask))
-    cv2ext.write_image_if(
-        canny_filtered, enable_debug, "_" + str(n_page) + "_4.png"
-    )
+    debug.image(canny_filtered, DebugImage.Level.DEBUG)
 
     # Détection des lignes.
     # La précision doit être de l'ordre de 0.05°
@@ -160,28 +156,33 @@ def find_rotation(
     # Le deuxième niveau de liste ne contient toujours qu'une ligne.
     lines = list(map(lambda line: line[0], list_lines))
 
-    if enable_debug is not None:
-        image_with_lines = cv2ext.convertion_en_couleur(image)
-        img = cv2ext.convertion_en_couleur(images_mask)
+    def image_with_lines() -> np.ndarray:
+        retval = cv2ext.convertion_en_couleur(image)
         for line_x1, line_y1, line_x2, line_y2 in lines:
             cv2.line(
-                image_with_lines,
+                retval,
                 (line_x1, line_y1),
                 (line_x2, line_y2),
                 (255, 0, 0),
                 1,
             )
+        return retval
+
+    debug.image_lazy(image_with_lines, DebugImage.Level.DEBUG)
+
+    def img() -> np.ndarray:
+        retval = cv2ext.convertion_en_couleur(images_mask)
+        for line_x1, line_y1, line_x2, line_y2 in lines:
             cv2.line(
-                img,
+                retval,
                 (line_x1, line_y1),
                 (line_x2, line_y2),
                 (255, 0, 0),
                 1,
             )
-        cv2ext.secure_write(
-            enable_debug + "_" + str(n_page) + "_5.png", image_with_lines
-        )
-        cv2ext.secure_write(enable_debug + "_" + str(n_page) + "_6.png", img)
+        return retval
+
+    debug.image_lazy(img, DebugImage.Level.DEBUG)
 
     return found_angle_unskew_page(
         lines,

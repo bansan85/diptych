@@ -76,7 +76,8 @@ disable=missing-module-docstring,
         too-many-locals,
         fixme,
         too-few-public-methods,
-        unsubscriptable-object
+        unsubscriptable-object,
+        cell-var-from-loop
 
 [REPORTS]
 

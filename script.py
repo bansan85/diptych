@@ -19,6 +19,7 @@ import cv2ext
 import pages
 import compute
 import fsext
+from debug_image import DebugImage, inc_debug
 
 
 class SeparatePage:
@@ -28,13 +29,13 @@ class SeparatePage:
         self,
         image: np.ndarray,
         parameters: SplitTwoWavesParameters,
-        enable_debug: Optional[str],
+        debug: DebugImage,
     ) -> Tuple[np.ndarray, np.ndarray]:
         self.__images_found = page.find_images.find_images(
             image,
             parameters.find_images,
             0.0,
-            compute.optional_concat(enable_debug, "_0"),
+            debug,
         )
         param1 = FoundSplitLineWithLineParameters(
             parameters.blur_size,
@@ -53,7 +54,7 @@ class SeparatePage:
             image,
             self.__images_found,
             param1,
-            compute.optional_concat(enable_debug, "_1"),
+            debug,
         )
 
         param2 = FoundSplitLineWithWave(
@@ -66,7 +67,7 @@ class SeparatePage:
             image,
             param2,
             angle_1,
-            compute.optional_concat(enable_debug, "_2"),
+            debug,
         )
 
         (
@@ -89,50 +90,52 @@ class SeparatePage:
             image, self.__angle_split, pos_moy
         )
 
-        cv2ext.write_image_if(page_gauche, enable_debug, "_3_1.png")
-        cv2ext.write_image_if(page_droite, enable_debug, "_3_2.png")
+        @inc_debug
+        def save_single_pages(debug_: DebugImage) -> None:
+            debug_.image(page_gauche, DebugImage.Level.TOP)
+            debug_.image(page_droite, DebugImage.Level.TOP)
+
+        save_single_pages(debug)
 
         # On renvoie les images cropées.
         return page_gauche, page_droite
 
+    @inc_debug
     def unskew_page(
         self,
         image: np.ndarray,
         n_page: int,
         parameters: UnskewPageParameters,
-        enable_debug: Optional[str],
+        debug: DebugImage,
     ) -> np.ndarray:
         rotate_angle = page.unskew.find_rotation(
-            image, n_page, parameters, self.__angle_split - 90.0, enable_debug
+            image, parameters, self.__angle_split - 90.0, debug
         )
 
         self.__output.print(ConstString.page_rotation(n_page), rotate_angle)
         # Enfin, on tourne.
         img_rotated = cv2ext.rotate_image(image, rotate_angle)
-        if enable_debug is not None:
-            cv2ext.secure_write(
-                enable_debug + "_" + str(n_page) + "_8.png", img_rotated
-            )
+        debug.image(img_rotated, DebugImage.Level.TOP)
+
         return img_rotated
 
+    @inc_debug
     def crop_around_data_in_page(
         self,
         image: np.ndarray,
         n_page: int,
         parameters: CropAroundDataInPageParameters,
-        enable_debug: Optional[str],
+        debug: DebugImage,
     ) -> Tuple[np.ndarray, Tuple[int, int, int, int], int, int]:
         crop_rect_size = page.crop.crop_around_page(
-            image, n_page, parameters, self.__angle_split - 90.0, enable_debug
+            image, parameters, self.__angle_split - 90.0, debug
         )
 
         page_gauche_0 = cv2ext.crop_rectangle(image, crop_rect_size)
-        cv2ext.write_image_if(
-            page_gauche_0, enable_debug, "_" + str(n_page) + "_6.png"
-        )
+        debug.image(page_gauche_0, DebugImage.Level.TOP)
 
         crop_rect2_size = page.crop.crop_around_data(
-            page_gauche_0, n_page, parameters, enable_debug
+            page_gauche_0, parameters, debug
         )
 
         imgh, imgw = cv2ext.get_hw(page_gauche_0)
@@ -185,9 +188,7 @@ class SeparatePage:
 
         image_crop = cv2ext.crop_rectangle(page_gauche_0, crop)
 
-        cv2ext.write_image_if(
-            image_crop, enable_debug, "_" + str(n_page) + "_10.png"
-        )
+        debug.image(image_crop, DebugImage.Level.TOP)
 
         return (
             image_crop,
@@ -252,7 +253,7 @@ class SeparatePage:
         dict_default_values: Optional[
             Dict[str, Union[int, float, Tuple[int, int]]]
         ] = None,
-        enable_debug: bool = False,
+        debug: DebugImage = DebugImage(DebugImage.Level.OFF),
     ) -> None:
         print(filename)
         img = cv2ext.charge_image(filename)
@@ -269,33 +270,33 @@ class SeparatePage:
         image1, image2 = self.split_two_waves(
             img,
             parameters.split_two_waves,
-            compute.optional_str(enable_debug, filename),
+            debug,
         )
 
         image1a = self.unskew_page(
             image1,
             1,
             parameters.unskew_page,
-            compute.optional_str(enable_debug, filename + "_4"),
+            debug,
         )
         image2a = self.unskew_page(
             image2,
             2,
             parameters.unskew_page,
-            compute.optional_str(enable_debug, filename + "_4"),
+            debug,
         )
 
         (image1b, crop1, imgw1, imgh1) = self.crop_around_data_in_page(
             image1a,
             1,
             parameters.crop_around_data_in_page.set_pos_inside_right(),
-            compute.optional_str(enable_debug, filename + "_5"),
+            debug,
         )
         (image2b, crop2, imgw2, imgh2) = self.crop_around_data_in_page(
             image2a,
             2,
             parameters.crop_around_data_in_page.set_pos_inside_left(),
-            compute.optional_str(enable_debug, filename + "_5"),
+            debug,
         )
 
         image1c = self.uncrop_to_fit_size(image1b, 1, (imgw1, imgh1), crop1)
@@ -324,11 +325,12 @@ def treat_file(
     dict_default_values: Optional[
         Dict[str, Union[int, float, Tuple[int, int]]]
     ] = None,
-    enable_debug: bool = True,
+    debug: DebugImage = DebugImage(DebugImage.Level.DEBUG),
 ) -> None:
+    debug.set_root(filename)
     sep.treat_file(
         filename,
         dict_test,
         dict_default_values,
-        enable_debug,
+        debug,
     )
