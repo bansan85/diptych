@@ -131,6 +131,18 @@ class SeparatePage:
             image, parameters, self.__angle_split - 90.0, debug
         )
 
+        if (
+            not 1 / 5
+            <= (crop_rect_size[1] - crop_rect_size[0])
+            / (crop_rect_size[3] - crop_rect_size[2])
+            <= 5
+        ):
+            self.__output.print(ConstString.image_crop(n_page, "x1"), 0)
+            self.__output.print(ConstString.image_crop(n_page, "y1"), 0)
+            self.__output.print(ConstString.image_crop(n_page, "x2"), 0)
+            self.__output.print(ConstString.image_crop(n_page, "y2"), 0)
+            return (np.empty(0), (0, 0, 0, 0), 0, 0)
+
         page_gauche_0 = cv2ext.crop_rectangle(image, crop_rect_size)
         debug.image(page_gauche_0, DebugImage.Level.TOP)
 
@@ -204,6 +216,12 @@ class SeparatePage:
         size_wh: Tuple[int, int],
         crop: Tuple[int, int, int, int],
     ) -> np.ndarray:
+        if len(image) == 0:
+            self.__output.print(ConstString.image_border(n_page, 1), 0)
+            self.__output.print(ConstString.image_border(n_page, 2), 0)
+            self.__output.print(ConstString.image_border(n_page, 3), 0)
+            self.__output.print(ConstString.image_border(n_page, 4), 0)
+            return image
         dpi = compute.find_dpi(size_wh[0], size_wh[1], 21.0, 29.7)
         self.__output.print(ConstString.image_dpi(n_page), dpi)
         recadre = cv2ext.add_border_to_match_size(
@@ -302,8 +320,14 @@ class SeparatePage:
         image1c = self.uncrop_to_fit_size(image1b, 1, (imgw1, imgh1), crop1)
         image2c = self.uncrop_to_fit_size(image2b, 2, (imgw2, imgh2), crop2)
 
-        self.save_final_page(filename + "_page_1.png", image1c)
-        self.save_final_page(filename + "_page_2.png", image2c)
+        if len(image1c) != 0 and len(image2c) != 0:
+            self.save_final_page(filename + "_page_1.png", image1c)
+            self.save_final_page(filename + "_page_2.png", image2c)
+        else:
+            if len(image1c) != 0:
+                self.save_final_page(filename + "_page.png", image1c)
+            if len(image2c) != 0:
+                self.save_final_page(filename + "_page.png", image1c)
 
         self.__output.close()
 

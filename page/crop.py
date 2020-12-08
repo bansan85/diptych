@@ -376,6 +376,10 @@ def found_data_try1(
     contours, _ = cv2.findContours(
         threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
+
+    if len(contours) == 0:
+        return None
+
     contour_max = max(contours, key=cv2.contourArea)
     image2222 = cv2.drawContours(
         cv2ext.convertion_en_couleur(image), contours, -1, (0, 0, 255), 3
@@ -475,10 +479,15 @@ def found_data_try2_find_edges(
             minLineLength=hough_lines_param_i.min_line_length,
             maxLineGap=hough_lines_param_i.max_line_gap,
         )
-        liste_lines.extend(lines_i)
+        if lines_i is not None:
+            liste_lines.extend(lines_i)
 
         def image_with_lines() -> np.ndarray:
             retval = cv2ext.convertion_en_couleur(image)
+
+            if lines_i is None:
+                return retval
+
             for line in lines_i:
                 for point1_x, point1_y, point2_x, point2_y in line:
                     cv2.line(
@@ -717,7 +726,7 @@ def found_data_try2(
     param: FoundDataTry2Parameters,
     page_angle: float,
     debug: DebugImage,
-) -> np.ndarray:
+) -> Optional[np.ndarray]:
     liste_lines = found_data_try2_find_edges(image, param, debug)
 
     images_mask = page.find_images.find_images(
@@ -728,7 +737,7 @@ def found_data_try2(
     )
 
     if np.all(images_mask == 0):
-        raise Exception("Failed to found images.")
+        return None
 
     (
         lines_vertical_angle,
@@ -769,6 +778,10 @@ def crop_around_page(
         rect = page.crop.found_data_try2(
             image, parameters.found_data_try2, page_angle, debug
         )
+
+    if rect is None:
+        height, width = cv2ext.get_hw(image)
+        return (0, width - 1, 0, height - 1)
 
     debug.image_lazy(
         lambda: cv2.drawContours(

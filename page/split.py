@@ -984,6 +984,9 @@ def found_split_line_with_wave(
         debug,
     )
 
+    if len(cs2) == 0:
+        return None
+
     line_wave = __found_best_split_line_with_wave(
         cs2,
         image,

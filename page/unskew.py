@@ -152,6 +152,9 @@ def find_rotation(
         maxLineGap=parameters.hough_lines.max_line_gap,
     )
 
+    if list_lines is None:
+        return 0.0
+
     # lines contient une liste de liste de lignes.
     # Le deuxième niveau de liste ne contient toujours qu'une ligne.
     lines = list(map(lambda line: line[0], list_lines))
