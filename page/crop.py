@@ -807,7 +807,12 @@ def crop_around_page(
     x_crop1.sort()
     y_crop1.sort()
 
-    return (x_crop1[0], x_crop1[3], y_crop1[0], y_crop1[3])
+    return (
+        compute.clamp(x_crop1[0], 0, len(image[0]) - 1),
+        compute.clamp(x_crop1[3], 0, len(image[0]) - 1),
+        compute.clamp(y_crop1[0], 0, len(image) - 1),
+        compute.clamp(y_crop1[3], 0, len(image) - 1),
+    )
 
 
 @inc_debug
