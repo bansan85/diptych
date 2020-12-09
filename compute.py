@@ -119,7 +119,7 @@ def keep_angle_pos_closed_to_target(
 
 def pourcent_error(val1: float, val2: float) -> float:
     if val1 < 0 or val2 < 0:
-        raise ValueError("pourcent_error", "rgument must be positive.")
+        raise ValueError("pourcent_error", "Argument must be positive.")
     return np.absolute(val1 - val2) / np.maximum(val1, val2) * 100.0
 
 
