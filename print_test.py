@@ -2,11 +2,12 @@
 """
 
 import copy
-from typing import Dict, Union, Optional, Tuple
+from typing import Dict, Union, Optional, Tuple, Any
 import unittest
 
-from print_interface import PrintInterface
+from print_interface import PrintInterface, _N
 import compute
+from angle import Angle
 
 
 class PrintTest(PrintInterface):
@@ -20,11 +21,24 @@ class PrintTest(PrintInterface):
     """
 
     __last_msg_assert: Optional[str]
+    __values: Dict[
+        str,
+        Union[
+            Tuple[str, int, int],
+            Tuple[str, float, float],
+            Tuple[str, Angle, Angle],
+        ],
+    ]
 
     def __init__(
         self,
         values_to_check: Dict[
-            str, Union[Tuple[str, int, int], Tuple[str, float, float]]
+            str,
+            Union[
+                Tuple[str, int, int],
+                Tuple[str, float, float],
+                Tuple[str, Angle, Angle],
+            ],
         ],
     ) -> None:
         """Constructor for test purpose.
@@ -51,9 +65,9 @@ class PrintTest(PrintInterface):
     def __check(
         self,
         name: str,
-        value: Union[int, float],
-        minimum: Union[int, float],
-        maximum: Union[int, float],
+        value: Any,
+        minimum: Any,
+        maximum: Any,
     ) -> None:
         try:
             self.__test.assertGreaterEqual(value, minimum)
@@ -62,7 +76,7 @@ class PrintTest(PrintInterface):
             self.__last_msg_assert = "{0} : {1}".format(name, err)
             print(self.__last_msg_assert)
 
-    def print(self, name: str, data: Union[int, float]) -> None:
+    def print(self, name: str, data: _N) -> None:
         """Print the tuple (key, value) and check if the value is in the
         expected boundary.
 
@@ -71,7 +85,7 @@ class PrintTest(PrintInterface):
 
         Args:
             name (str): the name of the key
-            data (Union[int, float]): the value to check.
+            data (_N): the value to check.
 
         Raises:
             ValueError: raised if the value is outside of the valid domain.
@@ -82,8 +96,10 @@ class PrintTest(PrintInterface):
                 self.__check(
                     name,
                     data,
-                    self.__values[name][1] - self.__values[name][2],
-                    self.__values[name][1] + self.__values[name][2],
+                    self.__values[name][1]  # type: ignore
+                    - self.__values[name][2],
+                    self.__values[name][1]  # type: ignore
+                    + self.__values[name][2],
                 )
             elif self.__values[name][0] == "range":
                 self.__check(
@@ -91,13 +107,6 @@ class PrintTest(PrintInterface):
                     data,
                     self.__values[name][1],
                     self.__values[name][2],
-                )
-            elif self.__values[name][0] == "pourcent":
-                self.__check(
-                    name,
-                    data,
-                    self.__values[name][1] - data * self.__values[name][2],
-                    self.__values[name][1] + data * self.__values[name][2],
                 )
             else:
                 raise ValueError(

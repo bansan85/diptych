@@ -2,7 +2,12 @@
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Union
+from typing import TypeVar
+
+from angle import Angle
+
+
+_N = TypeVar("_N", int, float, Angle)
 
 
 class PrintInterface(metaclass=ABCMeta):
@@ -17,7 +22,7 @@ class PrintInterface(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def print(self, name: str, data: Union[int, float]) -> None:
+    def print(self, name: str, data: _N) -> None:
         """Print the tuple (key, value).
 
         Args:

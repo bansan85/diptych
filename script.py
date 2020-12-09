@@ -20,6 +20,7 @@ import pages
 import compute
 import fsext
 from debug_image import DebugImage, inc_debug
+from angle import Angle
 
 
 class SeparatePage:
@@ -34,7 +35,7 @@ class SeparatePage:
         self.__images_found = page.find_images.find_images(
             image,
             parameters.find_images,
-            0.0,
+            Angle.rad(0.0),
             debug,
         )
         param1 = FoundSplitLineWithLineParameters(
@@ -77,7 +78,7 @@ class SeparatePage:
             (angle_1, posx_1),
             second,
             histogram_length,
-            param1.hough_lines.delta_tetha / np.pi * 180.0,
+            param1.hough_lines.delta_tetha,
             ecart,
         )
 
@@ -109,12 +110,12 @@ class SeparatePage:
         debug: DebugImage,
     ) -> np.ndarray:
         rotate_angle = page.unskew.find_rotation(
-            image, parameters, self.__angle_split - 90.0, debug
+            image, parameters, self.__angle_split - Angle.deg(90.0), debug
         )
 
         self.__output.print(ConstString.page_rotation(n_page), rotate_angle)
         # Enfin, on tourne.
-        img_rotated = cv2ext.rotate_image(image, rotate_angle)
+        img_rotated = cv2ext.rotate_image(image, rotate_angle.get_deg())
         debug.image(img_rotated, DebugImage.Level.TOP)
 
         return img_rotated
@@ -128,7 +129,7 @@ class SeparatePage:
         debug: DebugImage,
     ) -> Tuple[np.ndarray, Tuple[int, int, int, int], int, int]:
         crop_rect_size = page.crop.crop_around_page(
-            image, parameters, self.__angle_split - 90.0, debug
+            image, parameters, self.__angle_split - Angle.deg(90.0), debug
         )
 
         if (
@@ -266,10 +267,17 @@ class SeparatePage:
         self,
         filename: str,
         dict_test: Optional[
-            Dict[str, Union[Tuple[str, int, int], Tuple[str, float, float]]]
+            Dict[
+                str,
+                Union[
+                    Tuple[str, int, int],
+                    Tuple[str, float, float],
+                    Tuple[str, Angle, Angle],
+                ],
+            ]
         ] = None,
         dict_default_values: Optional[
-            Dict[str, Union[int, float, Tuple[int, int]]]
+            Dict[str, Union[int, float, Tuple[int, int], Angle]]
         ] = None,
         debug: DebugImage = DebugImage(DebugImage.Level.OFF),
     ) -> None:
@@ -332,7 +340,7 @@ class SeparatePage:
         self.__output.close()
 
     __output: PrintInterface
-    __angle_split: float
+    __angle_split: Angle
     __images_found: np.ndarray
 
 
@@ -344,10 +352,17 @@ def treat_file(
     sep: SeparatePage,
     filename: str,
     dict_test: Optional[
-        Dict[str, Union[Tuple[str, int, int], Tuple[str, float, float]]]
+        Dict[
+            str,
+            Union[
+                Tuple[str, int, int],
+                Tuple[str, float, float],
+                Tuple[str, Angle, Angle],
+            ],
+        ]
     ] = None,
     dict_default_values: Optional[
-        Dict[str, Union[int, float, Tuple[int, int]]]
+        Dict[str, Union[int, float, Tuple[int, int], Angle]]
     ] = None,
     debug: DebugImage = DebugImage(DebugImage.Level.DEBUG),
 ) -> None:

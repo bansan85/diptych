@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import cv2ext
 from debug_image import DebugImage, inc_debug
+from angle import Angle
 
 
 class FindImageParameters:
@@ -75,7 +76,7 @@ class FindImageParameters:
 
 @inc_debug
 def remove_black_border_in_image(
-    gray_bordered: np.ndarray, page_angle: float, debug: DebugImage
+    gray_bordered: np.ndarray, page_angle: Angle, debug: DebugImage
 ) -> np.ndarray:
     thresholdi = cv2ext.threshold_from_gaussian_histogram_black(gray_bordered)
     _, threshold = cv2.threshold(
@@ -98,7 +99,7 @@ def remove_black_border_in_image(
     __epsilon__ = 5
     mask_border_only = 255 * np.ones(shape=gray_bordered.shape, dtype=np.uint8)
     height, width = cv2ext.get_hw(gray_bordered)
-    __angle_tolerance__ = 3.0
+    __angle_tolerance__ = Angle.deg(3.0)
     for cnt in contours:
         (
             (left_top, left_bottom),
@@ -132,7 +133,7 @@ def remove_black_border_in_image(
 def find_images(
     image: np.ndarray,
     param: FindImageParameters,
-    page_angle: Optional[float],
+    page_angle: Optional[Angle],
     debug: DebugImage,
 ) -> np.ndarray:
     __internal_border__ = 20
@@ -244,7 +245,7 @@ def remove_points_inside_images_in_contours(
     contours: List[np.ndarray],
     image: np.ndarray,
     param: FindImageParameters,
-    page_angle: Optional[float],
+    page_angle: Optional[Angle],
     debug: DebugImage,
 ) -> List[np.ndarray]:
     mask_with_images = find_images(image, param, page_angle, debug)

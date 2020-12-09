@@ -1,10 +1,12 @@
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Any
 
 import cv2
 import numpy as np
 
 import compute
 from exceptext import NotMyException
+from angle import Angle
+from parameters import HoughLinesParameters
 
 
 def charge_image(fichier: str) -> np.ndarray:
@@ -75,12 +77,17 @@ def get_polygon_from_contour(
 
 
 def remove_error(
-    data: np.ndarray, absolute_error: Tuple[float, ...]
-) -> np.ndarray:
+    data: List[Any], absolute_error: Tuple[Any, ...]
+) -> List[Any]:
     if len(data) == 1:
         return data
+    data_kmeans = np.asarray(
+        [[y / z for y, z in zip(x, absolute_error)] for x in data],
+        dtype=np.float32,
+    )
+
     _, label, _ = cv2.kmeans(
-        data,
+        data_kmeans,
         2,
         None,
         (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
@@ -88,61 +95,51 @@ def remove_error(
         cv2.KMEANS_RANDOM_CENTERS,
     )
     ravel = [
-        data[label.ravel() == x]
+        [y for y, z in zip(data_kmeans, label.ravel() == x) if z]
         for x in range(max(label)[0] - min(label)[0] + 1)
     ]
     mean1 = [np.mean(x) for x in list(zip(*ravel[0]))]
     mean2 = [np.mean(x) for x in list(zip(*ravel[1]))]
-    effective_error = [
-        np.abs(x[0] - x[1]) - x[2]
-        for x in list(zip(mean1, mean2, absolute_error))
-    ]
-    if max(effective_error) < 0:
+    effective_error = [np.abs(x[0] - x[1]) for x in list(zip(mean1, mean2))]
+    if max(effective_error) < 1:
         return data
-    ravel_sorted = sorted(ravel, key=len, reverse=True)
+    ravel_len = list(map(len, ravel))
 
-    return ravel_sorted[0]
+    return [
+        y for y, z in zip(data, label.ravel() == np.argmax(ravel_len)) if z
+    ]
 
 
 def get_polygon_from_contour_hough_lines(
-    contour: np.ndarray, number_of_vertices: int, image_src: np.ndarray
+    hough_lines_param: HoughLinesParameters,
+    contour: np.ndarray,
+    number_of_vertices: int,
+    image_src: np.ndarray,
 ) -> Optional[np.ndarray]:
     image = np.zeros(get_hw(image_src), dtype=np.uint8)
     image = cv2.drawContours(image, [contour], -1, 255, 1)
 
     lines_i = cv2.HoughLinesP(
         image,
-        1,
-        0.05 / 180.0 * np.pi,
-        30,
-        minLineLength=100,
-        maxLineGap=30,
+        hough_lines_param.delta_rho,
+        hough_lines_param.delta_tetha.get_rad(),
+        hough_lines_param.threshold,
+        minLineLength=hough_lines_param.min_line_length,
+        maxLineGap=hough_lines_param.max_line_gap,
     )
 
-    angle_pos = np.asarray(
-        (
-            [
-                np.asarray(
-                    (
-                        compute.line_xy_to_polar(
-                            ((x[0][0], x[0][1]), (x[0][2], x[0][3]))
-                        )
-                    ),
-                    dtype=np.float32,
-                )
-                for x in lines_i
-            ]
-        ),
-        dtype=np.float32,
-    )
+    angle_pos = [
+        compute.line_xy_to_polar(((x[0][0], x[0][1]), (x[0][2], x[0][3])))
+        for x in lines_i
+    ]
 
     angle_pos_kmeans = np.asarray(
         (
             [
                 np.asarray(
                     (
-                        np.cos(((x[0] + 360) % 360) / 180.0 * np.pi * 2),
-                        np.sin(((x[0] + 360) % 180) / 180.0 * np.pi * 2),
+                        np.cos(((x[0].get_rad() + 2.0 * np.pi) % np.pi) * 2.0),
+                        np.sin(((x[0].get_rad() + 2.0 * np.pi) % np.pi) * 2.0),
                         x[1] / min(get_hw(image_src)),
                     ),
                     dtype=np.float32,
@@ -162,11 +159,11 @@ def get_polygon_from_contour_hough_lines(
         cv2.KMEANS_RANDOM_CENTERS,
     )
     ravel = [
-        angle_pos[label.ravel() == x]
+        [y for y, z in zip(angle_pos, label.ravel() == x) if z]
         for x in range(max(label)[0] - min(label)[0] + 1)
     ]
     ravel_filter = [
-        remove_error(x, (0.05 * 180, 0.05 * min(get_hw(image_src))))
+        remove_error(x, (Angle.deg(0.05 * 180), 0.05 * min(get_hw(image_src))))
         for x in ravel
     ]
 
@@ -174,7 +171,7 @@ def get_polygon_from_contour_hough_lines(
         np.asarray(
             [
                 np.asarray(
-                    (np.cos(y / 180.0 * np.pi), np.sin(y / 180.0 * np.pi)),
+                    (np.cos(y.get_rad()), np.sin(y.get_rad())),
                     dtype=np.float32,
                 )
                 for y in list(zip(*x))[0]
@@ -205,7 +202,9 @@ def get_polygon_from_contour_hough_lines(
         for y in ravel_pre_mean_label
     ]
     ravel_pre_mean_4 = [
-        compute.angle_between(x[0], x[1] - 180 - 10, x[1] - 180 + 10)
+        compute.angle_between(
+            x[0], x[1] - Angle.deg(170), x[1] - Angle.deg(190)
+        )
         if len(x) == 2
         else False
         for x in ravel_pre_mean_3
@@ -213,7 +212,12 @@ def get_polygon_from_contour_hough_lines(
 
     ravel_mean = [
         (
-            compute.mean_angle([((a + 360) % 360) for a in list(zip(*x))[0]]),
+            compute.mean_angle(
+                [
+                    ((a + Angle.deg(360)) % Angle.deg(360))
+                    for a in list(zip(*x))[0]
+                ]
+            ),
             np.mean(list(zip(*x))[1]),
         )
         if not y
@@ -221,14 +225,20 @@ def get_polygon_from_contour_hough_lines(
             compute.mean_angle(
                 [
                     a
-                    if compute.angle_between(a, z[0] - 10, z[0] + 10)
-                    else ((a + 180) % 360)
+                    if compute.angle_between(
+                        a, z[0] - Angle.deg(10), z[0] + Angle.deg(10)
+                    )
+                    else ((a + Angle.deg(180)) % Angle.deg(360))
                     for a in list(zip(*x))[0]
                 ]
             ),
             np.mean(
                 [
-                    b if compute.angle_between(a, z[0] - 10, z[0] + 10) else -b
+                    b
+                    if compute.angle_between(
+                        a, z[0] - Angle.deg(10), z[0] + Angle.deg(10)
+                    )
+                    else -b
                     for a, b in x
                 ]
             ),
@@ -240,8 +250,8 @@ def get_polygon_from_contour_hough_lines(
     ravel_points = [
         (
             (
-                0 + x[1] * np.cos(x[0] / 180.0 * np.pi),
-                0 + x[1] * np.sin(x[0] / 180.0 * np.pi),
+                0 + x[1] * np.cos(x[0].get_rad()),
+                0 + x[1] * np.sin(x[0].get_rad()),
             ),
             x[0],
         )
@@ -251,8 +261,8 @@ def get_polygon_from_contour_hough_lines(
         (
             x[0],
             (
-                x[0][0] + 1000 * np.cos((x[1] + 90) / 180.0 * np.pi),
-                x[0][1] + 1000 * np.sin((x[1] + 90) / 180.0 * np.pi),
+                x[0][0] + 1000 * np.cos(x[1].get_rad() + np.pi / 2),
+                x[0][1] + 1000 * np.sin(x[1].get_rad() + np.pi / 2),
             ),
             x[1],
         )
@@ -261,11 +271,13 @@ def get_polygon_from_contour_hough_lines(
 
     lines_sorted = sorted(ravel_lines, key=lambda x: x[2])
     ecart = [
-        np.abs(y - x)
+        Angle.abs(y - x)
         for x, y in compute.iterator_zip_n_n_1(list(zip(*lines_sorted))[2])
     ]
-    i = int(np.argmin(ecart))
-    if ecart[i] > ecart[(i - 1) % 4] - 5 or ecart[i] > ecart[(i + 1) % 4] - 5:
+    i = int(np.argmin(list(map(lambda x: x.get_deg(), ecart))))
+    if ecart[i] > ecart[(i - 1) % 4] - Angle.deg(5) or ecart[i] > ecart[
+        (i + 1) % 4
+    ] - Angle.deg(5):
         return None
     lines_i = compute.convert_line_to_contour(
         (lines_sorted[i % 4][0], lines_sorted[i % 4][1]),
@@ -363,7 +375,7 @@ def remove_border_in_contours(
 
 
 def split_image(
-    image: np.ndarray, angle: float, posx: int
+    image: np.ndarray, angle: Angle, posx: int
 ) -> Tuple[np.ndarray, np.ndarray]:
     height, width = get_hw(image)
 
@@ -500,8 +512,8 @@ def insert_border_in_mask(
     cnt: np.ndarray,
     threshold2: np.ndarray,
     mask_border_only: np.ndarray,
-    epsilon: Tuple[int, float],
-    page_angle: float,
+    epsilon: Tuple[int, Angle],
+    page_angle: Angle,
 ) -> None:
     __pourcentage_white_allowed__ = 0.01
     epsilon_border, epsilon_angle = epsilon
@@ -533,7 +545,10 @@ def insert_border_in_mask(
     vertical_lines = list(
         filter(
             lambda x: compute.is_angle_closed_to(
-                x[1], page_angle + 90.0, epsilon_angle, 180
+                x[1],
+                page_angle + Angle.deg(90.0),
+                epsilon_angle,
+                Angle.deg(180),
             ),
             all_angles,
         )
@@ -541,7 +556,7 @@ def insert_border_in_mask(
     horizontal_lines = list(
         filter(
             lambda x: compute.is_angle_closed_to(
-                x[1], page_angle, epsilon_angle, 180
+                x[1], page_angle, epsilon_angle, Angle.deg(180)
             ),
             all_angles,
         )

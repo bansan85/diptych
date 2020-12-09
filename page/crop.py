@@ -14,6 +14,7 @@ import cv2ext
 import compute
 import ocr
 from debug_image import DebugImage, inc_debug
+from angle import Angle
 
 
 class FoundDataTry1Parameters:
@@ -21,6 +22,9 @@ class FoundDataTry1Parameters:
         erode: ErodeParameters = ErodeParameters((9, 9), 1)
         threshold: int = 240
         pourcentage_ecart_rectangle: float = 10.0
+        hough_lines: HoughLinesParameters = HoughLinesParameters(
+            1, Angle.deg(1 / 20), 30, 100, 30
+        )
 
     def __init__(self) -> None:
         self.__param = FoundDataTry1Parameters.Impl()
@@ -47,6 +51,12 @@ class FoundDataTry1Parameters:
     def pourcentage_ecart_rectangle(self, val: float) -> None:
         self.__param.pourcentage_ecart_rectangle = val
 
+    @property
+    def hough_lines(
+        self,
+    ) -> HoughLinesParameters:
+        return self.__param.hough_lines
+
 
 class FoundDataTry2Parameters:
     class Impl(types.SimpleNamespace):
@@ -55,12 +65,12 @@ class FoundDataTry2Parameters:
         kernel_morpho_size: Tuple[int, int] = (10, 10)
         canny_gray: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines_gray: HoughLinesParameters = HoughLinesParameters(
-            1, np.pi / (180 * 20), 30, 100, 30
+            1, Angle.deg(1 / 20), 30, 100, 30
         )
         threshold_histogram: int = 15
         canny_histogram: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines_histogram: HoughLinesParameters = HoughLinesParameters(
-            1, np.pi / (180 * 20), 30, 100, 30
+            1, Angle.deg(1 / 20), 30, 100, 30
         )
         find_images: FindImageParameters = FindImageParameters(
             5,
@@ -268,7 +278,7 @@ class CropAroundDataInPageParameters:
     def init_default_values(
         self,
         key: str,
-        value: Union[int, float, Tuple[int, int]],
+        value: Union[int, float, Tuple[int, int], Angle],
     ) -> None:
         if key.startswith("Erode"):
             self.found_data_try1.erode.init_default_values(
@@ -388,7 +398,9 @@ def found_data_try1(
     debug.image(image2222, DebugImage.Level.DEBUG)
 
     # On garde le rectangle le plus grand.
-    rect = cv2ext.get_polygon_from_contour_hough_lines(contour_max, 4, image)
+    rect = cv2ext.get_polygon_from_contour_hough_lines(
+        param.hough_lines, contour_max, 4, image
+    )
 
     if rect is None:
         return None
@@ -474,7 +486,7 @@ def found_data_try2_find_edges(
         lines_i = cv2.HoughLinesP(
             canny,
             hough_lines_param_i.delta_rho,
-            hough_lines_param_i.delta_tetha,
+            hough_lines_param_i.delta_tetha.get_rad(),
             hough_lines_param_i.threshold,
             minLineLength=hough_lines_param_i.min_line_length,
             maxLineGap=hough_lines_param_i.max_line_gap,
@@ -522,13 +534,13 @@ def found_data_try2_filter_edges(
     """Edges must be vertical or horizontal and must be not cross images."""
     lines_vertical_angle = []
     lines_horizontal_angle = []
-    delta_angle = 3
+    delta_angle = Angle.deg(3)
     for line in liste_lines:
         point1_x, point1_y, point2_x, point2_y = line[0]
         angle = compute.get_angle_0_180(
             (point1_x, point1_y), (point2_x, point2_y)
         )
-        if 90 - delta_angle <= angle <= 90 + delta_angle:
+        if Angle.deg(90) - delta_angle <= angle <= Angle.deg(90) + delta_angle:
             angle, posx = compute.get_angle_0_180_posx_safe(
                 (point1_x, point1_y), (point2_x, point2_y)
             )
@@ -547,7 +559,7 @@ def found_data_try2_filter_edges(
                 lines_vertical_angle.append(
                     ((point1_x, point1_y), (point2_x, point2_y))
                 )
-        if angle <= delta_angle or angle > 180 - delta_angle:
+        if angle <= delta_angle or angle > Angle.deg(180) - delta_angle:
             angle, posy = compute.get_angle_0_180_posy_safe(
                 (point1_x, point1_y), (point2_x, point2_y)
             )
@@ -724,7 +736,7 @@ def found_data_try2_find_smallest_rectangular_with_all_images_inside(
 def found_data_try2(
     image: np.ndarray,
     param: FoundDataTry2Parameters,
-    page_angle: float,
+    page_angle: Angle,
     debug: DebugImage,
 ) -> Optional[np.ndarray]:
     liste_lines = found_data_try2_find_edges(image, param, debug)

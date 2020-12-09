@@ -14,6 +14,7 @@ import page.find_images
 import cv2ext
 import compute
 from debug_image import DebugImage, inc_debug
+from angle import Angle
 
 
 class FoundSplitLineWithLineParameters:
@@ -23,7 +24,7 @@ class FoundSplitLineWithLineParameters:
         canny: CannyParameters
         hough_lines: HoughLinesParameters
         limit_rho: int
-        limit_tetha: float
+        limit_tetha: Angle
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
@@ -32,7 +33,7 @@ class FoundSplitLineWithLineParameters:
         canny: CannyParameters,
         hough_lines: HoughLinesParameters,
         limit_rho: int,
-        limit_tetha: float,
+        limit_tetha: Angle,
     ) -> None:
         self.__param = FoundSplitLineWithLineParameters.Impl(
             blur_size=blur_size,
@@ -74,11 +75,11 @@ class FoundSplitLineWithLineParameters:
         self.__param.limit_rho = val
 
     @property
-    def limit_tetha(self) -> float:
+    def limit_tetha(self) -> Angle:
         return self.__param.limit_tetha
 
     @limit_tetha.setter
-    def limit_tetha(self, val: float) -> None:
+    def limit_tetha(self, val: Angle) -> None:
         self.__param.limit_tetha = val
 
 
@@ -107,7 +108,7 @@ class FindCandidatesSplitLineWithWaveParameters:
     def init_default_values(
         self,
         key: str,
-        value: Union[int, float, Tuple[int, int]],
+        value: Union[int, float, Tuple[int, int], Angle],
     ) -> None:
         if key == "RapportRect1Rect2" and isinstance(value, float):
             self.rapport_rect1_rect2 = value
@@ -166,7 +167,7 @@ class FindCandidatesSplitLineWithLineParameters:
         hough_lines: HoughLinesParameters
         erode: ErodeParameters
         limit_rho: int
-        limit_tetha: float
+        limit_tetha: Angle
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
@@ -175,7 +176,7 @@ class FindCandidatesSplitLineWithLineParameters:
         hough_lines: HoughLinesParameters,
         erode: ErodeParameters,
         limit_rho: int,
-        limit_tetha: float,
+        limit_tetha: Angle,
     ) -> None:
         self.__param = FindCandidatesSplitLineWithLineParameters.Impl(
             blur_size=blur_size,
@@ -225,11 +226,11 @@ class FindCandidatesSplitLineWithLineParameters:
     @property
     def limit_tetha(
         self,
-    ) -> float:
+    ) -> Angle:
         return self.__param.limit_tetha
 
     @limit_tetha.setter
-    def limit_tetha(self, val: float) -> None:
+    def limit_tetha(self, val: Angle) -> None:
         self.__param.limit_tetha = val
 
 
@@ -239,10 +240,10 @@ class SplitTwoWavesParameters:
         blur_size: Tuple[int, int] = (10, 10)
         canny: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, np.pi / (180 * 20), 150, 200, 150
+            1, Angle.deg(1 / 20), 150, 200, 150
         )
         delta_rho: int = 200
-        delta_tetha: float = 20.0
+        delta_tetha: Angle = Angle.deg(20.0)
         find_images: FindImageParameters = FindImageParameters(
             5, (10, 10), (10, 10), (10, 10), 0.01
         )
@@ -276,11 +277,11 @@ class SplitTwoWavesParameters:
         return self.__param.hough_lines
 
     @property
-    def delta_tetha(self) -> float:
+    def delta_tetha(self) -> Angle:
         return self.__param.delta_tetha
 
     @delta_tetha.setter
-    def delta_tetha(self, val: float) -> None:
+    def delta_tetha(self, val: Angle) -> None:
         self.__param.delta_tetha = val
 
     @property
@@ -304,7 +305,7 @@ class SplitTwoWavesParameters:
     def init_default_values(
         self,
         key: str,
-        value: Union[int, float, Tuple[int, int]],
+        value: Union[int, float, Tuple[int, int], Angle],
     ) -> None:
         if key.startswith("Erode"):
             self.erode.init_default_values(key[len("Erode") :], value)
@@ -318,7 +319,7 @@ class SplitTwoWavesParameters:
             )
         elif key == "DeltaRho" and isinstance(value, int):
             self.delta_rho = value
-        elif key == "DeltaTetha" and isinstance(value, float):
+        elif key == "DeltaTetha" and isinstance(value, Angle):
             self.delta_tetha = value
         elif key.startswith("Wave"):
             self.find_candidates.init_default_values(key[len("Wave") :], value)
@@ -350,7 +351,7 @@ def __found_candidates_split_line_with_line(
     list_lines_p = cv2.HoughLinesP(
         canny_filtered,
         param.hough_lines.delta_rho,
-        param.hough_lines.delta_tetha,
+        param.hough_lines.delta_tetha.get_rad(),
         param.hough_lines.threshold,
         minLineLength=param.hough_lines.min_line_length,
         maxLineGap=xxx ** 2,
@@ -367,7 +368,7 @@ def __found_candidates_split_line_with_line(
                 lambda x: compute.keep_angle_pos_closed_to_target(
                     x[0],
                     param.limit_tetha,
-                    90,
+                    Angle.deg(90),
                     cv2ext.get_hw(blurimg)[1] // 2,
                     cv2ext.get_hw(blurimg)[1] // 2,
                 ),
@@ -398,14 +399,14 @@ def detect_peaks(image: np.ndarray) -> np.ndarray:
 def __loop_to_find_best_mean_angle_pos(
     histogram_posx_length: np.ndarray,
     posx_ecart: int,
-    epsilon_angle: float,
-) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
+    epsilon_angle: Angle,
+) -> Tuple[Angle, int, List[Tuple[Angle, int, int]], int]:
     local_maximum = detect_peaks(histogram_posx_length)
     local_maximum_pos_raw = np.where(local_maximum)
     all_max_big_length = list(
         map(
             lambda x: (
-                x[0] * epsilon_angle,
+                epsilon_angle * x[0],
                 x[1] * posx_ecart,
                 histogram_posx_length[x[0], x[1]],
             ),
@@ -463,17 +464,16 @@ def __best_candidates_split_line_with_line(
     valid_lines: List[Tuple[int, int, int, int]],
     width: int,
     height: int,
-    epsilon_angle: float,
-) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
+    epsilon_angle: Angle,
+) -> Tuple[Angle, int, List[Tuple[Angle, int, int]], int]:
     ecart = int(
         np.ceil(
-            np.tan(epsilon_angle) * np.linalg.norm(np.array((width, height)))
+            np.tan(epsilon_angle.get_rad())
+            * np.linalg.norm(np.array((width, height)))
         )
     )
 
-    epsilon_angle_deg = epsilon_angle / np.pi * 180.0
-
-    histogram_size_angle = int(np.ceil(180.0 / epsilon_angle_deg))
+    histogram_size_angle = int(np.ceil(180.0 / epsilon_angle.get_deg()))
     histogram_size_posx = (width + ecart - 1) // ecart
     histogram_miny = np.full(
         (
@@ -493,7 +493,7 @@ def __best_candidates_split_line_with_line(
         angle, pos = compute.get_angle_0_180_posx_safe(
             (point1_x, point1_y), (point2_x, point2_y)
         )
-        angle_round = int(np.round(angle / epsilon_angle_deg))
+        angle_round = int(np.round(angle / epsilon_angle))
         pos_round = int(np.round(pos / ecart))
         histogram_miny[
             angle_round - __ecart__ : angle_round + __ecart__,
@@ -563,7 +563,7 @@ def __best_candidates_split_line_with_line(
     return __loop_to_find_best_mean_angle_pos(
         histogram_length_clip_int,
         ecart,
-        epsilon_angle_deg,
+        epsilon_angle,
     )
 
 
@@ -573,7 +573,7 @@ def found_split_line_with_line(
     images_found: np.ndarray,
     param: FoundSplitLineWithLineParameters,
     debug: DebugImage,
-) -> Tuple[float, int, List[Tuple[float, int, int]], int]:
+) -> Tuple[Angle, int, List[Tuple[Angle, int, int]], int]:
     debug.image(image, DebugImage.Level.DEBUG)
 
     valid_lines = __found_candidates_split_line_with_line(
@@ -611,7 +611,7 @@ def found_split_line_with_line(
     height, _ = cv2ext.get_hw(image)
     point_1a = (posx_1, 0)
     point_1b = (
-        int(posx_1 - np.tan((angle_1 - 90.0) / 180.0 * np.pi) * height),
+        int(posx_1 - np.tan(angle_1.get_rad() - np.pi / 2) * height),
         height - 1,
     )
 
@@ -687,8 +687,8 @@ def __found_best_split_line_with_wave_hull(
                 (defect2[2][0], defect2[2][1]), (defect2[4][0], defect2[4][1])
             ),
         ]
-        mean_angle = compute.mean_angle(list_angle) % 180.0
-        if 45 < mean_angle < 135:
+        mean_angle = compute.mean_angle(list_angle) % Angle.deg(180.0)
+        if Angle.deg(45.0) < mean_angle < Angle.deg(135.0):
             x_s = data[1]
             y_s = data[0]
         else:
@@ -708,7 +708,12 @@ def __found_best_split_line_with_wave_hull(
                 data,
                 error,
                 defect1[3] + defect2[3],
-                sum([np.square(x - mean_angle) for x in list_angle])
+                sum(
+                    [
+                        np.square(x.get_deg() - mean_angle.get_deg())
+                        for x in list_angle
+                    ]
+                )
                 / len(list_angle),
                 defect1[4],
                 defect2[4],
@@ -911,9 +916,9 @@ def __found_best_split_line_with_wave(
 def found_split_line_with_wave(
     image: np.ndarray,
     parameters: FoundSplitLineWithWave,
-    page_angle: Optional[float],
+    page_angle: Optional[Angle],
     debug: DebugImage,
-) -> Optional[Tuple[float, int]]:
+) -> Optional[Tuple[Angle, int]]:
     xxx = 7
     blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
     debug.image(blurimg, DebugImage.Level.DEBUG)
@@ -980,7 +985,7 @@ def found_split_line_with_wave(
         sorted_contours,
         image,
         parameters.find_images,
-        None if page_angle is None else page_angle - 90.0,
+        None if page_angle is None else page_angle - Angle.deg(90.0),
         debug,
     )
 
@@ -1020,17 +1025,17 @@ def found_split_line_with_wave(
 
 
 def find_best_split_in_all_candidates(
-    one: Tuple[float, int],
-    two: Optional[Tuple[float, int]],
-    histogram_length: List[Tuple[float, int, int]],
-    ecart_angle: float,
+    one: Tuple[Angle, int],
+    two: Optional[Tuple[Angle, int]],
+    histogram_length: List[Tuple[Angle, int, int]],
+    ecart_angle: Angle,
     ecart_posx: int,
-) -> Tuple[float, int]:
+) -> Tuple[Angle, int]:
     if two is None:
         return one
 
     if (
-        np.abs(one[0] - two[0]) < 10 * ecart_angle
+        Angle.abs(one[0] - two[0]) < ecart_angle * 10
         and np.abs(one[1] - two[1]) < 2 * ecart_posx
     ):
         angle_moy = compute.mean_angle([one[0], two[0]])
@@ -1041,7 +1046,7 @@ def find_best_split_in_all_candidates(
     possible_line = [
         x
         for x in histogram_length
-        if np.abs(two[0] - x[0]) < 10 * ecart_angle
+        if Angle.abs(two[0] - x[0]) < ecart_angle * 10
         and np.abs(two[1] - x[1]) < 2 * ecart_posx
     ]
 

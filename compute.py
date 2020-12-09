@@ -15,29 +15,29 @@ import time
 import numpy as np
 from scipy.stats import norm
 
+from angle import Angle
+
+
 _T = TypeVar("_T")
 AnyNumber = TypeVar("AnyNumber", int, float)
 
 
 def get_angle__180_180(
     point1: Tuple[int, int], point2: Tuple[int, int]
-) -> float:
-    angle = (
-        np.arctan2(point1[1] - point2[1], point1[0] - point2[0]) / np.pi * 180
-    )
-    return angle
+) -> Angle:
+    return Angle.rad(np.arctan2(point1[1] - point2[1], point1[0] - point2[0]))
 
 
-def get_angle_0_180(point1: Tuple[int, int], point2: Tuple[int, int]) -> float:
+def get_angle_0_180(point1: Tuple[int, int], point2: Tuple[int, int]) -> Angle:
     angle = get_angle__180_180(point1, point2)
-    if angle < 0:
-        angle = angle + 180
+    if angle.get_rad() < 0:
+        angle = angle + Angle.deg(180.0)
     return angle
 
 
 def get_angle_0_180_posx(
     point1: Tuple[int, int], point2: Tuple[int, int]
-) -> Tuple[float, Optional[int]]:
+) -> Tuple[Angle, Optional[int]]:
     angle = get_angle_0_180(point1, point2)
     if point1[1] == point2[1]:
         posx = None
@@ -51,7 +51,7 @@ def get_angle_0_180_posx(
 
 def get_angle_0_180_posx_safe(
     point1: Tuple[int, int], point2: Tuple[int, int]
-) -> Tuple[float, int]:
+) -> Tuple[Angle, int]:
     angle, posx = get_angle_0_180_posx(point1, point2)
     if posx is None:
         raise Exception("Line can't be horizontal")
@@ -59,17 +59,17 @@ def get_angle_0_180_posx_safe(
 
 
 def get_bottom_point_from_alpha_posx(
-    alpha: float, posx: int, height: int
+    alpha: Angle, posx: int, height: int
 ) -> Tuple[int, int]:
     return (
-        int(posx - np.tan((alpha - 90.0) / 180.0 * np.pi) * height),
+        int(posx - np.tan(alpha.get_rad() - np.pi / 2.0) * height),
         height - 1,
     )
 
 
 def get_angle_0_180_posy(
     point1: Tuple[int, int], point2: Tuple[int, int]
-) -> Tuple[float, Optional[int]]:
+) -> Tuple[Angle, Optional[int]]:
     angle = get_angle_0_180(point1, point2)
     if point1[0] == point2[0]:
         posy = None
@@ -83,7 +83,7 @@ def get_angle_0_180_posy(
 
 def get_angle_0_180_posy_safe(
     point1: Tuple[int, int], point2: Tuple[int, int]
-) -> Tuple[float, int]:
+) -> Tuple[Angle, int]:
     angle, posy = get_angle_0_180_posy(point1, point2)
     if posy is None:
         raise Exception("Line can't be vertical")
@@ -91,15 +91,15 @@ def get_angle_0_180_posy_safe(
 
 
 def get_right_point_from_alpha_posy(
-    alpha: float, posy: int, width: int
+    alpha: Angle, posy: int, width: int
 ) -> Tuple[int, int]:
-    return width - 1, int(posy + np.tan(alpha / 180.0 * np.pi) * width)
+    return width - 1, int(posy + np.tan(alpha.get_rad()) * width)
 
 
 def keep_angle_pos_closed_to_target(
     data: Tuple[int, int, int, int],
-    limit_angle: float,
-    target_angle: float,
+    limit_angle: Angle,
+    target_angle: Angle,
     target_pos: int,
     limit_pos: int,
 ) -> bool:
@@ -110,8 +110,8 @@ def keep_angle_pos_closed_to_target(
     angle_ok = (
         -limit_angle < ang + target_angle and ang + target_angle < limit_angle
     ) or (
-        -limit_angle < ang + target_angle - 180
-        and ang + target_angle - 180 < limit_angle
+        -limit_angle < ang + target_angle - Angle.deg(180)
+        and ang + target_angle - Angle.deg(180) < limit_angle
     )
     posx_ok = target_pos - limit_pos <= pos <= target_pos + limit_pos
     return angle_ok and posx_ok
@@ -288,7 +288,7 @@ def norm_cdf(value: float, mean: float, std: float) -> float:
 
 
 def is_angle_closed_to(
-    value: float, objectif: float, tolerance: float, max_range: int
+    value: Angle, objectif: Angle, tolerance: Angle, max_range: Angle
 ) -> bool:
     angle1 = (objectif - tolerance + max_range) % max_range
     angle2 = (objectif + tolerance + max_range) % max_range
@@ -297,29 +297,29 @@ def is_angle_closed_to(
     return value >= angle1 or value <= angle2
 
 
-def atan2(cosinus: float, sinus: float) -> float:
+def atan2(cosinus: float, sinus: float) -> Angle:
     if cosinus < 0:
-        return np.arctan(sinus / cosinus) / np.pi * 180.0 + 180.0
+        return Angle.rad(np.arctan(sinus / cosinus) + np.pi)
     if sinus > 0:
-        return np.arctan(sinus / cosinus) / np.pi * 180.0
-    return np.arctan(sinus / cosinus) / np.pi * 180.0 + 360.0
+        return Angle.rad(np.arctan(sinus / cosinus))
+    return Angle.rad(np.arctan(sinus / cosinus) + 2 * np.pi)
 
 
 def mean_angle(
-    liste: Union[List[float], Tuple[float, ...]],
+    liste: Union[List[Angle], Tuple[Angle, ...]],
     weight: Optional[Union[List[float], Tuple[float, ...]]] = None,
-) -> float:
+) -> Angle:
     if weight is None:
-        sin = sum(map(lambda x: np.sin(x / 180.0 * np.pi), liste)) / len(liste)
-        cos = sum(map(lambda x: np.cos(x / 180.0 * np.pi), liste)) / len(liste)
+        sin = sum(map(lambda x: np.sin(x.get_rad()), liste)) / len(liste)
+        cos = sum(map(lambda x: np.cos(x.get_rad()), liste)) / len(liste)
     else:
         sin = sum(
-            [np.sin(x / 180.0 * np.pi) * y for x, y in zip(liste, weight)]
+            [np.sin(x.get_rad()) * y for x, y in zip(liste, weight)]
         ) / sum(
             weight  # type: ignore
         )
         cos = sum(
-            [np.cos(x / 180.0 * np.pi) * y for x, y in zip(liste, weight)]
+            [np.cos(x.get_rad()) * y for x, y in zip(liste, weight)]
         ) / sum(
             weight  # type: ignore
         )
@@ -394,7 +394,7 @@ def angle_two_lines(
 
 def line_xy_to_polar(
     line: Tuple[Tuple[int, int], Tuple[int, int]]
-) -> Tuple[float, float]:
+) -> Tuple[Angle, float]:
     point = get_perpendicular_throught_point(line[0], line[1], (0, 0))
 
     angle = get_angle__180_180(point, (0, 0))
@@ -403,10 +403,10 @@ def line_xy_to_polar(
     return (angle, distance)
 
 
-def angle_between(value: float, value_min: float, value_max: float) -> float:
-    value = value % 360
-    value_min = value_min % 360
-    value_max = value_max % 360
+def angle_between(value: Angle, value_min: Angle, value_max: Angle) -> bool:
+    value = value % Angle.deg(360)
+    value_min = value_min % Angle.deg(360)
+    value_max = value_max % Angle.deg(360)
 
     if value_min < value_max:
         return value_min <= value <= value_max

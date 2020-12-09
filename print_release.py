@@ -1,9 +1,7 @@
 """Module that print a tuple (key, value) in release mode.
 """
 
-from typing import Union
-
-from print_interface import PrintInterface
+from print_interface import PrintInterface, _N
 
 
 class PrintRelease(PrintInterface):
@@ -15,7 +13,7 @@ class PrintRelease(PrintInterface):
         PrintInterface (PrintInterface): the print interface
     """
 
-    def print(self, name: str, data: Union[int, float]) -> None:
+    def print(self, name: str, data: _N) -> None:
         """Print the tuple (key, value).
 
         Args:

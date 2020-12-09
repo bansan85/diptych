@@ -13,7 +13,7 @@ from exceptext import NotMyException
 def execute(filename: str) -> None:
     try:
         script.SeparatePage().treat_file(
-            filename, debug=DebugImage(DebugImage.Level.TOP, filename)
+            filename, debug=DebugImage(DebugImage.Level.DEBUG, filename)
         )
     except NotMyException as err:
         print("Failure with image : {0}, reason: {1}".format(filename, err))

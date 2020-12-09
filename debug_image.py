@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import IntEnum
-from typing import List, TypeVar, Any
+from typing import List, Any
 from collections.abc import Callable
 
 
@@ -8,9 +8,6 @@ import numpy as np
 
 
 import cv2ext
-
-
-_T = TypeVar("_T")
 
 
 class DebugImage:

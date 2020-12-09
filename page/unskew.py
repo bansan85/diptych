@@ -9,6 +9,7 @@ from page.find_images import FindImageParameters
 import page.find_images
 import compute
 from debug_image import DebugImage
+from angle import Angle
 
 
 class UnskewPageParameters:
@@ -16,7 +17,7 @@ class UnskewPageParameters:
         erode: ErodeParameters = ErodeParameters((2, 2), 7)
         canny: CannyParameters = CannyParameters(25, 225, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, np.pi / (180 * 20), 70, 300, 90
+            1, Angle.deg(1 / 20), 70, 300, 90
         )
         find_images: FindImageParameters = FindImageParameters(
             5,
@@ -48,7 +49,7 @@ class UnskewPageParameters:
     def init_default_values(
         self,
         key: str,
-        value: Union[int, float, Tuple[int, int]],
+        value: Union[int, float, Tuple[int, int], Angle],
     ) -> None:
         if key.startswith("Erode"):
             self.erode.init_default_values(key[len("Erode") :], value)
@@ -63,15 +64,15 @@ class UnskewPageParameters:
 
 
 def found_angle_unskew_page(
-    lines: List[np.ndarray], delta_angle: float, approximate_angle: float
-) -> float:
-    histogram = np.zeros(int(np.ceil(90 / delta_angle)) + 1)
+    lines: List[np.ndarray], delta_angle: Angle, approximate_angle: Angle
+) -> Angle:
+    histogram = np.zeros(int(np.ceil(90 / delta_angle.get_deg())) + 1)
     for line in lines:
         angle = (
             np.arctan2(line[3] - line[1], line[2] - line[0]) / np.pi * 180
             + 180
         ) % 90
-        i = int(round(angle / delta_angle))
+        i = int(round(angle / delta_angle.get_deg()))
         length = np.linalg.norm(
             np.array((line[0], line[1])) - np.array((line[2], line[3]))
         )
@@ -86,7 +87,11 @@ def found_angle_unskew_page(
             - 2.0
             * np.absolute(
                 compute.norm_cdf(
-                    (x * delta_angle - approximate_angle + 45) % 90 - 45,
+                    (
+                        delta_angle * x - approximate_angle + Angle.deg(45)
+                    ).get_deg()
+                    % 90.0
+                    - 45.0,
                     0,
                     10.0,
                 )
@@ -97,18 +102,18 @@ def found_angle_unskew_page(
         reverse=True,
     )
 
-    retval = histogram_blur_top_sorted[0] * delta_angle
-    if retval >= 45.0:
-        retval = retval - 90.0
+    retval = delta_angle * histogram_blur_top_sorted[0]
+    if retval >= Angle.deg(45):
+        retval = retval - Angle.deg(90)
     return retval
 
 
 def find_rotation(
     image: np.ndarray,
     parameters: UnskewPageParameters,
-    approximate_angle: float,
+    approximate_angle: Angle,
     debug: DebugImage,
-) -> float:
+) -> Angle:
     debug.image(image, DebugImage.Level.DEBUG)
 
     images_mask = page.find_images.find_images(
@@ -146,14 +151,14 @@ def find_rotation(
     list_lines = cv2.HoughLinesP(
         canny_filtered,
         parameters.hough_lines.delta_rho,
-        parameters.hough_lines.delta_tetha,
+        parameters.hough_lines.delta_tetha.get_rad(),
         parameters.hough_lines.threshold,
         minLineLength=parameters.hough_lines.min_line_length,
         maxLineGap=parameters.hough_lines.max_line_gap,
     )
 
     if list_lines is None:
-        return 0.0
+        return Angle.rad(0.0)
 
     # lines contient une liste de liste de lignes.
     # Le deuxième niveau de liste ne contient toujours qu'une ligne.
@@ -189,6 +194,6 @@ def find_rotation(
 
     return found_angle_unskew_page(
         lines,
-        parameters.hough_lines.delta_tetha / np.pi * 180.0,
+        parameters.hough_lines.delta_tetha,
         approximate_angle,
     )

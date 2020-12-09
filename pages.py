@@ -4,6 +4,7 @@ import types
 from page.crop import CropAroundDataInPageParameters
 from page.split import SplitTwoWavesParameters
 from page.unskew import UnskewPageParameters
+from angle import Angle
 
 
 class Parameters:
@@ -33,7 +34,9 @@ class Parameters:
 
 
 def init_default_values(
-    default_values: Optional[Dict[str, Union[int, float, Tuple[int, int]]]]
+    default_values: Optional[
+        Dict[str, Union[int, float, Tuple[int, int], Angle]]
+    ]
 ) -> Parameters:
     parameters = Parameters()
 

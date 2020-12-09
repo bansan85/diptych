@@ -2,6 +2,9 @@ from typing import Union, Tuple
 import types
 
 
+from angle import Angle
+
+
 class ErodeParameters:
     class Impl(types.SimpleNamespace):
         size: Tuple[int, int]
@@ -29,7 +32,7 @@ class ErodeParameters:
     def init_default_values(
         self,
         key: str,
-        value: Union[int, float, Tuple[int, int]],
+        value: Union[int, float, Tuple[int, int], Angle],
     ) -> None:
         if key == "Size" and isinstance(value, tuple):
             self.size = value
@@ -77,7 +80,7 @@ class CannyParameters:
     def init_default_values(
         self,
         key: str,
-        value: Union[int, float, Tuple[int, int]],
+        value: Union[int, float, Tuple[int, int], Angle],
     ) -> None:
         if key == "Min" and isinstance(value, int):
             self.minimum = value
@@ -92,7 +95,7 @@ class CannyParameters:
 class HoughLinesParameters:
     class Impl(types.SimpleNamespace):
         delta_rho: int
-        delta_tetha: float
+        delta_tetha: Angle
         threshold: int
         min_line_length: int
         max_line_gap: int
@@ -100,7 +103,7 @@ class HoughLinesParameters:
     def __init__(  # pylint: disable=too-many-arguments
         self,
         delta_rho: int,
-        delta_tetha: float,
+        delta_tetha: Angle,
         threshold: int,
         min_line_length: int,
         max_line_gap: int,
@@ -122,11 +125,11 @@ class HoughLinesParameters:
         self.__param.delta_rho = val
 
     @property
-    def delta_tetha(self) -> float:
+    def delta_tetha(self) -> Angle:
         return self.__param.delta_tetha
 
     @delta_tetha.setter
-    def delta_tetha(self, val: float) -> None:
+    def delta_tetha(self, val: Angle) -> None:
         self.__param.delta_tetha = val
 
     @property
@@ -156,11 +159,11 @@ class HoughLinesParameters:
     def init_default_values(
         self,
         key: str,
-        value: Union[int, float, Tuple[int, int]],
+        value: Union[int, float, Tuple[int, int], Angle],
     ) -> None:
         if key == "DeltaRho" and isinstance(value, int):
             self.delta_rho = value
-        elif key == "DeltaTetha" and isinstance(value, float):
+        elif key == "DeltaTetha" and isinstance(value, Angle):
             self.delta_tetha = value
         elif key == "Threshold" and isinstance(value, int):
             self.threshold = value
