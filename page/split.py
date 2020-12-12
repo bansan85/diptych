@@ -891,13 +891,16 @@ def __found_best_split_line_with_wave(
     param: FindCandidatesSplitLineWithWaveParameters,
     debug: DebugImage,
 ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-    nb_rectangle = (
-        int(
-            cv2.contourArea(contour[0]) / cv2.contourArea(contour[1])
-            < param.rapport_rect1_rect2
+    if len(contour) == 1:
+        nb_rectangle = 1
+    else:
+        nb_rectangle = (
+            int(
+                cv2.contourArea(contour[0]) / cv2.contourArea(contour[1])
+                < param.rapport_rect1_rect2
+            )
+            + 1
         )
-        + 1
-    )
 
     def img_tmp() -> np.ndarray:
         retval = cv2.cvtColor(eroded, cv2.COLOR_GRAY2BGR)
@@ -905,7 +908,11 @@ def __found_best_split_line_with_wave(
             retval = cv2.drawContours(
                 retval, contour, i, (255 * (1 - i), 255 * i, 0), 10
             )
-        return cv2.drawContours(retval, contour, nb_rectangle, (0, 0, 255), 3)
+        if len(contour) > nb_rectangle:
+            retval = cv2.drawContours(
+                retval, contour, nb_rectangle, (0, 0, 255), 3
+            )
+        return retval
 
     debug.image_lazy(img_tmp, DebugImage.Level.DEBUG)
 
@@ -964,22 +971,16 @@ def found_split_line_with_wave(
         key=lambda x: np.maximum(cv2.contourArea(x), 1),
         reverse=True,
     )
-    debug.image_lazy(
-        lambda: cv2.drawContours(
-            cv2.drawContours(
-                cv2.cvtColor(eroded_bordered, cv2.COLOR_GRAY2BGR),
-                sorted_contours,
-                0,
-                (255, 0, 0),
-                10,
-            ),
-            sorted_contours,
-            1,
-            (0, 255, 0),
-            10,
-        ),
-        DebugImage.Level.DEBUG,
-    )
+
+    def img_contours() -> np.ndarray:
+        retval = cv2.cvtColor(eroded_bordered, cv2.COLOR_GRAY2BGR)
+        for i in range(min(2, len(sorted_contours))):
+            retval = cv2.drawContours(
+                retval, sorted_contours, i, (255 * (1 - i), 255 * i, 0), 10
+            )
+        return retval
+
+    debug.image_lazy(img_contours, DebugImage.Level.DEBUG)
 
     cv2ext.remove_border_in_contours(sorted_contours, size_border, image)
 
