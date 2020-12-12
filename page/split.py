@@ -644,6 +644,8 @@ def __found_best_split_line_with_wave_hull(
 ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
     hull = cv2.convexHull(contour, returnPoints=False)
     defects = cv2.convexityDefects(contour, hull)
+    if defects is None:
+        return None
     defects_full_data = [
         (
             contour[x[0, 0]][0],
