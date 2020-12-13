@@ -110,10 +110,9 @@ def remove_error(
     ]
 
 
-def get_polygon_from_contour_hough_lines(
+def get_rectangle_from_contour_hough_lines(
     hough_lines_param: HoughLinesParameters,
     contour: np.ndarray,
-    number_of_vertices: int,
     image_src: np.ndarray,
 ) -> Optional[np.ndarray]:
     image = np.zeros(get_hw(image_src), dtype=np.uint8)
@@ -152,7 +151,7 @@ def get_polygon_from_contour_hough_lines(
 
     _, label, _ = cv2.kmeans(
         angle_pos_kmeans,
-        number_of_vertices,
+        4,
         None,
         (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
         10,
@@ -717,7 +716,7 @@ def threshold_from_gaussian_histogram_black(
         blur_kernel_size,
         borderType=cv2.BORDER_REPLICATE,
     )
-    for i in range(1, 256):
+    for i in range(0, 255):
         if histogram_blur[i][0] < histogram_blur[i + 1][0]:
             return i
     return 255

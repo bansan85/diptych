@@ -8,7 +8,7 @@ def is_text(image: np.ndarray) -> bool:
     )
     list_of_text = list(
         filter(
-            lambda x: x[0] == 5 and x[1] > 70 and x[2].strip(" ") != '',
+            lambda x: x[0] == 5 and x[1] > 70 and x[2].strip(" |") != '',
             zip(data["level"], data["conf"], data["text"]),
         )
     )

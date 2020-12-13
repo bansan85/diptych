@@ -398,8 +398,8 @@ def found_data_try1(
     debug.image(image2222, DebugImage.Level.DEBUG)
 
     # On garde le rectangle le plus grand.
-    rect = cv2ext.get_polygon_from_contour_hough_lines(
-        param.hough_lines, contour_max, 4, image
+    rect = cv2ext.get_rectangle_from_contour_hough_lines(
+        param.hough_lines, contour_max, image
     )
 
     if rect is None:

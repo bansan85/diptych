@@ -1,6 +1,6 @@
 import types
 from typing import Union, Tuple, Optional, List
-from itertools import chain, combinations
+from itertools import combinations
 
 import numpy as np
 import cv2
@@ -369,8 +369,6 @@ def __found_candidates_split_line_with_line(
                     x[0],
                     param.limit_tetha,
                     Angle.deg(90),
-                    cv2ext.get_hw(blurimg)[1] // 2,
-                    cv2ext.get_hw(blurimg)[1] // 2,
                 ),
                 list_lines_p,
             )
@@ -403,7 +401,7 @@ def __loop_to_find_best_mean_angle_pos(
 ) -> Tuple[Angle, int, List[Tuple[Angle, int, int]], int]:
     local_maximum = detect_peaks(histogram_posx_length)
     local_maximum_pos_raw = np.where(local_maximum)
-    all_max_big_length = list(
+    all_max_length = list(
         map(
             lambda x: (
                 epsilon_angle * x[0],
@@ -413,11 +411,22 @@ def __loop_to_find_best_mean_angle_pos(
             zip(local_maximum_pos_raw[0], local_maximum_pos_raw[1]),
         )
     )
-    all_posx = tuple(zip(*all_max_big_length))
-    moy_posx = (min(all_posx[1]) + max(all_posx[1])) // 2
-    best_angle = sorted(
-        all_max_big_length, key=lambda x: np.abs(x[1] - moy_posx)
+    max_length = sorted(all_max_length, key=lambda x: x[2], reverse=True)[0][2]
+    all_only_max_length = list(
+        filter(lambda x: x[2] > max_length / 5, all_max_length)
     )
+    _, posxs, lengths = list(zip(*all_only_max_length))
+    moy_posx = (min(posxs) + max(posxs)) / 2
+    restricted_posx = list(
+        filter(lambda x: 0.95 * moy_posx <= x <= 1.05 * moy_posx, posxs)
+    )
+    if len(restricted_posx) == 0:
+        moy_posx = posxs[np.argmax(lengths)]
+    else:
+        moy_posx = sorted(restricted_posx, key=lambda x: np.abs(x - moy_posx))[
+            0
+        ]
+
     best_angle_with_err = list(
         map(
             lambda x: (
@@ -428,19 +437,10 @@ def __loop_to_find_best_mean_angle_pos(
                 * (
                     1.0
                     - 2.0
-                    * np.absolute(
-                        compute.norm_cdf(
-                            x[1],
-                            moy_posx,
-                            max(
-                                posx_ecart, np.abs(best_angle[0][1] - moy_posx)
-                            ),
-                        )
-                        - 0.5
-                    )
+                    * np.absolute(compute.norm_cdf(x[1], moy_posx, 10) - 0.5)
                 ),
             ),
-            best_angle,
+            all_max_length,
         )
     )
 
@@ -455,7 +455,7 @@ def __loop_to_find_best_mean_angle_pos(
                 list(zip(*best_angle_with_err))[3],
             )
         ),
-        all_max_big_length,
+        all_max_length,
         posx_ecart,
     )
 
@@ -475,93 +475,66 @@ def __best_candidates_split_line_with_line(
 
     histogram_size_angle = int(np.ceil(180.0 / epsilon_angle.get_deg()))
     histogram_size_posx = (width + ecart - 1) // ecart
-    histogram_miny = np.full(
+    # https://stackoverflow.com/questions/40709519/initialize-64-by-64-numpy-of-0-0-tuples-in-python
+    value = np.empty((), dtype=object)
+    value[()] = []
+    histogram = np.full(
         (
             histogram_size_angle,
             histogram_size_posx,
         ),
-        height,
+        value,
+        dtype=object,
     )
-    histogram_maxy = np.zeros(
-        (
-            histogram_size_angle,
-            histogram_size_posx,
-        ),
-    )
-    __ecart__ = 2
+    tolerance = 4
     for point1_x, point1_y, point2_x, point2_y in valid_lines:
         angle, pos = compute.get_angle_0_180_posx_safe(
             (point1_x, point1_y), (point2_x, point2_y)
         )
         angle_round = int(np.round(angle / epsilon_angle))
         pos_round = int(np.round(pos / ecart))
-        histogram_miny[
-            angle_round - __ecart__ : angle_round + __ecart__,
-            pos_round - __ecart__ : pos_round + __ecart__,
-        ] = [
-            min(
-                min(
-                    chain.from_iterable(
-                        list(
-                            zip(
-                                *histogram_miny[
-                                    max(angle_round - __ecart__, 0) : min(
-                                        angle_round + __ecart__,
-                                        histogram_size_angle - 1,
-                                    ),
-                                    max(pos_round - __ecart__, 0) : min(
-                                        pos_round + __ecart__,
-                                        histogram_size_posx - 1,
-                                    ),
-                                ]
-                            )
-                        )
-                    )
-                ),
-                point1_y,
-                point2_y,
-            )
-        ]
-        histogram_maxy[
-            angle_round - __ecart__ : angle_round + __ecart__,
-            pos_round - __ecart__ : pos_round + __ecart__,
-        ] = [
-            max(
-                max(
-                    chain.from_iterable(
-                        list(
-                            zip(
-                                *histogram_maxy[
-                                    max(angle_round - __ecart__, 0) : min(
-                                        angle_round + __ecart__,
-                                        histogram_size_angle - 1,
-                                    ),
-                                    max(pos_round - __ecart__, 0) : min(
-                                        pos_round + __ecart__,
-                                        histogram_size_posx - 1,
-                                    ),
-                                ]
-                            )
-                        )
-                    )
-                ),
-                point1_y,
-                point2_y,
-            )
-        ]
 
-    histogram_length = histogram_maxy - histogram_miny
-    histogram_length_clip = np.clip(histogram_length, 0, height)
-    histogram_length_clip_blur = cv2.GaussianBlur(
-        histogram_length_clip,
-        (1, 11),
+        min_angle_round = max(angle_round - tolerance, 0)
+        min_pos_round = max(pos_round - tolerance, 0)
+        max_angle_round = min(
+            angle_round + tolerance, histogram_size_angle - 1
+        )
+        max_pos_round = min(pos_round + tolerance, histogram_size_posx - 1)
+        for i in range(min_angle_round, max_angle_round + 1):
+            for j in range(min_pos_round, max_pos_round + 1):
+                new_list = histogram[i, j].copy()
+                new_list.append(
+                    (min(point1_y, point2_y), max(point1_y, point2_y))
+                )
+                histogram[i, j] = compute.merge_interval(new_list)
+
+    histogram_length = np.asarray(
+        (
+            [
+                np.asarray(
+                    (
+                        [
+                            0 if len(y) == 0 else sum([z[1] - z[0] for z in y])
+                            for y in x
+                        ]
+                    ),
+                    dtype=np.float32,
+                )
+                for x in histogram
+            ]
+        ),
+        dtype=np.float32,
+    )
+    histogram_length_blur = cv2.GaussianBlur(
+        histogram_length,
+        (11, 11),
         11,
         borderType=cv2.BORDER_REPLICATE,
     )
-    histogram_length_clip_int = histogram_length_clip_blur.astype(int)
+    histogram_length_blur_int = histogram_length_blur.astype(int)
 
     return __loop_to_find_best_mean_angle_pos(
-        histogram_length_clip_int,
+        histogram_length_blur_int,
         ecart,
         epsilon_angle,
     )

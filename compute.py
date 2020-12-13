@@ -100,8 +100,6 @@ def keep_angle_pos_closed_to_target(
     data: Tuple[int, int, int, int],
     limit_angle: Angle,
     target_angle: Angle,
-    target_pos: int,
-    limit_pos: int,
 ) -> bool:
     ang, pos = get_angle_0_180_posx((data[0], data[1]), (data[2], data[3]))
 
@@ -113,8 +111,7 @@ def keep_angle_pos_closed_to_target(
         -limit_angle < ang + target_angle - Angle.deg(180)
         and ang + target_angle - Angle.deg(180) < limit_angle
     )
-    posx_ok = target_pos - limit_pos <= pos <= target_pos + limit_pos
-    return angle_ok and posx_ok
+    return angle_ok
 
 
 def pourcent_error(val1: float, val2: float) -> float:
@@ -172,7 +169,7 @@ def line_intersection(
 
     div = determinant(xdiff, ydiff)
     if div == 0:
-        raise Exception("Lines do not intersect")
+        raise Exception("Lines {0}, {1} do not intersect".format(line1, line2))
 
     distance = (determinant(*line1), determinant(*line2))
     point_x = determinant(distance, xdiff) / div
@@ -411,3 +408,39 @@ def angle_between(value: Angle, value_min: Angle, value_max: Angle) -> bool:
     if value_min < value_max:
         return value_min <= value <= value_max
     return value_min <= value or value <= value_max
+
+
+# http://sametmax.com/union-dun-ensemble-dintervalles/
+def merge_interval(intervals: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+    list_debut = [interv[0] for interv in intervals]
+    list_fin = [interv[1] for interv in intervals]
+
+    list_debut.sort()
+    list_fin.sort()
+
+    list_intervalle_final = []
+    nb_superposition = 0
+    debut_intervalle_courant = 0
+
+    while list_debut:
+        if list_debut[0] < list_fin[0]:
+            pos_debut = list_debut.pop(0)
+            if nb_superposition == 0:
+                debut_intervalle_courant = pos_debut
+            nb_superposition += 1
+        elif list_debut[0] > list_fin[0]:
+            pos_fin = list_fin.pop(0)
+            nb_superposition -= 1
+            if nb_superposition == 0:
+                nouvel_intervalle = (debut_intervalle_courant, pos_fin)
+                list_intervalle_final.append(nouvel_intervalle)
+        else:
+            list_debut.pop(0)
+            list_fin.pop(0)
+
+    if list_fin:
+        pos_fin = list_fin[-1]
+        nouvel_intervalle = (debut_intervalle_courant, pos_fin)
+        list_intervalle_final.append(nouvel_intervalle)
+
+    return list_intervalle_final
