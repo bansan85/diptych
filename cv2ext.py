@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 
 import compute
-from exceptext import NotMyException
 from angle import Angle
 from parameters import HoughLinesParameters
+from debug_image import DebugImage
 
 
 def charge_image(fichier: str) -> np.ndarray:
@@ -114,6 +114,7 @@ def get_rectangle_from_contour_hough_lines(
     hough_lines_param: HoughLinesParameters,
     contour: np.ndarray,
     image_src: np.ndarray,
+    debug: DebugImage,
 ) -> Optional[np.ndarray]:
     image = np.zeros(get_hw(image_src), dtype=np.uint8)
     image = cv2.drawContours(image, [contour], -1, 255, 1)
@@ -125,6 +126,12 @@ def get_rectangle_from_contour_hough_lines(
         hough_lines_param.threshold,
         minLineLength=hough_lines_param.min_line_length,
         maxLineGap=hough_lines_param.max_line_gap,
+    )
+    debug.image_lazy(
+        lambda: draw_lines_from_hough_lines(
+            image_src, lines_i, (0, 0, 255), 1
+        ),
+        DebugImage.Level.DEBUG,
     )
 
     angle_pos = [
@@ -455,18 +462,6 @@ def add_border_to_match_size(
     bottom = int(pixels_manquant * pourcentbas)
 
     return (top, bottom, left, right)
-
-
-def secure_write(filename: str, image: np.ndarray) -> None:
-    if not cv2.imwrite(filename, image):
-        raise NotMyException("Failed to write image " + filename)
-
-
-def write_image_if(
-    image: np.ndarray, enable_debug: Optional[str], filename: str
-) -> None:
-    if enable_debug is not None:
-        secure_write(enable_debug + filename, image)
 
 
 def find_longest_lines_in_border(
@@ -942,6 +937,7 @@ def convert_polygon_with_fitline(
         new_points = points
         all_checksum: List[int] = []
         checksum = compute.hash_djb2_n_3(new_points)
+        line_res = None
         while checksum not in all_checksum:
             all_checksum.append(checksum)
             line_res = cv2.fitLine(new_points, cv2.DIST_L2, 0, 0.01, 0.01)
@@ -961,7 +957,7 @@ def convert_polygon_with_fitline(
                 break
             checksum = compute.hash_djb2_n_3(new_points)
 
-        if len(new_points) == 0:
+        if len(new_points) == 0 or line_res is None:
             continue
 
         all_perpendicular_distances = [

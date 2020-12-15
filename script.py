@@ -21,6 +21,7 @@ import compute
 import fsext
 from debug_image import DebugImage, inc_debug
 from angle import Angle
+from exceptext import NotMyException
 
 
 class SeparatePage:
@@ -261,7 +262,8 @@ class SeparatePage:
     # Need a function to be able to override behavior
     # pylint: disable=no-self-use
     def save_final_page(self, filename: str, image: np.ndarray) -> None:
-        cv2ext.secure_write(filename, image)
+        if not cv2.imwrite(filename, image):
+            raise NotMyException("Failed to write image " + filename)
 
     def treat_file(
         self,

@@ -5,9 +5,10 @@ from collections.abc import Callable
 
 
 import numpy as np
+import cv2
 
 
-import cv2ext
+from exceptext import NotMyException
 
 
 class DebugImage:
@@ -67,7 +68,8 @@ class DebugImage:
             self.__next_when_dec[0 : self.__sub_level] = [
                 True for x in range(self.__sub_level)
             ]
-            cv2ext.secure_write(name, img)
+            if not cv2.imwrite(name, img):
+                raise NotMyException("Failed to write image " + name)
 
     def image_lazy(self, func: Callable[[], np.ndarray], level: Level) -> None:
         if level >= self.__level:
@@ -76,7 +78,8 @@ class DebugImage:
             self.__next_when_dec[0 : self.__sub_level] = [
                 True for x in range(self.__sub_level)
             ]
-            cv2ext.secure_write(name, func())
+            if not cv2.imwrite(name, func()):
+                raise NotMyException("Failed to write image " + name)
 
     __level: Level
     __root: str

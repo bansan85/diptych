@@ -356,8 +356,8 @@ def __found_candidates_split_line_with_line(
         minLineLength=param.hough_lines.min_line_length,
         maxLineGap=xxx ** 2,
     )
-    debug.image(
-        cv2ext.draw_lines_from_hough_lines(
+    debug.image_lazy(
+        lambda: cv2ext.draw_lines_from_hough_lines(
             image, list_lines_p, (0, 0, 255), 1
         ),
         DebugImage.Level.DEBUG,

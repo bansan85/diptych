@@ -399,7 +399,7 @@ def found_data_try1(
 
     # On garde le rectangle le plus grand.
     rect = cv2ext.get_rectangle_from_contour_hough_lines(
-        param.hough_lines, contour_max, image
+        param.hough_lines, contour_max, image, debug
     )
 
     if rect is None:
