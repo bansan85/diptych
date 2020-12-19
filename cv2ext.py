@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 import compute
-from angle import Angle
+from angle import Angle, is_between
 from parameters import HoughLinesParameters
 from debug_image import DebugImage
 
@@ -76,11 +76,9 @@ def get_polygon_from_contour(
         last_contour_size = len(contour_i)
 
 
-def remove_error(
-    data: List[Any], absolute_error: Tuple[Any, ...]
-) -> List[Any]:
+def remove_error(data: List[Any], absolute_error: Tuple[Any, ...]) -> bool:
     if len(data) == 1:
-        return data
+        return False
     data_kmeans = np.asarray(
         [[y / z for y, z in zip(x, absolute_error)] for x in data],
         dtype=np.float32,
@@ -101,13 +99,174 @@ def remove_error(
     mean1 = [np.mean(x) for x in list(zip(*ravel[0]))]
     mean2 = [np.mean(x) for x in list(zip(*ravel[1]))]
     effective_error = [np.abs(x[0] - x[1]) for x in list(zip(mean1, mean2))]
-    if max(effective_error) < 1:
-        return data
-    ravel_len = list(map(len, ravel))
+    return max(effective_error) >= 1.0
 
-    return [
-        y for y, z in zip(data, label.ravel() == np.argmax(ravel_len)) if z
-    ]
+
+def __found_optimal_kmeans(
+    angle_pos: List[Tuple[Angle, float]],
+    angle_pos_kmeans: np.ndarray,
+    min_shape: int,
+) -> List[List[Tuple[Angle, float]]]:
+    discretisation = 4
+    error = 1
+    ravel = []
+    while error != 0:
+        _, label, _ = cv2.kmeans(
+            angle_pos_kmeans,
+            discretisation,
+            None,
+            (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
+            10,
+            cv2.KMEANS_RANDOM_CENTERS,
+        )
+        ravel = [
+            [y for y, z in zip(angle_pos, label.ravel() == x) if z]
+            for x in range(max(label)[0] - min(label)[0] + 1)
+        ]
+        ravel_filter = [
+            remove_error(x, (Angle.deg(0.05 * 180), 0.05 * min_shape))
+            for x in ravel
+        ]
+        error = sum(ravel_filter)
+        discretisation += 1
+
+    return ravel
+
+
+def __found_valid_edge_for_rectangle(
+    contour: np.ndarray,
+    ravel_lines_mod_90_sorted: List[
+        Tuple[Tuple[float, float], Tuple[float, float], Angle, float, Angle]
+    ],
+    shape_hw: Tuple[int, int],
+) -> Optional[Tuple[List[int], List[List[List[int]]]]]:
+    current_iter = Angle.deg(10)
+    next_iter = Angle.deg(5)
+    count_valid_180 = []
+    count_valid_180_ok = []
+    count_valid_180_sorted = []
+    mask_contour = cv2.drawContours(
+        np.zeros(shape_hw, dtype=np.uint8), [contour], 0, 255, -1
+    )
+    area_contour = cv2.contourArea(contour)
+    last_ok = None
+    nfails = 0
+    while nfails != 10:
+        count_valid_90 = [
+            sum(
+                [
+                    is_between(
+                        y[-1], x[-1], (x[-1] + current_iter) % Angle.deg(90)
+                    )
+                    for y in ravel_lines_mod_90_sorted
+                ]
+            )
+            for x in ravel_lines_mod_90_sorted
+        ]
+        count_valid_180 = [
+            (
+                [
+                    y % len(count_valid_90)
+                    for y in range(x, x + count_valid_90[x])
+                    if is_between(
+                        ravel_lines_mod_90_sorted[y % len(count_valid_90)][2]
+                        % Angle.deg(180),
+                        ravel_lines_mod_90_sorted[x][2] % Angle.deg(180),
+                        (ravel_lines_mod_90_sorted[x][2] + current_iter)
+                        % Angle.deg(180),
+                    )
+                ],
+                [
+                    y % len(count_valid_90)
+                    for y in range(x, x + count_valid_90[x])
+                    if is_between(
+                        ravel_lines_mod_90_sorted[y % len(count_valid_90)][2]
+                        % Angle.deg(180),
+                        (ravel_lines_mod_90_sorted[x][2] + Angle.deg(90))
+                        % Angle.deg(180),
+                        (
+                            ravel_lines_mod_90_sorted[x][2]
+                            + Angle.deg(90)
+                            + current_iter
+                        )
+                        % Angle.deg(180),
+                    )
+                ],
+            )
+            for x in range(len(count_valid_90))
+        ]
+
+        count_valid_180_sorted = [
+            [
+                sorted(y, key=lambda z: ravel_lines_mod_90_sorted[z][3])
+                for y in x
+            ]
+            for x in count_valid_180
+        ]
+
+        def ternaire(pair: List[List[int]]) -> int:
+            if len(pair[0]) < 2 or len(pair[1]) < 2:
+                return 0
+            rectangle = compute.convert_line_to_contour(
+                (
+                    ravel_lines_mod_90_sorted[pair[0][0]][0],
+                    ravel_lines_mod_90_sorted[pair[0][0]][1],
+                ),
+                (
+                    ravel_lines_mod_90_sorted[pair[0][-1]][0],
+                    ravel_lines_mod_90_sorted[pair[0][-1]][1],
+                ),
+                (
+                    ravel_lines_mod_90_sorted[pair[1][0]][0],
+                    ravel_lines_mod_90_sorted[pair[1][0]][1],
+                ),
+                (
+                    ravel_lines_mod_90_sorted[pair[1][-1]][0],
+                    ravel_lines_mod_90_sorted[pair[1][-1]][1],
+                ),
+            )
+            mask_i = cv2.drawContours(
+                255 * np.ones(shape_hw, dtype=np.uint8),
+                [rectangle],
+                0,
+                0,
+                -1,
+            )
+            img_and_i = cv2.bitwise_and(mask_contour, mask_i)
+            if (
+                # If not enough area, interval too small
+                area_contour * 0.99 > cv2.contourArea(rectangle)
+                # Too much area outside of the rectangle
+                or cv2.countNonZero(img_and_i)
+                > 0.1 * mask_i.shape[0] * mask_i.shape[1]
+                - cv2.countNonZero(mask_i)
+            ):
+                return 0
+            # Perfect
+            if len(pair[0]) == 2 and len(pair[1]) == 2:
+                return 1
+            # Inverval too big
+            if len(pair[0]) >= 2 and len(pair[1]) >= 2:
+                return 2
+            # Interval too small
+            return 0
+
+        count_valid_180_ok = list(map(ternaire, count_valid_180_sorted))
+        if sum(count_valid_180_ok) == 0:
+            nfails += 1
+            current_iter += next_iter
+        elif sum(count_valid_180_ok) > 1:
+            if next_iter < Angle.deg(0.01):
+                break
+            current_iter -= next_iter
+            nfails = 0
+            last_ok = (count_valid_180_ok, count_valid_180_sorted)
+        else:
+            last_ok = (count_valid_180_ok, count_valid_180_sorted)
+            break
+        next_iter = Angle.rad(next_iter.get_rad() / 2.0)
+
+    return last_ok
 
 
 def get_rectangle_from_contour_hough_lines(
@@ -139,6 +298,7 @@ def get_rectangle_from_contour_hough_lines(
         for x in lines_i
     ]
 
+    # Sort by inclinaison of the line, not its direction.
     angle_pos_kmeans = np.asarray(
         (
             [
@@ -156,22 +316,9 @@ def get_rectangle_from_contour_hough_lines(
         dtype=np.float32,
     )
 
-    _, label, _ = cv2.kmeans(
-        angle_pos_kmeans,
-        4,
-        None,
-        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
-        10,
-        cv2.KMEANS_RANDOM_CENTERS,
+    ravel = __found_optimal_kmeans(
+        angle_pos, angle_pos_kmeans, min(get_hw(image_src))
     )
-    ravel = [
-        [y for y, z in zip(angle_pos, label.ravel() == x) if z]
-        for x in range(max(label)[0] - min(label)[0] + 1)
-    ]
-    ravel_filter = [
-        remove_error(x, (Angle.deg(0.05 * 180), 0.05 * min(get_hw(image_src))))
-        for x in ravel
-    ]
 
     ravel_pre_mean = [
         np.asarray(
@@ -184,8 +331,9 @@ def get_rectangle_from_contour_hough_lines(
             ],
             dtype=np.float32,
         )
-        for x in ravel_filter
+        for x in ravel
     ]
+    # For each inclinaison of line, check if direction is different.
     ravel_pre_mean_2 = [
         cv2.kmeans(
             x,
@@ -207,10 +355,9 @@ def get_rectangle_from_contour_hough_lines(
         [compute.mean_angle([compute.atan2(x[0], x[1]) for x in z]) for z in y]
         for y in ravel_pre_mean_label
     ]
+    # True if there is line with same inclinaison but both direction
     ravel_pre_mean_4 = [
-        compute.angle_between(
-            x[0], x[1] - Angle.deg(170), x[1] - Angle.deg(190)
-        )
+        is_between(x[0], x[1] - Angle.deg(190), x[1] - Angle.deg(170))
         if len(x) == 2
         else False
         for x in ravel_pre_mean_3
@@ -224,34 +371,34 @@ def get_rectangle_from_contour_hough_lines(
                     for a in list(zip(*x))[0]
                 ]
             ),
-            np.mean(list(zip(*x))[1]),
+            float(np.mean(list(zip(*x))[1])),
         )
         if not y
         else (
             compute.mean_angle(
                 [
                     a
-                    if compute.angle_between(
+                    if is_between(
                         a, z[0] - Angle.deg(10), z[0] + Angle.deg(10)
                     )
                     else ((a + Angle.deg(180)) % Angle.deg(360))
                     for a in list(zip(*x))[0]
                 ]
             ),
-            np.mean(
-                [
-                    b
-                    if compute.angle_between(
-                        a, z[0] - Angle.deg(10), z[0] + Angle.deg(10)
-                    )
-                    else -b
-                    for a, b in x
-                ]
+            float(
+                np.mean(
+                    [
+                        b
+                        if is_between(
+                            a, z[0] - Angle.deg(10), z[0] + Angle.deg(10)
+                        )
+                        else -b
+                        for a, b in x
+                    ]
+                )
             ),
         )
-        for x, y, z in list(
-            zip(ravel_filter, ravel_pre_mean_4, ravel_pre_mean_3)
-        )
+        for x, y, z in list(zip(ravel, ravel_pre_mean_4, ravel_pre_mean_3))
     ]
     ravel_points = [
         (
@@ -260,6 +407,7 @@ def get_rectangle_from_contour_hough_lines(
                 0 + x[1] * np.sin(x[0].get_rad()),
             ),
             x[0],
+            x[1],
         )
         for x in ravel_mean
     ]
@@ -271,31 +419,56 @@ def get_rectangle_from_contour_hough_lines(
                 x[0][1] + 1000 * np.sin(x[1].get_rad() + np.pi / 2),
             ),
             x[1],
+            x[2],
         )
         for x in ravel_points
     ]
 
-    lines_sorted = sorted(ravel_lines, key=lambda x: x[2])
-    ecart = [
-        Angle.abs(y - x)
-        for x, y in compute.iterator_zip_n_n_1(list(zip(*lines_sorted))[2])
-    ]
-    i = int(np.argmin(list(map(lambda x: x.get_deg(), ecart))))
-    if ecart[i] > ecart[(i - 1) % 4] - Angle.deg(5) or ecart[i] > ecart[
-        (i + 1) % 4
-    ] - Angle.deg(5):
-        return None
-    lines_i = compute.convert_line_to_contour(
-        (lines_sorted[i % 4][0], lines_sorted[i % 4][1]),
-        (lines_sorted[(i + 1) % 4][0], lines_sorted[(i + 1) % 4][1]),
-        (lines_sorted[(i + 2) % 4][0], lines_sorted[(i + 2) % 4][1]),
-        (lines_sorted[(i + 3) % 4][0], lines_sorted[(i + 3) % 4][1]),
-    )
-    lines_i2 = np.asarray(
-        ([lines_i[0]], [lines_i[1]], [lines_i[2]], [lines_i[3]])
+    ravel_lines_mod_90 = [(*x, x[2] % Angle.deg(90)) for x in ravel_lines]
+    ravel_lines_mod_90_sorted = sorted(ravel_lines_mod_90, key=lambda x: x[-1])
+
+    retval = __found_valid_edge_for_rectangle(
+        contour, ravel_lines_mod_90_sorted, get_hw(image_src)
     )
 
-    return lines_i2
+    if retval is None:
+        return None
+
+    count_valid_180_ok, count_valid_180_sorted = retval
+
+    max_area = 0
+    final_lines = np.empty((0))
+    lines_i2 = np.empty((0))
+    for _, lines in filter(
+        lambda x: x[0] >= 1, zip(count_valid_180_ok, count_valid_180_sorted)
+    ):
+        lines_i2 = compute.convert_line_to_contour(
+            (
+                ravel_lines_mod_90_sorted[lines[0][0]][0],
+                ravel_lines_mod_90_sorted[lines[0][0]][1],
+            ),
+            (
+                ravel_lines_mod_90_sorted[lines[0][-1]][0],
+                ravel_lines_mod_90_sorted[lines[0][-1]][1],
+            ),
+            (
+                ravel_lines_mod_90_sorted[lines[1][0]][0],
+                ravel_lines_mod_90_sorted[lines[1][0]][1],
+            ),
+            (
+                ravel_lines_mod_90_sorted[lines[1][-1]][0],
+                ravel_lines_mod_90_sorted[lines[1][-1]][1],
+            ),
+        )
+        lines_i3 = np.asarray(
+            ([lines_i2[0]], [lines_i2[1]], [lines_i2[2]], [lines_i2[3]])
+        )
+        area_i = cv2.contourArea(lines_i3)
+        if max_area == 0 or area_i < max_area:
+            max_area = area_i
+            final_lines = lines_i3
+
+    return final_lines
 
 
 def rotate_image(image: np.ndarray, angle_deg: float) -> np.ndarray:

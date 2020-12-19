@@ -9,6 +9,7 @@ from typing import (
     Dict,
     List,
     Union,
+    Any,
 )
 import time
 
@@ -23,12 +24,14 @@ AnyNumber = TypeVar("AnyNumber", int, float)
 
 
 def get_angle__180_180(
-    point1: Tuple[int, int], point2: Tuple[int, int]
+    point1: Tuple[AnyNumber, AnyNumber], point2: Tuple[AnyNumber, AnyNumber]
 ) -> Angle:
     return Angle.rad(np.arctan2(point1[1] - point2[1], point1[0] - point2[0]))
 
 
-def get_angle_0_180(point1: Tuple[int, int], point2: Tuple[int, int]) -> Angle:
+def get_angle_0_180(
+    point1: Tuple[AnyNumber, AnyNumber], point2: Tuple[AnyNumber, AnyNumber]
+) -> Angle:
     angle = get_angle__180_180(point1, point2)
     if angle.get_rad() < 0:
         angle = angle + Angle.deg(180.0)
@@ -36,7 +39,7 @@ def get_angle_0_180(point1: Tuple[int, int], point2: Tuple[int, int]) -> Angle:
 
 
 def get_angle_0_180_posx(
-    point1: Tuple[int, int], point2: Tuple[int, int]
+    point1: Tuple[AnyNumber, AnyNumber], point2: Tuple[AnyNumber, AnyNumber]
 ) -> Tuple[Angle, Optional[int]]:
     angle = get_angle_0_180(point1, point2)
     if point1[1] == point2[1]:
@@ -50,7 +53,7 @@ def get_angle_0_180_posx(
 
 
 def get_angle_0_180_posx_safe(
-    point1: Tuple[int, int], point2: Tuple[int, int]
+    point1: Tuple[AnyNumber, AnyNumber], point2: Tuple[AnyNumber, AnyNumber]
 ) -> Tuple[Angle, int]:
     angle, posx = get_angle_0_180_posx(point1, point2)
     if posx is None:
@@ -68,7 +71,7 @@ def get_bottom_point_from_alpha_posx(
 
 
 def get_angle_0_180_posy(
-    point1: Tuple[int, int], point2: Tuple[int, int]
+    point1: Tuple[AnyNumber, AnyNumber], point2: Tuple[AnyNumber, AnyNumber]
 ) -> Tuple[Angle, Optional[int]]:
     angle = get_angle_0_180(point1, point2)
     if point1[0] == point2[0]:
@@ -82,7 +85,7 @@ def get_angle_0_180_posy(
 
 
 def get_angle_0_180_posy_safe(
-    point1: Tuple[int, int], point2: Tuple[int, int]
+    point1: Tuple[AnyNumber, AnyNumber], point2: Tuple[AnyNumber, AnyNumber]
 ) -> Tuple[Angle, int]:
     angle, posy = get_angle_0_180_posy(point1, point2)
     if posy is None:
@@ -97,7 +100,7 @@ def get_right_point_from_alpha_posy(
 
 
 def keep_angle_pos_closed_to_target(
-    data: Tuple[int, int, int, int],
+    data: Tuple[AnyNumber, AnyNumber, AnyNumber, AnyNumber],
     limit_angle: Angle,
     target_angle: Angle,
 ) -> bool:
@@ -155,14 +158,22 @@ def is_contour_rectangle(rectangle: np.ndarray, tolerance: float) -> bool:
 
 
 def line_intersection(
-    line1: Tuple[Tuple[int, int], Tuple[int, int]],
-    line2: Tuple[Tuple[int, int], Tuple[int, int]],
+    line1: Tuple[Tuple[AnyNumber, AnyNumber], Tuple[AnyNumber, AnyNumber]],
+    line2: Tuple[Tuple[AnyNumber, AnyNumber], Tuple[AnyNumber, AnyNumber]],
 ) -> Tuple[int, int]:
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
     ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
 
-    def determinant(point_a: Tuple[int, int], point_b: Tuple[int, int]) -> int:
-        return int(
+    def determinant(
+        point_a: Tuple[AnyNumber, AnyNumber],
+        point_b: Tuple[AnyNumber, AnyNumber],
+    ) -> Any:
+        if isinstance(point_a[0], float):
+            return (
+                point_a[0] * point_b[1] - point_a[1] * point_b[0]
+            )
+
+        return (  # type: ignore
             np.int64(point_a[0]) * point_b[1]
             - np.int64(point_a[1]) * point_b[0]
         )
@@ -178,10 +189,10 @@ def line_intersection(
 
 
 def convert_line_to_contour(
-    line0: Tuple[Tuple[int, int], Tuple[int, int]],
-    line1: Tuple[Tuple[int, int], Tuple[int, int]],
-    line2: Tuple[Tuple[int, int], Tuple[int, int]],
-    line3: Tuple[Tuple[int, int], Tuple[int, int]],
+    line0: Tuple[Tuple[AnyNumber, AnyNumber], Tuple[AnyNumber, AnyNumber]],
+    line1: Tuple[Tuple[AnyNumber, AnyNumber], Tuple[AnyNumber, AnyNumber]],
+    line2: Tuple[Tuple[AnyNumber, AnyNumber], Tuple[AnyNumber, AnyNumber]],
+    line3: Tuple[Tuple[AnyNumber, AnyNumber], Tuple[AnyNumber, AnyNumber]],
 ) -> np.ndarray:
     point1_x, point1_y = line_intersection(line0, line2)
     point2_x, point2_y = line_intersection(line0, line3)
@@ -336,7 +347,7 @@ def get_perpendicular_throught_point(
     line_start: Tuple[AnyNumber, AnyNumber],
     line_end: Tuple[AnyNumber, AnyNumber],
     point: Tuple[AnyNumber, AnyNumber],
-) -> Tuple[AnyNumber, AnyNumber]:
+) -> Tuple[float, float]:
     x_1, y_1 = line_start
     x_2, y_2 = line_end
     x_3, y_3 = point
@@ -348,10 +359,7 @@ def get_perpendicular_throught_point(
     x_4 = x_3 - k * (y_2 - y_1)
     y_4 = y_3 + k * (x_2 - x_1)
 
-    if isinstance(x_1, float):
-        return (x_4, y_4)  # type: ignore
-
-    return (int(x_4), int(y_4))
+    return (x_4, y_4)
 
 
 def get_distance_line_point(
@@ -398,16 +406,6 @@ def line_xy_to_polar(
     distance = np.sqrt(point[0] ** 2 + point[1] ** 2)
 
     return (angle, distance)
-
-
-def angle_between(value: Angle, value_min: Angle, value_max: Angle) -> bool:
-    value = value % Angle.deg(360)
-    value_min = value_min % Angle.deg(360)
-    value_max = value_max % Angle.deg(360)
-
-    if value_min < value_max:
-        return value_min <= value <= value_max
-    return value_min <= value or value <= value_max
 
 
 # http://sametmax.com/union-dun-ensemble-dintervalles/

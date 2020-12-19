@@ -75,3 +75,13 @@ class Angle:
 
     # angle is stored in radian
     __angle: float
+
+
+def is_between(value: Angle, value_min: Angle, value_max: Angle) -> bool:
+    value = value % Angle.deg(360)
+    value_min = value_min % Angle.deg(360)
+    value_max = value_max % Angle.deg(360)
+
+    if value_min < value_max:
+        return value_min <= value <= value_max
+    return value_min <= value or value <= value_max

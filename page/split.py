@@ -690,8 +690,8 @@ def __found_best_split_line_with_wave_hull(
                     ]
                 )
                 / len(list_angle),
-                defect1[4],
-                defect2[4],
+                defect1[4].astype(int),
+                defect2[4].astype(int),
             )
         )
 
