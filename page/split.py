@@ -336,7 +336,7 @@ def __found_candidates_split_line_with_line(
     xxx = 7
     blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
     debug.image(blurimg, DebugImage.Level.DEBUG)
-    erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), xxx)
+    erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), 2)
     debug.image(erode_dilate, DebugImage.Level.DEBUG)
     canny = cv2.Canny(
         erode_dilate,
@@ -354,7 +354,7 @@ def __found_candidates_split_line_with_line(
         param.hough_lines.delta_tetha.get_rad(),
         param.hough_lines.threshold,
         minLineLength=param.hough_lines.min_line_length,
-        maxLineGap=xxx ** 2,
+        maxLineGap=(xxx - 1) ** 2,
     )
     debug.image_lazy(
         lambda: cv2ext.draw_lines_from_hough_lines(

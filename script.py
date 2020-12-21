@@ -337,7 +337,7 @@ class SeparatePage:
             if len(image1c) != 0:
                 self.save_final_page(filename + "_page.png", image1c)
             if len(image2c) != 0:
-                self.save_final_page(filename + "_page.png", image1c)
+                self.save_final_page(filename + "_page.png", image2c)
 
         self.__output.close()
 
