@@ -56,13 +56,21 @@ jobs:
         git clone --depth 1 ssh://git@github.com/bansan85/ocr-book-travis.git -b "unittest""${{ matrix.python-version }}"
         rm -Rf ocr-book-travis/*
         cp -R pytest-junit.xml cov_html coverage.xml ocr-book-travis/
-        cd ocr-book-travis
+        cd ocr-book-travis || exit 1
         git config --global user.name "Travis"
         git config --global user.email "travis-ci@le-garrec.fr"
         git add .
-        if [ -n "$(git diff-index --name-only HEAD --)" ]; \
-        then \
-          git commit -m "$(echo \"${{ github.event.head_commit.message }}\")" -m "Update from $GITHUB_SHA"; \
-          git push || { echo "Failure git push" && exit 1; } \
+
+        touch COMMIT_MSG
+        cat << EOF > COMMIT_MSG
+        ${{ github.event.head_commit.message }}
+        EOF
+
+        if [ -n "$(git diff-index --name-only HEAD --)" ]
+        then
+          echo -e "\n" >> COMMIT_MSG
+          echo "Update from bansan85/ocr-book@$GITHUB_SHA" >> COMMIT_MSG
+          git commit -F COMMIT_MSG || { echo "Failure git commit" && exit 1; }
+          git push || { echo "Failure git push" && exit 1; }
         fi
         cd ..

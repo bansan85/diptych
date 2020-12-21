@@ -293,6 +293,9 @@ def get_rectangle_from_contour_hough_lines(
         DebugImage.Level.DEBUG,
     )
 
+    if len(lines_i) < 4:
+        return None
+
     angle_pos = [
         compute.line_xy_to_polar(((x[0][0], x[0][1]), (x[0][2], x[0][3])))
         for x in lines_i
