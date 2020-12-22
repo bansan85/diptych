@@ -240,7 +240,7 @@ class SplitTwoWavesParameters:
         blur_size: Tuple[int, int] = (10, 10)
         canny: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, Angle.deg(1 / 20), 150, 200, 150
+            1, Angle.deg(1 / 20), 100, 200, 19
         )
         delta_rho: int = 200
         delta_tetha: Angle = Angle.deg(20.0)
@@ -336,10 +336,8 @@ def __found_candidates_split_line_with_line(
     xxx = 7
     blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
     debug.image(blurimg, DebugImage.Level.DEBUG)
-    erode_dilate = cv2ext.erode_and_dilate(blurimg, (xxx, xxx), 2)
-    debug.image(erode_dilate, DebugImage.Level.DEBUG)
     canny = cv2.Canny(
-        erode_dilate,
+        blurimg,
         param.canny.minimum,
         param.canny.maximum,
         apertureSize=param.canny.aperture_size,
@@ -354,7 +352,9 @@ def __found_candidates_split_line_with_line(
         param.hough_lines.delta_tetha.get_rad(),
         param.hough_lines.threshold,
         minLineLength=param.hough_lines.min_line_length,
-        maxLineGap=(xxx - 1) ** 2,
+        # Distance between two lines of text.
+        # You have to hope that width spaces are smaller.
+        maxLineGap=param.hough_lines.max_line_gap,
     )
     debug.image_lazy(
         lambda: cv2ext.draw_lines_from_hough_lines(
