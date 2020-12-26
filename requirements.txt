@@ -1,7 +1,10 @@
-# opencv-Python >= 4.3 needs pip >= 19.3.
-# https://pypi.org/project/opencv-python/
-pip>=19.3
-opencv-python>=4
-numpy>=1.20rc1
-scipy
-pytesseract
+opencv-python==4.4.0.46
+  numpy==1.20.0rc2
+pipdeptree==2.0.0
+  pip==20.3.3
+pytesseract==0.3.7
+  Pillow==8.0.1
+scipy==1.5.4
+  numpy==1.20.0rc2
+setuptools==51.1.0
+wheel==0.36.2
