@@ -45,6 +45,9 @@ jobs:
         prospector {**,.}/*.py
         pycodestyle {**,.}/*.py
         mypy {**,.}/*.py
+        safety check -r requirements.txt
+        safety check -r test-requirements.txt
+        safety check
     - name: Test with pytest
       run: |
         pytest --no-cov-on-fail
