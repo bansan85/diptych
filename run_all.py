@@ -1,13 +1,13 @@
-import multiprocessing
 import glob
+import multiprocessing
 
 import pytesseract
-import script
-from debug_image import DebugImage
 
-import tests.test_images
-import tests.test_features
+from debug_image import DebugImage
 from exceptext import NotMyException
+import script
+import tests.test_features
+import tests.test_images
 
 
 def execute(filename: str) -> None:

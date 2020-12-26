@@ -1,17 +1,17 @@
 import itertools
 import math
+import time
 from typing import (
+    Any,
+    Dict,
     Iterable,
     Iterator,
+    List,
     Optional,
     Tuple,
     TypeVar,
-    Dict,
-    List,
     Union,
-    Any,
 )
-import time
 
 import numpy as np
 from scipy.stats import norm
@@ -169,9 +169,7 @@ def line_intersection(
         point_b: Tuple[AnyNumber, AnyNumber],
     ) -> Any:
         if isinstance(point_a[0], float):
-            return (
-                point_a[0] * point_b[1] - point_a[1] * point_b[0]
-            )
+            return point_a[0] * point_b[1] - point_a[1] * point_b[0]
 
         return (  # type: ignore
             np.int64(point_a[0]) * point_b[1]

@@ -1,20 +1,21 @@
 from __future__ import annotations
-from typing import Optional, Tuple, List, Dict, Union
-import types
-from enum import Enum
+
 from copy import deepcopy
+from enum import Enum
+import types
+from typing import Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import cv2
+import numpy as np
 
-from parameters import ErodeParameters, CannyParameters, HoughLinesParameters
-from page.find_images import FindImageParameters
-import page.find_images
-import cv2ext
-import compute
-import ocr
-from debug_image import DebugImage, inc_debug
 from angle import Angle
+import compute
+import cv2ext
+from debug_image import DebugImage, inc_debug
+import ocr
+import page.find_images
+from page.find_images import FindImageParameters
+from parameters import CannyParameters, ErodeParameters, HoughLinesParameters
 
 
 class FoundDataTry1Parameters:

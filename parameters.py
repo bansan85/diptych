@@ -1,6 +1,5 @@
-from typing import Union, Tuple
 import types
-
+from typing import Tuple, Union
 
 from angle import Angle
 

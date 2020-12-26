@@ -1,12 +1,12 @@
 import types
-from typing import Tuple, Optional, List
-
-import numpy as np
+from typing import List, Optional, Tuple
 
 import cv2
+import numpy as np
+
+from angle import Angle
 import cv2ext
 from debug_image import DebugImage, inc_debug
-from angle import Angle
 
 
 class FindImageParameters:

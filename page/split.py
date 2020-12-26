@@ -1,20 +1,20 @@
-import types
-from typing import Union, Tuple, Optional, List
 from itertools import combinations
+import types
+from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import cv2
-from scipy.ndimage.filters import maximum_filter
-from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
+import numpy as np
 import scipy
+from scipy.ndimage.filters import maximum_filter
+from scipy.ndimage.morphology import binary_erosion, generate_binary_structure
 
-from parameters import ErodeParameters, CannyParameters, HoughLinesParameters
-from page.find_images import FindImageParameters
-import page.find_images
-import cv2ext
-import compute
-from debug_image import DebugImage, inc_debug
 from angle import Angle
+import compute
+import cv2ext
+from debug_image import DebugImage, inc_debug
+import page.find_images
+from page.find_images import FindImageParameters
+from parameters import CannyParameters, ErodeParameters, HoughLinesParameters
 
 
 class FoundSplitLineWithLineParameters:

@@ -1,12 +1,12 @@
-from typing import List, Tuple, Optional, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
-import compute
 from angle import Angle, is_between
-from parameters import HoughLinesParameters
+import compute
 from debug_image import DebugImage
+from parameters import HoughLinesParameters
 
 
 def charge_image(fichier: str) -> np.ndarray:

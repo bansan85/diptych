@@ -1,12 +1,11 @@
 from __future__ import annotations
-from enum import IntEnum
-from typing import List, Any
+
 from collections.abc import Callable
+from enum import IntEnum
+from typing import Any, List
 
-
-import numpy as np
 import cv2
-
+import numpy as np
 
 from exceptext import NotMyException
 

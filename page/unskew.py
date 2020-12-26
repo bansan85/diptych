@@ -1,15 +1,16 @@
 import types
-from typing import Union, Tuple, List
-import numpy as np
-import cv2
+from typing import List, Tuple, Union
 
-from parameters import ErodeParameters, CannyParameters, HoughLinesParameters
-import cv2ext
-from page.find_images import FindImageParameters
-import page.find_images
-import compute
-from debug_image import DebugImage
+import cv2
+import numpy as np
+
 from angle import Angle
+import compute
+import cv2ext
+from debug_image import DebugImage
+import page.find_images
+from page.find_images import FindImageParameters
+from parameters import CannyParameters, ErodeParameters, HoughLinesParameters
 
 
 class UnskewPageParameters:

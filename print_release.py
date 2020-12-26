@@ -1,7 +1,7 @@
 """Module that print a tuple (key, value) in release mode.
 """
 
-from print_interface import PrintInterface, _N
+from print_interface import _N, PrintInterface
 
 
 class PrintRelease(PrintInterface):

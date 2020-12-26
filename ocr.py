@@ -1,5 +1,5 @@
-import pytesseract
 import numpy as np
+import pytesseract
 
 
 def is_text(image: np.ndarray) -> bool:

@@ -1,27 +1,27 @@
-from typing import Dict, Optional, Union, Tuple
+from typing import Dict, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 
-from print_release import PrintRelease
-from print_test import PrintTest
-from print_interface import PrintInterface, ConstString
+from angle import Angle
+import compute
+import cv2ext
+from debug_image import DebugImage, inc_debug
+from exceptext import NotMyException
+import fsext
 from page.crop import CropAroundDataInPageParameters
+import page.split
 from page.split import (
     FoundSplitLineWithLineParameters,
     FoundSplitLineWithWave,
     SplitTwoWavesParameters,
 )
-import page.split
 import page.unskew
 from page.unskew import UnskewPageParameters
-import cv2ext
 import pages
-import compute
-import fsext
-from debug_image import DebugImage, inc_debug
-from angle import Angle
-from exceptext import NotMyException
+from print_interface import ConstString, PrintInterface
+from print_release import PrintRelease
+from print_test import PrintTest
 
 
 class SeparatePage:
