@@ -281,9 +281,13 @@ class SeparatePage:
         dict_default_values: Optional[
             Dict[str, Union[int, float, Tuple[int, int], Angle]]
         ] = None,
-        debug: DebugImage = DebugImage(DebugImage.Level.OFF),
+        debug: Optional[DebugImage] = None,
     ) -> None:
         print(filename)
+
+        if debug is None:
+            debug = DebugImage(DebugImage.Level.OFF)
+
         img = cv2ext.charge_image(filename)
         if img is None:
             raise Exception("Failed to load image.", filename)
@@ -366,8 +370,11 @@ def treat_file(
     dict_default_values: Optional[
         Dict[str, Union[int, float, Tuple[int, int], Angle]]
     ] = None,
-    debug: DebugImage = DebugImage(DebugImage.Level.DEBUG),
+    debug: Optional[DebugImage] = None,
 ) -> None:
+    if debug is None:
+        debug = DebugImage(DebugImage.Level.DEBUG)
+
     debug.set_root(filename)
     sep.treat_file(
         filename,
