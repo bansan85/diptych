@@ -197,7 +197,9 @@ def find_images(
     contours, _ = cv2.findContours(
         morpho2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
-    cv2ext.remove_border_in_contours(contours, __internal_border__, image)
+    contours = cv2ext.remove_border_in_contours(
+        contours, __internal_border__, image
+    )
     debug_image_contours = cv2.drawContours(
         cv2ext.convertion_en_couleur(image), contours, -1, (0, 0, 255), 3
     )

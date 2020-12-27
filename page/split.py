@@ -955,7 +955,9 @@ def found_split_line_with_wave(
 
     debug.image_lazy(img_contours, DebugImage.Level.DEBUG)
 
-    cv2ext.remove_border_in_contours(sorted_contours, size_border, image)
+    sorted_contours = cv2ext.remove_border_in_contours(
+        sorted_contours, size_border, image
+    )
 
     cs2 = page.find_images.remove_points_inside_images_in_contours(
         sorted_contours,

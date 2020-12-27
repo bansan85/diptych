@@ -853,7 +853,7 @@ def crop_around_data(
     contours, hierarchy = cv2.findContours(
         threshold2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
-    cv2ext.remove_border_in_contours(contours, 1, threshold)
+    contours = cv2ext.remove_border_in_contours(contours, 1, threshold)
     big_rectangle = parameters.get_big_rectangle(imgw, imgh)
     small_rectangle = parameters.get_small_rectangle(imgw, imgh)
     image2222 = cv2ext.convertion_en_couleur(page_gauche_0)

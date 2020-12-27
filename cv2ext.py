@@ -544,16 +544,18 @@ def get_hw(image: np.ndarray) -> Tuple[int, int]:
 
 def remove_border_in_contours(
     contours: List[np.ndarray], border_size: int, image: np.ndarray
-) -> None:
+) -> List[np.ndarray]:
     height, width = get_hw(image)
-    for cnt in contours:
-        for contour in cnt:
-            contour[0, 0] = compute.clamp(
-                contour[0, 0] - border_size, 0, width - 1
-            )
-            contour[0, 1] = compute.clamp(
-                contour[0, 1] - border_size, 0, height - 1
-            )
+    height -= 1
+    width -= 1
+
+    def subst(contour: np.ndarray) -> np.ndarray:
+        contour = contour - border_size
+        contour[:, 0, 0] = np.clip(contour[:, 0, 0], 0, width)
+        contour[:, 0, 1] = np.clip(contour[:, 0, 1], 0, height)
+        return contour
+
+    return list(map(subst, contours))
 
 
 def split_image(
