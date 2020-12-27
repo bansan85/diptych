@@ -894,12 +894,16 @@ def crop_around_data(
     )
 
     def is_border(contour: np.ndarray) -> bool:
-        border_gray = gray.copy()
-        border_threshold = cv2.bitwise_not(threshold)
+        border_gray_inv = cv2.bitwise_not(gray)
+        border_threshold_inv = cv2.bitwise_not(threshold)
         border_mask = np.zeros((imgh, imgw), dtype=np.uint8)
         cv2.drawContours(border_mask, [contour], -1, 255, -1)
-        border_threshold[border_mask == 0] = 0
-        border_gray[border_mask == 0] = 255
+        border_threshold = cv2.bitwise_and(
+            border_threshold_inv, border_threshold_inv, mask=border_mask
+        )
+        border_gray = cv2.bitwise_not(
+            cv2.bitwise_and(border_gray_inv, border_gray_inv, mask=border_mask)
+        )
         cnt_in_small = cv2.bitwise_and(small_border, border_threshold)
         cnt_in_big = cv2.bitwise_and(big_border, border_threshold)
 
