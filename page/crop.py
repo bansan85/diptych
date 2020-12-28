@@ -512,7 +512,7 @@ def found_data_try2_find_edges(
                     )
             return retval
 
-        debug.image_lazy(image_with_lines, DebugImage.Level.DEBUG)
+        debug.image_lazy(image_with_lines, DebugImage.Level.INFO)
 
     height, width = cv2ext.get_hw(image)
     liste_lines.append(np.array([[0, 0, 0, height - 1]], dtype=int))
