@@ -687,7 +687,7 @@ def insert_border_in_mask(
     epsilon: Tuple[int, Angle],
     page_angle: Angle,
 ) -> None:
-    __pourcentage_white_allowed__ = 0.01
+    __pourcentage_white_allowed__ = 0.015
     epsilon_border, epsilon_angle = epsilon
     height, width = get_hw(threshold2)
     cnt2 = cnt[cnt[:, 0, 0] > epsilon_border]

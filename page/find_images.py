@@ -83,7 +83,7 @@ def remove_black_border_in_image(
         gray_bordered, thresholdi, 255, cv2.THRESH_BINARY_INV
     )
     debug.image(threshold, DebugImage.Level.DEBUG)
-    contours, _ = cv2.findContours(
+    contours, hierarchy = cv2.findContours(
         threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
     debug.image_lazy(
@@ -100,7 +100,12 @@ def remove_black_border_in_image(
     mask_border_only = 255 * np.ones(shape=gray_bordered.shape, dtype=np.uint8)
     height, width = cv2ext.get_hw(gray_bordered)
     __angle_tolerance__ = Angle.deg(3.0)
-    for cnt in contours:
+    is_a_border = []
+
+    if len(contours) == 0 or hierarchy is None:
+        return mask_border_only
+
+    for cnt, hier in zip(contours, hierarchy[0]):
         (
             (left_top, left_bottom),
             (right_top, right_bottom),
@@ -110,12 +115,23 @@ def remove_black_border_in_image(
             (height, width), __epsilon__, cnt
         )
 
-        if (
+        is_border = (
             left_bottom - left_top > 0
             or top_right - top_left > 0
             or right_bottom - right_top > 0
             or bottom_right - bottom_left > 0
-        ):
+        )
+        is_a_border.append(is_border)
+
+        def is_parent_border() -> bool:
+            parent_i = hier[3]
+            return (
+                parent_i >= 0  # pylint: disable=chained-comparison
+                and hierarchy[0][parent_i][3] < 0
+                and is_a_border[parent_i]
+            )
+
+        if is_border or is_parent_border():
             cv2ext.insert_border_in_mask(
                 cnt,
                 threshold,
