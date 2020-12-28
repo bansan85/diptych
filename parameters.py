@@ -98,6 +98,7 @@ class HoughLinesParameters:
         threshold: int
         min_line_length: int
         max_line_gap: int
+        scale: float
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
@@ -106,6 +107,7 @@ class HoughLinesParameters:
         threshold: int,
         min_line_length: int,
         max_line_gap: int,
+        scale: float,
     ) -> None:
         self.__param = HoughLinesParameters.Impl(
             delta_rho=delta_rho,
@@ -113,6 +115,7 @@ class HoughLinesParameters:
             threshold=threshold,
             min_line_length=min_line_length,
             max_line_gap=max_line_gap,
+            scale=scale,
         )
 
     @property
@@ -133,7 +136,7 @@ class HoughLinesParameters:
 
     @property
     def threshold(self) -> int:
-        return self.__param.threshold
+        return int(self.__param.threshold * self.scale)
 
     @threshold.setter
     def threshold(self, val: int) -> None:
@@ -141,7 +144,7 @@ class HoughLinesParameters:
 
     @property
     def min_line_length(self) -> int:
-        return self.__param.min_line_length
+        return int(self.__param.min_line_length * self.scale)
 
     @min_line_length.setter
     def min_line_length(self, val: int) -> None:
@@ -149,11 +152,19 @@ class HoughLinesParameters:
 
     @property
     def max_line_gap(self) -> int:
-        return self.__param.max_line_gap
+        return int(self.__param.max_line_gap * self.scale)
 
     @max_line_gap.setter
     def max_line_gap(self, val: int) -> None:
         self.__param.max_line_gap = val
+
+    @property
+    def scale(self) -> float:
+        return self.__param.scale
+
+    @scale.setter
+    def scale(self, val: float) -> None:
+        self.__param.scale = val
 
     def init_default_values(
         self,
@@ -170,5 +181,7 @@ class HoughLinesParameters:
             self.min_line_length = value
         elif key == "MaxLineGap" and isinstance(value, int):
             self.max_line_gap = value
+        elif key == "Scale" and isinstance(value, float):
+            self.scale = value
         else:
             raise Exception("Invalid property.", key)

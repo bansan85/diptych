@@ -240,7 +240,7 @@ class SplitTwoWavesParameters:
         blur_size: Tuple[int, int] = (10, 10)
         canny: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, Angle.deg(1 / 20), 100, 200, 19
+            1, Angle.deg(1 / 20), 100, 200, 19, 1.0
         )
         delta_rho: int = 200
         delta_tetha: Angle = Angle.deg(20.0)

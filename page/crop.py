@@ -24,7 +24,7 @@ class FoundDataTry1Parameters:
         threshold: int = 240
         pourcentage_ecart_rectangle: float = 10.0
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, Angle.deg(1 / 20), 30, 100, 30
+            1, Angle.deg(1 / 20), 30, 100, 30, 1.0
         )
 
     def __init__(self) -> None:
@@ -66,12 +66,12 @@ class FoundDataTry2Parameters:
         kernel_morpho_size: Tuple[int, int] = (10, 10)
         canny_gray: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines_gray: HoughLinesParameters = HoughLinesParameters(
-            1, Angle.deg(1 / 20), 30, 100, 30
+            1, Angle.deg(1 / 20), 30, 100, 30, 1.0
         )
         threshold_histogram: int = 15
         canny_histogram: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines_histogram: HoughLinesParameters = HoughLinesParameters(
-            1, Angle.deg(1 / 20), 30, 100, 30
+            1, Angle.deg(1 / 20), 30, 100, 30, 1.0
         )
         find_images: FindImageParameters = FindImageParameters(
             5,

@@ -18,7 +18,7 @@ class UnskewPageParameters:
         erode: ErodeParameters = ErodeParameters((2, 2), 7)
         canny: CannyParameters = CannyParameters(25, 225, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, Angle.deg(1 / 20), 70, 300, 90
+            1, Angle.deg(1 / 20), 100, 300, 30, 0.35
         )
         find_images: FindImageParameters = FindImageParameters(
             5,
@@ -133,7 +133,15 @@ def find_rotation(
         iterations=parameters.erode.iterations,
     )
     debug.image(eroded, DebugImage.Level.DEBUG)
-    eroded2 = eroded & 0b11100000
+
+    small = cv2.resize(
+        eroded,
+        (0, 0),
+        fx=parameters.hough_lines.scale,
+        fy=parameters.hough_lines.scale,
+    )
+
+    eroded2 = small & 0b11100000
     debug.image(eroded2, DebugImage.Level.DEBUG)
 
     # Aide à la détection des contours
@@ -144,7 +152,15 @@ def find_rotation(
         apertureSize=parameters.canny.aperture_size,
     )
     debug.image(canny, DebugImage.Level.DEBUG)
-    canny_filtered = cv2.bitwise_and(canny, cv2.bitwise_not(images_mask))
+    canny_filtered = cv2.bitwise_and(
+        canny,
+        cv2.resize(
+            cv2.bitwise_not(images_mask),
+            (0, 0),
+            fx=parameters.hough_lines.scale,
+            fy=parameters.hough_lines.scale,
+        ),
+    )
     debug.image(canny_filtered, DebugImage.Level.DEBUG)
 
     # Détection des lignes.
@@ -166,7 +182,12 @@ def find_rotation(
     lines = list(map(lambda line: line[0], list_lines))
 
     def image_with_lines() -> np.ndarray:
-        retval = cv2ext.convertion_en_couleur(image)
+        retval = cv2.resize(
+            cv2ext.convertion_en_couleur(image),
+            (0, 0),
+            fx=parameters.hough_lines.scale,
+            fy=parameters.hough_lines.scale,
+        )
         for line_x1, line_y1, line_x2, line_y2 in lines:
             cv2.line(
                 retval,
@@ -177,10 +198,15 @@ def find_rotation(
             )
         return retval
 
-    debug.image_lazy(image_with_lines, DebugImage.Level.DEBUG)
+    debug.image_lazy(image_with_lines, DebugImage.Level.INFO)
 
     def img() -> np.ndarray:
-        retval = cv2ext.convertion_en_couleur(images_mask)
+        retval = cv2.resize(
+            cv2ext.convertion_en_couleur(images_mask),
+            (0, 0),
+            fx=parameters.hough_lines.scale,
+            fy=parameters.hough_lines.scale,
+        )
         for line_x1, line_y1, line_x2, line_y2 in lines:
             cv2.line(
                 retval,
