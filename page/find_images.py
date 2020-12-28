@@ -86,8 +86,8 @@ def remove_black_border_in_image(
     contours, _ = cv2.findContours(
         threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
-    debug.image(
-        cv2.drawContours(
+    debug.image_lazy(
+        lambda: cv2.drawContours(
             cv2ext.convertion_en_couleur(gray_bordered),
             contours,
             -1,
