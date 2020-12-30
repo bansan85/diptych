@@ -8,7 +8,6 @@ import compute
 import cv2ext
 from debug_image import DebugImage, inc_debug
 from exceptext import NotMyException
-import fsext
 from page.crop import CropAroundDataInPageParameters
 import page.split
 from page.split import (
@@ -288,6 +287,8 @@ class SeparatePage:
         if debug is None:
             debug = DebugImage(DebugImage.Level.OFF)
 
+        debug.set_root(filename)
+
         img = cv2ext.charge_image(filename)
         if img is None:
             raise Exception("Failed to load image.", filename)
@@ -348,37 +349,3 @@ class SeparatePage:
     __output: PrintInterface
     __angle_split: Angle
     __images_found: np.ndarray
-
-
-def get_absolute_from_current_path(root: str, filename: str) -> str:
-    return fsext.get_absolute_from_current_path(root, filename)
-
-
-def treat_file(
-    sep: SeparatePage,
-    filename: str,
-    dict_test: Optional[
-        Dict[
-            str,
-            Union[
-                Tuple[str, int, int],
-                Tuple[str, float, float],
-                Tuple[str, Angle, Angle],
-            ],
-        ]
-    ] = None,
-    dict_default_values: Optional[
-        Dict[str, Union[int, float, Tuple[int, int], Angle]]
-    ] = None,
-    debug: Optional[DebugImage] = None,
-) -> None:
-    if debug is None:
-        debug = DebugImage(DebugImage.Level.DEBUG)
-
-    debug.set_root(filename)
-    sep.treat_file(
-        filename,
-        dict_test,
-        dict_default_values,
-        debug,
-    )

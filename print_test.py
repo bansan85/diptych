@@ -117,4 +117,4 @@ class PrintTest(PrintInterface):
 
     def close(self) -> None:
         if self.__last_msg_assert is not None:
-            raise Exception(self.__last_msg_assert)
+            raise AssertionError(self.__last_msg_assert)
