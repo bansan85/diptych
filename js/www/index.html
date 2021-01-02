@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript">
+      // set the pyodide files URL (packages.json, pyodide.asm.data etc)
+      window.languagePluginUrl = '/pyodide/';
+    </script>
+    <script type="text/javascript" src="load_python.js"></script>
+    <script src="/pyodide/pyodide.js"></script>
+  </head>
+<body>
+
+<p id="log"></p>
+
+<script>
+
+progressBar = document.getElementById("log")
+progressBar.innerHTML = "Start loading python...";
+languagePluginLoader.then(() => {
+  progressBar.innerHTML += " done<br />Loading package numpy...";
+  pyodide.loadPackage(['numpy']).then(() => {
+  progressBar.innerHTML += " done<br />Loading package scipy...";
+  pyodide.loadPackage(['scipy']).then(() => {
+  progressBar.innerHTML += " done<br />";
+  loadPyModules(['angle', 'compute'],
+    module => { progressBar.innerHTML += "Loading python module " + module + "..." },
+    module => { progressBar.innerHTML += " done.<br />" }, () => {
+    progressBar.innerHTML += " done.<br />";
+    progressBar.innerHTML += "Run example.<br />";
+
+    pyodide.runPython(`
+print (angle.Angle(3.14, angle.Angle.Unite.RADIAN).get_deg())
+
+print (compute.get_timestamp_ns())
+`);
+
+    document.getElementById("log").innerHTML += "Success.";
+  });
+  });
+  });
+});
+</script> 
+
+</body>
+</html>

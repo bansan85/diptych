@@ -54,7 +54,7 @@ jobs:
         safety check
     - name: Test with pytest
       run: |
-        pytest --no-cov-on-fail
+        pytest tests --no-cov-on-fail
         sed -i "s/^.*created at.*$//" cov_html/*.html
     - name: Publish results
       run: |
