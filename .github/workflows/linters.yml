@@ -47,3 +47,4 @@ jobs:
         safety check -r requirements.txt
         safety check -r linter-requirements.txt
         safety check
+        find . -name "*.ini" -exec bash -c "echo check {}; ini_linter.py {}" \;

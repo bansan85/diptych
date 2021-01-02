@@ -7,6 +7,19 @@ flake8-bugbear==20.11.1
 flake8-import-order==0.18.1
   pycodestyle==2.6.0
   setuptools==51.1.0
+git-lint==0.1.2
+  docopt==0.6.2
+  docutils==0.16
+  html-linter==0.4.0
+    docopt==0.6.2
+    template-remover==0.1.9
+      docopt==0.6.2
+  pathlib2==2.3.5
+    six==1.15.0
+  PyYAML==5.3.1
+  template-remover==0.1.9
+    docopt==0.6.2
+  termcolor==1.1.0
 mypy==0.790
   mypy-extensions==0.4.3
   typed-ast==1.4.1
