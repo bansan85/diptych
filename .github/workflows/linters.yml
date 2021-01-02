@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.9"
       - name: Install binaries dependencies
-        run: sudo apt-get install tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng
+        run: sudo apt-get install tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng shellcheck
       - name: Install python modules dependencies
         run: |
           python -m pip install --upgrade pip pipdeptree
@@ -41,13 +41,16 @@ jobs:
           diff -pu linter-requirements.txt linter-requirements-ci.txt
       - name: Lint
         run: |
-          pylint {**,.}/*.py
-          flake8 {**,.}/*.py
-          prospector {**,.}/*.py
-          pycodestyle {**,.}/*.py
-          mypy {**,.}/*.py
+          shopt -s globstar
+          shopt -s dotglob
+          pylint **/*.py
+          flake8 **/*.py
+          prospector **/*.py
+          pycodestyle **/*.py
+          mypy **/*.py
           safety check -r requirements.txt
           safety check -r linter-requirements.txt
           safety check
           bash ./.github/scripts/ini-lint-check.sh
           bash ./.github/scripts/yaml-lint-check.sh
+          shellcheck **/*.sh

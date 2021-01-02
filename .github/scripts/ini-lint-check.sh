@@ -3,7 +3,7 @@
 
 shopt -s globstar dotglob
 for i in **/*.ini; do
-  echo $i
+  echo "$i"
   ini_linter.py "$i" || exit 1
 done
 

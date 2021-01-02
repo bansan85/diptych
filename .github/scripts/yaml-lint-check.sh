@@ -3,7 +3,7 @@
 
 shopt -s globstar dotglob
 for i in {**/*.yml,**/*.yaml}; do
-  echo $i
+  echo "$i"
   yamllint "$i" || exit 1
 done
 
