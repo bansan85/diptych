@@ -42,13 +42,6 @@ jobs:
         pip install -r test-requirements.txt
         pipdeptree -f > test-requirements-ci.txt
         diff -pu test-requirements.txt test-requirements-ci.txt || { [[ "${{ matrix.python-version }}" != "3.7" ]] && exit 1 || exit 0; }
-    - name: Lint
-      run: |
-        pylint {**,.}/*.py
-        flake8 {**,.}/*.py
-        prospector {**,.}/*.py
-        pycodestyle {**,.}/*.py
-        mypy {**,.}/*.py
         safety check -r requirements.txt
         safety check -r test-requirements.txt
         safety check
@@ -67,12 +60,10 @@ jobs:
         git config --global user.name "Travis"
         git config --global user.email "travis-ci@le-garrec.fr"
         git add .
-
         touch COMMIT_MSG
         cat << EOF > COMMIT_MSG
         ${{ github.event.head_commit.message }}
         EOF
-
         if [ -n "$(git diff-index --name-only HEAD --)" ]
         then
           echo -e "\n" >> COMMIT_MSG

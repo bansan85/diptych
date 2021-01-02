@@ -1,0 +1,49 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: linters
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SSH_KEY_TRAVIS_CI }}
+        # get with ssh-keyscan localhost
+        known_hosts: localhost ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCUWdBcM5OvIS/hYfBQkC6nKSuyoPfuYrc90aiTYZvNkKIVKDcTWHmgPJMllbP4GD8b5lBF1NPGde2iKO0d0K/7IIAI0/nAKYgKcu0b1JuF9m4lj7x8YWSGFSXg+EmU3IUBLr777jbok9mCLy1UO6I6Dmu/nNwy+Q8GCAbqtQodUF1fpavJeTIBnVBcGOkesUC/X1HIboCiBQl1etUj8Xip3eb41TVz7Eda2DUSEsot4g4SkYd6fnCve4c2hO2vGzeeMsdWOWaM/FZCBy6FBCYC15ta8dcAOBzkqM9/kPDxuR53qzjHoZhwLu4XWybd5J+4gmKlPkwQDSUwvCsVx5ax
+    - name: Set up Python "3.9"
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.9"
+    - name: Install binaries dependencies
+      run: sudo apt-get install tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng
+    - name: Install python modules dependencies
+      run: |
+        python -m pip install --upgrade pip pipdeptree
+        pip install -r requirements.txt
+        pip install -r linter-requirements.txt
+        pipdeptree -f > linter-requirements-ci.txt
+        diff -pu linter-requirements.txt linter-requirements-ci.txt
+    - name: Lint
+      run: |
+        pylint {**,.}/*.py
+        flake8 {**,.}/*.py
+        prospector {**,.}/*.py
+        pycodestyle {**,.}/*.py
+        mypy {**,.}/*.py
+        safety check -r requirements.txt
+        safety check -r linter-requirements.txt
+        safety check
