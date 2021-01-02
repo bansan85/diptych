@@ -6,3 +6,6 @@ rules:
   new-lines: false
   line-length: false
   truthy: false
+
+ignore: |
+  node_modules/

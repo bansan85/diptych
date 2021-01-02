@@ -1,0 +1,19 @@
+{
+  "name": "ocr-book",
+  "version": "0.0.1",
+  "description": "Detect multiple pages in image scanned, split them and apply OCR.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bansan85/ocr-book.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/bansan85/ocr-book/issues"
+  },
+  "homepage": "https://github.com/bansan85/ocr-book#readme"
+}

@@ -1,12 +1,14 @@
-function loadPyModule(module, callback) {
-  xmlHttp = new XMLHttpRequest();
-  xmlHttp.open( 'GET', '/' + module + '.py', true );
-  xmlHttp.overrideMimeType("text/plain; charset=x-user-defined"); 
+function loadPyModule(module) {
+  return new Promise((resolve, reject) => {
+    const xmlHttp = new XMLHttpRequest();
+    xmlHttp.open('GET', `/${module}.py`, true);
+    xmlHttp.overrideMimeType('text/plain; charset=x-user-defined');
 
-  xmlHttp.onload = function() {
-    document.source = this.responseText
-    document.module = module
-    pyodide.runPython(`
+    xmlHttp.onload = () => {
+      if (xmlHttp.status === 200) {
+        document.source = xmlHttp.responseText;
+        document.module = module;
+        pyodide.runPython(`
 import js
 
 import sys
@@ -16,26 +18,30 @@ print ("python" + js.document.module + ".py")
 
 with open(js.document.module + ".py", "w") as fd:
   fd.write(js.document.source)
-`);
+        `);
 
-    pyodide.runPython(`
-import ` + module + `
-`);
-    callback();
-  }
+        pyodide.runPython(`
+import ${module}
+        `);
+        resolve();
+      } else {
+        reject();
+      }
+    };
 
-  xmlHttp.send('');
+    xmlHttp.send('');
+  });
 }
 
-function loadPyModules(modules, callbackStart, callbackEnd, finalCallback, i = 0) {
+function loadPyModules(modules, callbackStart, callbackEnd, i = 0) {
   if (Object.is(modules.length - 1, i)) {
-    callbackStart(modules[i])
-    loadPyModule(modules[i], finalCallback)
-  } else {
-    callbackStart(modules[i])
-    loadPyModule(modules[i], () => {
-      callbackEnd(modules[i])
-      loadPyModules(modules, callbackStart, callbackEnd, finalCallback, i + 1);
-    })
+    callbackStart(modules[i]);
+    return loadPyModule(modules[i]);
   }
+
+  callbackStart(modules[i]);
+  return loadPyModule(modules[i]).then(() => {
+    callbackEnd();
+    return loadPyModules(modules, callbackStart, callbackEnd, i + 1);
+  });
 }
