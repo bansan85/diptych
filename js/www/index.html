@@ -34,17 +34,27 @@ function runPython(code) {
 const progressBar = document.getElementById('log');
 progressBar.innerHTML = 'Start loading python...';
 languagePluginLoader
-  .then(
-    () => loadPyPackage('numpy', (name) => { progressBar.innerHTML += ` done<br />Loading package ${name}...`; }),
+  .then(() =>
+    loadPyPackage('numpy', (name) => {
+      progressBar.innerHTML += ` done<br />Loading package ${name}...`;
+    })
   )
-  .then(
-    () => loadPyPackage('scipy', (name) => { progressBar.innerHTML += ` done<br />Loading package ${name}...`; }),
+  .then(() =>
+    loadPyPackage('scipy', (name) => {
+      progressBar.innerHTML += ` done<br />Loading package ${name}...`;
+    })
   )
   .then(() => {
     progressBar.innerHTML += ' done<br />';
-    return loadPyModules(['angle', 'compute'],
-      (module) => { progressBar.innerHTML += `Loading python module ${module}...`; },
-      () => { progressBar.innerHTML += ' done.<br />'; });
+    return loadPyModules(
+      ['angle', 'compute'],
+      (module) => {
+        progressBar.innerHTML += `Loading python module ${module}...`;
+      },
+      () => {
+        progressBar.innerHTML += ' done.<br />';
+      }
+    );
   })
   .then(() => {
     progressBar.innerHTML += ' done.<br />';

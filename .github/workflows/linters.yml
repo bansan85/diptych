@@ -40,7 +40,7 @@ jobs:
           pipdeptree -f > linter-requirements-ci.txt
           diff -pu linter-requirements.txt linter-requirements-ci.txt
           cd js
-          npm install eslint eslint-plugin-html eslint-config-airbnb-base eslint-plugin-import eslint-plugin-promise --no-save
+          npm install eslint prettier eslint-plugin-import eslint-plugin-promise eslint-plugin-prettier eslint-plugin-html eslint-config-airbnb-base eslint-config-prettier --no-save
           cd ..
       - name: Lint
         run: |
