@@ -34,7 +34,7 @@ jobs:
         run: sudo apt-get install tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng shellcheck nodejs npm
       - name: Install python modules dependencies
         run: |
-          python -m pip install --upgrade pip pipdeptree
+          python -m pip install --upgrade pip pipdeptree wheel
           pip install -r requirements.txt
           pip install -r linter-requirements.txt
           pipdeptree -f > linter-requirements-ci.txt
