@@ -41,6 +41,7 @@ jobs:
           diff -pu linter-requirements.txt linter-requirements-ci.txt
           cd js
           npm install eslint prettier eslint-plugin-import eslint-plugin-promise eslint-plugin-prettier eslint-plugin-html eslint-config-airbnb-base eslint-config-prettier --no-save
+          sudo npm install jsonlint -g
           cd ..
       - name: Lint
         run: |
@@ -50,6 +51,7 @@ jobs:
           flake8 **/*.py
           prospector **/*.py
           pycodestyle **/*.py
+          find . -name "*.json" ! -path "./js/node_modules/*" ! -path "./js/www/pyodide/*" -print0 | xargs -n 1 -0 -I "{}" echo "echo jsonlint {} ; jsonlint {} | diff -pu {} - || exit 1" | sh
           mypy **/*.py
           safety check -r requirements.txt
           safety check -r linter-requirements.txt

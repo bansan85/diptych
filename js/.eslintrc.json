@@ -1,52 +1,52 @@
 {
-    "env": {
-        "browser": true,
-        "es2021": true
-    },
-    "extends": [
-        "plugin:promise/recommended",
-        "airbnb-base",
-        "plugin:prettier/recommended",
-        "plugin:import/errors",
-        "plugin:import/warnings"
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": [
+    "plugin:promise/recommended",
+    "airbnb-base",
+    "plugin:prettier/recommended",
+    "plugin:import/errors",
+    "plugin:import/warnings"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 12,
+    "sourceType": "script"
+  },
+  "rules": {
+    "linebreak-style": "off",
+    "import/prefer-default-export": "off",
+    "promise/catch-or-return": [
+      "error",
+      {
+        "allowFinally": true
+      }
     ],
-    "parserOptions": {
-        "ecmaVersion": 12,
-        "sourceType": "script"
-    },
-    "rules": {
-        "linebreak-style": "off",
-        "import/prefer-default-export": "off",
-        "promise/catch-or-return": [
-            "error",
-            {
-                "allowFinally": true
-            }
-        ],
-        "no-unused-vars": "off",
-        "no-undef": "off",
-        "prettier/prettier": [
-            "error",
-            {
-                "singleQuote": true,
-                "avoidEscape": true,
-                "endOfLine": "auto"
-            }
-        ]
-    },
-    "plugins": [
-        "html",
-        "promise",
-        "prettier",
-        "import"
-    ],
-    "settings": {
-        "html/html-extensions": [
-            ".html"
-        ]
-    },
-    "globals": {
-        "pyodide": true,
-        "languagePluginLoader": true
-    }
+    "no-unused-vars": "off",
+    "no-undef": "off",
+    "prettier/prettier": [
+      "error",
+      {
+        "singleQuote": true,
+        "avoidEscape": true,
+        "endOfLine": "auto"
+      }
+    ]
+  },
+  "plugins": [
+    "html",
+    "promise",
+    "prettier",
+    "import"
+  ],
+  "settings": {
+    "html/html-extensions": [
+      ".html"
+    ]
+  },
+  "globals": {
+    "pyodide": true,
+    "languagePluginLoader": true
+  }
 }
