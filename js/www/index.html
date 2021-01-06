@@ -1,78 +1,77 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <script type="text/javascript">
+<head>
+
+  <script type="text/javascript">
       // set the pyodide files URL (packages.json, pyodide.asm.data etc)
       window.languagePluginUrl = '/pyodide/';
-    </script>
-    <script src="./pyodide/pyodide.js"></script>
-    <script src="./load_python.js"></script>
-  </head>
+  </script>
+  <script src="./pyodide/pyodide.js"></script>
+  <script src="./load_python.js"></script>
+  <title></title>
+</head>
 <body>
+  <p id="log">Please, enable Javascript.</p>
+  <script>
+  function loadPyPackage(namePackage, startCallback) {
+    return new Promise((resolve, reject) => {
+      startCallback(namePackage);
+      pyodide.loadPackage(namePackage).then(resolve).catch(reject);
+    });
+  }
 
-<p id="log">Please, enable Javascript.</p>
-
-<script>
-function loadPyPackage(namePackage, startCallback) {
-  return new Promise((resolve, reject) => {
-    startCallback(namePackage);
-    pyodide.loadPackage(namePackage).then(resolve).catch(reject);
-  });
-}
-
-function runPython(code) {
-  return new Promise((resolve, reject) => {
-    try {
-      pyodide.runPython(code);
-      resolve();
-    } catch (error) {
-      reject();
-    }
-  });
-}
-
-const progressBar = document.getElementById('log');
-progressBar.innerHTML = 'Start loading python...';
-languagePluginLoader
-  .then(() =>
-    loadPyPackage('numpy', (name) => {
-      progressBar.innerHTML += ` done<br />Loading package ${name}...`;
-    })
-  )
-  .then(() =>
-    loadPyPackage('scipy', (name) => {
-      progressBar.innerHTML += ` done<br />Loading package ${name}...`;
-    })
-  )
-  .then(() => {
-    progressBar.innerHTML += ' done<br />';
-    return loadPyModules(
-      ['angle', 'compute'],
-      (module) => {
-        progressBar.innerHTML += `Loading python module ${module}...`;
-      },
-      () => {
-        progressBar.innerHTML += ' done.<br />';
+  function runPython(code) {
+    return new Promise((resolve, reject) => {
+      try {
+        pyodide.runPython(code);
+        resolve();
+      } catch (error) {
+        reject();
       }
-    );
-  })
-  .then(() => {
-    progressBar.innerHTML += ' done.<br />';
-    progressBar.innerHTML += 'Run example.<br />';
+    });
+  }
 
-    return runPython(`
-print (angle.Angle(3.14, angle.Angle.Unite.RADIAN).get_deg())
+  const progressBar = document.getElementById('log');
+  progressBar.innerHTML = 'Start loading python...';
+  languagePluginLoader
+    .then(() =>
+      loadPyPackage('numpy', (name) => {
+        progressBar.innerHTML += ` done<br />Loading package ${name}...`;
+      })
+    )
+    .then(() =>
+      loadPyPackage('scipy', (name) => {
+        progressBar.innerHTML += ` done<br />Loading package ${name}...`;
+      })
+    )
+    .then(() => {
+      progressBar.innerHTML += ' done<br />';
+      return loadPyModules(
+        ['angle', 'compute'],
+        (module) => {
+          progressBar.innerHTML += `Loading python module ${module}...`;
+        },
+        () => {
+          progressBar.innerHTML += ' done.<br />';
+        }
+      );
+    })
+    .then(() => {
+      progressBar.innerHTML += ' done.<br />';
+      progressBar.innerHTML += 'Run example.<br />';
 
-print (compute.get_timestamp_ns())
-`);
-  })
-  .catch((error) => {
-    progressBar.innerHTML += ` failed (${error}).<br />`;
-  })
-  .finally(() => {
-    document.getElementById('log').innerHTML += 'Success.';
-  });
-</script> 
+      return runPython(`
+  print (angle.Angle(3.14, angle.Angle.Unite.RADIAN).get_deg())
 
+  print (compute.get_timestamp_ns())
+  `);
+    })
+    .catch((error) => {
+      progressBar.innerHTML += ` failed (${error}).<br />`;
+    })
+    .finally(() => {
+      document.getElementById('log').innerHTML += 'Success.';
+    });
+  </script>
 </body>
 </html>
