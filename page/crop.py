@@ -153,7 +153,7 @@ class CropAroundDataInPageParameters:
         found_data_try2: FoundDataTry2Parameters = FoundDataTry2Parameters()
         dilate_size: Tuple[int, int] = (5, 5)
         threshold2: int = 200
-        contour_area_min: float = 0.01 * 0.01
+        contour_area_min: float = 0.005 * 0.005
         contour_area_max: float = 1.0
         border: int = 10
         closed_to_edge_x_inside_edge_min: float = 0.025

@@ -1179,3 +1179,43 @@ def convert_polygon_with_fitline(
         ret.append(line)
 
     return (ret, ret_points)
+
+
+def best_fitline(
+    point_1a: Tuple[int, int],
+    point_1b: Tuple[int, int],
+    valid_lines: List[Tuple[int, int, int, int]],
+    shape_hw: Tuple[int, int],
+    distance: int,
+) -> Tuple[Angle, int]:
+    image = np.zeros((shape_hw), dtype=np.uint8)
+
+    for line in valid_lines:
+        cv2.line(
+            image,
+            (line[0], line[1]),
+            (line[2], line[3]),
+            255,
+            1,
+        )
+
+    indices = np.where(image == 255)
+
+    points = list(
+        filter(
+            lambda point: compute.get_distance_line_point(
+                point_1a,
+                point_1b,
+                (point[1], point[0]),
+            )
+            < distance,
+            zip(*indices),
+        )
+    )
+
+    line_res = cv2.fitLine(np.asarray(points), cv2.DIST_L2, 0, 0.01, 0.01)
+
+    return compute.get_angle_0_180_posx_safe(
+        (line_res[3][0], line_res[2][0]),
+        (line_res[3][0] + line_res[1][0], line_res[2][0] + line_res[0][0]),
+    )

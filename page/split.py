@@ -240,7 +240,7 @@ class SplitTwoWavesParameters:
         blur_size: Tuple[int, int] = (10, 10)
         canny: CannyParameters = CannyParameters(25, 255, 5)
         hough_lines: HoughLinesParameters = HoughLinesParameters(
-            1, Angle.deg(1 / 20), 100, 200, 19, 1.0
+            1, Angle.deg(1 / 20), 100, 200, 25, 0.35
         )
         delta_rho: int = 200
         delta_tetha: Angle = Angle.deg(20.0)
@@ -336,14 +336,31 @@ def __found_candidates_split_line_with_line(
     xxx = 7
     blurimg = cv2ext.force_image_to_be_grayscale(image, (xxx, xxx))
     debug.image(blurimg, DebugImage.Level.DEBUG)
-    canny = cv2.Canny(
+
+    small = cv2.resize(
         blurimg,
+        (0, 0),
+        fx=param.hough_lines.scale,
+        fy=param.hough_lines.scale,
+    )
+
+    debug.image(small, DebugImage.Level.DEBUG)
+
+    images_mask_small = cv2.resize(
+        images_mask,
+        (0, 0),
+        fx=param.hough_lines.scale,
+        fy=param.hough_lines.scale,
+    )
+
+    canny = cv2.Canny(
+        small,
         param.canny.minimum,
         param.canny.maximum,
         apertureSize=param.canny.aperture_size,
     )
     debug.image(canny, DebugImage.Level.DEBUG)
-    canny_filtered = cv2.bitwise_and(canny, cv2.bitwise_not(images_mask))
+    canny_filtered = cv2.bitwise_and(canny, cv2.bitwise_not(images_mask_small))
     debug.image(canny_filtered, DebugImage.Level.DEBUG)
 
     list_lines_p = cv2.HoughLinesP(
@@ -358,22 +375,23 @@ def __found_candidates_split_line_with_line(
     )
     debug.image_lazy(
         lambda: cv2ext.draw_lines_from_hough_lines(
-            image, list_lines_p, (0, 0, 255), 1
+            small, list_lines_p, (0, 0, 255), 1
         ),
         DebugImage.Level.DEBUG,
     )
-    lines_valid = np.asarray(
-        list(
-            filter(
-                lambda x: compute.keep_angle_pos_closed_to_target(
-                    x[0],
-                    param.limit_tetha,
-                    Angle.deg(90),
-                ),
-                list_lines_p,
+    lines_valid = (
+        np.asarray(
+            list(
+                filter(
+                    lambda x: compute.keep_angle_pos_closed_to_target(
+                        x[0], param.limit_tetha, Angle.deg(90)
+                    ),
+                    list_lines_p,
+                )
             )
         )
-    )
+        / param.hough_lines.scale
+    ).astype(np.int32)
     debug.image(
         cv2ext.draw_lines_from_hough_lines(image, lines_valid, (0, 0, 255), 1),
         DebugImage.Level.DEBUG,
@@ -440,7 +458,7 @@ def __loop_to_find_best_mean_angle_pos(
                     * np.absolute(compute.norm_cdf(x[1], moy_posx, 10) - 0.5)
                 ),
             ),
-            all_max_length,
+            all_only_max_length,
         )
     )
 
@@ -466,11 +484,14 @@ def __best_candidates_split_line_with_line(
     height: int,
     epsilon_angle: Angle,
 ) -> Tuple[Angle, int, List[Tuple[Angle, int, int]], int]:
-    ecart = int(
-        np.ceil(
-            np.tan(epsilon_angle.get_rad())
-            * np.linalg.norm(np.array((width, height)))
+    ecart = (
+        int(
+            np.ceil(
+                np.tan(epsilon_angle.get_rad())
+                * np.linalg.norm(np.array((width, height)))
+            )
         )
+        + 1
     )
 
     histogram_size_angle = int(np.ceil(180.0 / epsilon_angle.get_deg()))
@@ -588,6 +609,16 @@ def found_split_line_with_line(
         height - 1,
     )
 
+    (angle_2, posx_2) = cv2ext.best_fitline(
+        point_1a, point_1b, valid_lines, cv2ext.get_hw(image), 2 * ecart
+    )
+
+    point_2a = (posx_2, 0)
+    point_2b = (
+        int(posx_2 - np.tan(angle_2.get_rad() - np.pi / 2) * height),
+        height - 1,
+    )
+
     def image_with_lines() -> np.ndarray:
         retval = cv2ext.convertion_en_couleur(image)
         cv2.line(
@@ -595,7 +626,14 @@ def found_split_line_with_line(
             (point_1a[0], point_1a[1]),
             (point_1b[0], point_1b[1]),
             (255, 0, 0),
-            5,
+            3,
+        )
+        cv2.line(
+            retval,
+            (point_2a[0], point_2a[1]),
+            (point_2b[0], point_2b[1]),
+            (0, 255, 0),
+            3,
         )
         for line in valid_lines:
             cv2.line(
@@ -609,7 +647,7 @@ def found_split_line_with_line(
 
     debug.image_lazy(image_with_lines, DebugImage.Level.TOP)
 
-    return angle_1, posx_1, histogram_length, ecart
+    return angle_2, posx_2, histogram_length, ecart
 
 
 def __found_best_split_line_with_wave_hull(
