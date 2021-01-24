@@ -1,5 +1,5 @@
 {
-  "name": "ocr-book",
+  "name": "diptych",
   "version": "0.0.1",
   "description": "Detect multiple pages in image scanned, split them and apply OCR.",
   "main": "index.js",
@@ -8,12 +8,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bansan85/ocr-book.git"
+    "url": "git+https://github.com/bansan85/diptych.git"
   },
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/bansan85/ocr-book/issues"
+    "url": "https://github.com/bansan85/diptych/issues"
   },
-  "homepage": "https://github.com/bansan85/ocr-book#readme"
+  "homepage": "https://github.com/bansan85/diptych#readme"
 }

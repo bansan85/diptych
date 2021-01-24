@@ -55,10 +55,10 @@ jobs:
         run: |
           eval `ssh-agent`
           ssh-add ~/.ssh/id_rsa
-          git clone --depth 1 ssh://git@github.com/bansan85/ocr-book-travis.git -b "unittest""${{ matrix.python-version }}"
-          rm -Rf ocr-book-travis/*
-          cp -R pytest-junit.xml cov_html coverage.xml ocr-book-travis/
-          cd ocr-book-travis || exit 1
+          git clone --depth 1 ssh://git@github.com/bansan85/diptych-travis.git -b "unittest""${{ matrix.python-version }}"
+          rm -Rf diptych-travis/*
+          cp -R pytest-junit.xml cov_html coverage.xml diptych-travis/
+          cd diptych-travis || exit 1
           git config --global user.name "Travis"
           git config --global user.email "travis-ci@le-garrec.fr"
           git add .
@@ -69,7 +69,7 @@ jobs:
           if [ -n "$(git diff-index --name-only HEAD --)" ]
           then
             echo -e "\n" >> COMMIT_MSG
-            echo "Update from bansan85/ocr-book@$GITHUB_SHA" >> COMMIT_MSG
+            echo "Update from bansan85/diptych@$GITHUB_SHA" >> COMMIT_MSG
             git commit -F COMMIT_MSG || { echo "Failure git commit" && exit 1; }
             git push || { echo "Failure git push" && exit 1; }
           fi

@@ -34,13 +34,13 @@ jobs:
         run: |
           eval `ssh-agent`
           ssh-add ~/.ssh/id_rsa
-          git clone --depth 1 ssh://git@github.com/bansan85/ocr-book-travis.git -b documentation
-          rm -Rf ocr-book-travis/{*.htm*,*.png}
+          git clone --depth 1 ssh://git@github.com/bansan85/diptych-travis.git -b documentation
+          rm -Rf diptych-travis/{*.htm*,*.png}
           cd doc
-          find . -name "*.asciidoc" -exec asciidoctor {} -D ../ocr-book-travis \;
-          cp *.png ../ocr-book-travis/
+          find . -name "*.asciidoc" -exec asciidoctor {} -D ../diptych-travis \;
+          cp *.png ../diptych-travis/
           cd ..
-          cd ocr-book-travis
+          cd diptych-travis
           git config --global user.name "Travis"
           git config --global user.email "travis-ci@le-garrec.fr"
           git add .

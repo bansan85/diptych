@@ -1,4 +1,4 @@
-# ocr-book
+# diptych
 
 ## Goal
 
@@ -24,9 +24,9 @@ You can have a look at the file `run_all.py` and simply run the command `execute
 
 ## It doesn't work with my image
 
-No doubt about it. It still the beginning. Open a [issue](https://github.com/bansan85/ocr-book/issues) in github, send the image and tell what the problem. I will do my best to improve the recognition.
+No doubt about it. It still the beginning. Open a [issue](https://github.com/bansan85/diptych/issues) in github, send the image and tell what the problem. I will do my best to improve the recognition.
 
 ## How does it work ?
 
-Open the file [algorithm.asciidoc](https://github.com/bansan85/ocr-book/blob/master/doc/algorithm.asciidoc) with the browser but remember that full algorithm is not detailed until they are stable.
+Open the file [algorithm.asciidoc](https://github.com/bansan85/diptych/blob/master/doc/algorithm.asciidoc) with the browser but remember that full algorithm is not detailed until they are stable.
 
