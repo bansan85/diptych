@@ -3,10 +3,10 @@ from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-from angle import Angle, is_between
-import compute
-from debug_image import DebugImage
-from parameters import HoughLinesParameters
+from . import compute
+from .angle import Angle, is_between
+from .debug_image import DebugImage
+from .parameters import HoughLinesParameters
 
 
 def charge_image(fichier: str) -> np.ndarray:

@@ -1,7 +1,7 @@
 import types
 from typing import Tuple, Union
 
-from angle import Angle
+from .angle import Angle
 
 
 class ErodeParameters:

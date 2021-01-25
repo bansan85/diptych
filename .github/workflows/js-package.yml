@@ -44,7 +44,8 @@ jobs:
       - name: Install website
         run: |
           sudo cp js/www/* /var/www/html/
-          sudo cp angle.py compute.py /var/www/html/
+          sudo mkdir /var/www/html/diptych/
+          sudo cp diptych/angle.py diptych/compute.py /var/www/html/diptych/
           wget https://github.com/iodide-project/pyodide/releases/download/0.16.1/pyodide-build-0.16.1.tar.bz2
           sudo tar -xvf pyodide-build-0.16.1.tar.bz2 -C /var/www/html/
       - name: Test with pytest

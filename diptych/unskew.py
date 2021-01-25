@@ -4,13 +4,11 @@ from typing import List, Tuple, Union
 import cv2
 import numpy as np
 
-from angle import Angle
-import compute
-import cv2ext
-from debug_image import DebugImage
-import page.find_images
-from page.find_images import FindImageParameters
-from parameters import CannyParameters, ErodeParameters, HoughLinesParameters
+from . import compute, cv2ext, find_images
+from .angle import Angle
+from .debug_image import DebugImage
+from .find_images import FindImageParameters
+from .parameters import CannyParameters, ErodeParameters, HoughLinesParameters
 
 
 class UnskewPageParameters:
@@ -117,7 +115,7 @@ def find_rotation(
 ) -> Angle:
     debug.image(image, DebugImage.Level.DEBUG)
 
-    images_mask = page.find_images.find_images(
+    images_mask = find_images.find_images(
         image,
         parameters.find_images,
         approximate_angle,

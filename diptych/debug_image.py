@@ -7,7 +7,7 @@ from typing import Any, List
 import cv2
 import numpy as np
 
-from exceptext import NotMyException
+from .exceptext import NotMyException
 
 
 class DebugImage:

@@ -5,9 +5,9 @@ import copy
 from typing import Any, Dict, Optional, Tuple, Union
 import unittest
 
-from angle import Angle
-import compute
-from print_interface import _N, PrintInterface
+from . import compute
+from .angle import Angle
+from .print_interface import _N, PrintInterface
 
 
 class PrintTest(PrintInterface):

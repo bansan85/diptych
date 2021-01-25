@@ -4,8 +4,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import TypeVar
 
-from angle import Angle
-
+from .angle import Angle
 
 _N = TypeVar("_N", int, float, Angle)
 

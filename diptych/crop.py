@@ -8,14 +8,11 @@ from typing import Dict, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 
-from angle import Angle
-import compute
-import cv2ext
-from debug_image import DebugImage, inc_debug
-import ocr
-import page.find_images
-from page.find_images import FindImageParameters
-from parameters import CannyParameters, ErodeParameters, HoughLinesParameters
+from . import compute, cv2ext, find_images, ocr
+from .angle import Angle
+from .debug_image import DebugImage, inc_debug
+from .find_images import FindImageParameters
+from .parameters import CannyParameters, ErodeParameters, HoughLinesParameters
 
 
 class FoundDataTry1Parameters:
@@ -742,7 +739,7 @@ def found_data_try2(
 ) -> Optional[np.ndarray]:
     liste_lines = found_data_try2_find_edges(image, param, debug)
 
-    images_mask = page.find_images.find_images(
+    images_mask = find_images.find_images(
         image,
         param.find_images,
         page_angle,
@@ -785,10 +782,10 @@ def crop_around_page(
 ) -> Tuple[int, int, int, int]:
     debug.image(image, DebugImage.Level.DEBUG)
 
-    rect = page.crop.found_data_try1(image, parameters.found_data_try1, debug)
+    rect = found_data_try1(image, parameters.found_data_try1, debug)
 
     if rect is None:
-        rect = page.crop.found_data_try2(
+        rect = found_data_try2(
             image, parameters.found_data_try2, page_angle, debug
         )
 

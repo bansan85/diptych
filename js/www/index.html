@@ -61,9 +61,9 @@
       progressBar.innerHTML += 'Run example.<br />';
 
       return runPython(`
-  print (angle.Angle(3.14, angle.Angle.Unite.RADIAN).get_deg())
+  print (diptych.angle.Angle(3.14, diptych.angle.Angle.Unite.RADIAN).get_deg())
 
-  print (compute.get_timestamp_ns())
+  print (diptych.compute.get_timestamp_ns())
   `);
     })
     .catch((error) => {

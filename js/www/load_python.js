@@ -1,7 +1,7 @@
 function loadPyModule(module) {
   return new Promise((resolve, reject) => {
     const xmlHttp = new XMLHttpRequest();
-    xmlHttp.open('GET', `/${module}.py`, true);
+    xmlHttp.open('GET', `/diptych/${module}.py`, true);
     xmlHttp.overrideMimeType('text/plain; charset=x-user-defined');
 
     xmlHttp.onload = () => {
@@ -11,17 +11,21 @@ function loadPyModule(module) {
         pyodide.runPython(`
 import js
 
+import os
 import sys
+
 sys.path.insert(0, '/')
 
-print ("python" + js.document.module + ".py")
+print("python" + js.document.module + ".py")
 
-with open(js.document.module + ".py", "w") as fd:
+if not os.path.exists("diptych"):
+  os.makedirs("diptych")
+with open("diptych/" + js.document.module + ".py", "w") as fd:
   fd.write(js.document.source)
         `);
 
         pyodide.runPython(`
-import ${module}
+import diptych.${module}
         `);
         resolve();
       } else {

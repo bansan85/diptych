@@ -8,13 +8,14 @@ import scipy
 from scipy.ndimage.filters import maximum_filter
 from scipy.ndimage.morphology import binary_erosion, generate_binary_structure
 
-from angle import Angle
-import compute
-import cv2ext
-from debug_image import DebugImage, inc_debug
-import page.find_images
-from page.find_images import FindImageParameters
-from parameters import CannyParameters, ErodeParameters, HoughLinesParameters
+from . import compute, cv2ext
+from .angle import Angle
+from .debug_image import DebugImage, inc_debug
+from .find_images import (
+    FindImageParameters,
+    remove_points_inside_images_in_contours,
+)
+from .parameters import CannyParameters, ErodeParameters, HoughLinesParameters
 
 
 class FoundSplitLineWithLineParameters:
@@ -997,7 +998,7 @@ def found_split_line_with_wave(
         sorted_contours, size_border, image
     )
 
-    cs2 = page.find_images.remove_points_inside_images_in_contours(
+    cs2 = remove_points_inside_images_in_contours(
         sorted_contours,
         image,
         parameters.find_images,

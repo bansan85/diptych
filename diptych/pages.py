@@ -1,10 +1,10 @@
 import types
 from typing import Dict, Optional, Tuple, Union
 
-from angle import Angle
-from page.crop import CropAroundDataInPageParameters
-from page.split import SplitTwoWavesParameters
-from page.unskew import UnskewPageParameters
+from .angle import Angle
+from .crop import CropAroundDataInPageParameters
+from .split import SplitTwoWavesParameters
+from .unskew import UnskewPageParameters
 
 
 class Parameters:

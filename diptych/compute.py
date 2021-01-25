@@ -16,8 +16,7 @@ from typing import (
 import numpy as np
 from scipy.stats import norm
 
-from angle import Angle
-
+from .angle import Angle
 
 _T = TypeVar("_T")
 AnyNumber = TypeVar("AnyNumber", int, float)

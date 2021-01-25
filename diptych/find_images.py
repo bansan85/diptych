@@ -4,9 +4,9 @@ from typing import List, Optional, Tuple
 import cv2
 import numpy as np
 
-from angle import Angle
-import cv2ext
-from debug_image import DebugImage, inc_debug
+from . import cv2ext
+from .angle import Angle
+from .debug_image import DebugImage, inc_debug
 
 
 class FindImageParameters:

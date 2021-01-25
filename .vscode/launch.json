@@ -15,7 +15,8 @@
       "type": "python",
       "request": "launch",
       "program": "${file}",
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "cwd": "${fileDirname}"
     },
     {
       "name": "Python: test_images",
@@ -26,6 +27,12 @@
         "-n=auto",
         "tests/test_images.py"
       ]
+    },
+    {
+      "name": "Python: run_all",
+      "type": "python",
+      "request": "launch",
+      "module": "tests.run_all"
     }
   ]
 }

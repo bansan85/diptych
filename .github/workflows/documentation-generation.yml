@@ -36,7 +36,7 @@ jobs:
           ssh-add ~/.ssh/id_rsa
           git clone --depth 1 ssh://git@github.com/bansan85/diptych-travis.git -b documentation
           rm -Rf diptych-travis/{*.htm*,*.png}
-          cd doc
+          cd docs
           find . -name "*.asciidoc" -exec asciidoctor {} -D ../diptych-travis \;
           cp *.png ../diptych-travis/
           cd ..
