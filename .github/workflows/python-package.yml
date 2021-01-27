@@ -51,6 +51,7 @@ jobs:
         run: |
           pytest tests --no-cov-on-fail
           sed -i "s/^.*created at.*$//" cov_html/*.html
+          python ./setup.py sdist
       - name: Publish results
         run: |
           eval `ssh-agent`
