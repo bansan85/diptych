@@ -24,6 +24,7 @@ jobs:
         with:
           submodules: recursive
       - name: Install SSH key
+        if: ${{ github.event_name == 'push' }}
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_KEY_TRAVIS_CI }}
@@ -53,6 +54,7 @@ jobs:
           sed -i "s/^.*created at.*$//" cov_html/*.html
           python ./setup.py sdist
       - name: Publish results
+        if: ${{ github.event_name == 'push' }}
         run: |
           eval `ssh-agent`
           ssh-add ~/.ssh/id_rsa

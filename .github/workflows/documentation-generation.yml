@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install SSH key
+        if: ${{ github.event_name == 'push' }}
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_KEY_TRAVIS_CI }}
@@ -31,6 +32,7 @@ jobs:
       - name: Install dependencies
         run: bundle install
       - name: Publish documentation
+        if: ${{ github.event_name == 'push' }}
         run: |
           eval `ssh-agent`
           ssh-add ~/.ssh/id_rsa
