@@ -20,12 +20,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_KEY_TRAVIS_CI }}
-          # get with ssh-keyscan localhost
-          known_hosts: localhost ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCUWdBcM5OvIS/hYfBQkC6nKSuyoPfuYrc90aiTYZvNkKIVKDcTWHmgPJMllbP4GD8b5lBF1NPGde2iKO0d0K/7IIAI0/nAKYgKcu0b1JuF9m4lj7x8YWSGFSXg+EmU3IUBLr777jbok9mCLy1UO6I6Dmu/nNwy+Q8GCAbqtQodUF1fpavJeTIBnVBcGOkesUC/X1HIboCiBQl1etUj8Xip3eb41TVz7Eda2DUSEsot4g4SkYd6fnCve4c2hO2vGzeeMsdWOWaM/FZCBy6FBCYC15ta8dcAOBzkqM9/kPDxuR53qzjHoZhwLu4XWybd5J+4gmKlPkwQDSUwvCsVx5ax
       - name: Set up Python "3.9"
         uses: actions/setup-python@v2
         with:
@@ -54,8 +48,8 @@ jobs:
           find . -name "*.json" ! -path "./js/node_modules/*" ! -path "./js/www/pyodide/*" -print0 | xargs -n 1 -0 -I "{}" echo "echo jsonlint {} ; jsonlint {} | diff -pu {} - || exit 1" | sh
           mypy **/*.py
           safety check -r requirements.txt
-          safety check -r linter-requirements.txt
-          safety check
+          safety check -r linter-requirements.txt -i 39621
+          safety check -i 39621
           bash ./.github/scripts/ini-lint-check.sh
           bash ./.github/scripts/yaml-lint-check.sh
           shellcheck **/*.sh
