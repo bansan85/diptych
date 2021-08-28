@@ -6,7 +6,7 @@ flake8-bugbear==21.4.3
     pyflakes==2.2.0
 flake8-import-order==0.18.1
   pycodestyle==2.6.0
-  setuptools==47.1.0
+  setuptools==56.0.0
 git-lint==0.1.2
   docopt==0.6.2
   docutils==0.17.1
@@ -14,25 +14,21 @@ git-lint==0.1.2
     docopt==0.6.2
     template-remover==0.1.9
       docopt==0.6.2
-  pathlib2==2.3.5
+  pathlib2==2.3.6
     six==1.16.0
   PyYAML==5.4.1
   template-remover==0.1.9
     docopt==0.6.2
   termcolor==1.1.0
-mypy==0.812
+mypy==0.910
   mypy-extensions==0.4.3
-  typed-ast==1.4.3
+  toml==0.10.2
   typing-extensions==3.10.0.0
-opencv-python==4.5.2.52
-  numpy==1.20.3
-pipdeptree==2.0.0
-  pip==21.1.1
-prospector==1.3.1
-  astroid==2.4.1
-    lazy-object-proxy==1.4.3
-    six==1.16.0
-    wrapt==1.12.1
+opencv-python==4.5.3.56
+  numpy==1.21.2
+pipdeptree==2.1.0
+  pip==21.2.4
+prospector==1.4.1
   dodgy==0.2.1
   mccabe==0.6.1
   pep8-naming==0.10.0
@@ -42,123 +38,131 @@ prospector==1.3.1
         pycodestyle==2.6.0
         pyflakes==2.2.0
   pycodestyle==2.6.0
-  pydocstyle==6.0.0
+  pydocstyle==6.1.1
     snowballstemmer==2.1.0
   pyflakes==2.2.0
-  pylint==2.5.3
-    astroid==2.4.1
-      lazy-object-proxy==1.4.3
-      six==1.16.0
+  pylint==2.10.2
+    astroid==2.7.2
+      lazy-object-proxy==1.6.0
+      setuptools==56.0.0
       wrapt==1.12.1
-    isort==4.3.21
+    isort==5.9.3
     mccabe==0.6.1
+    platformdirs==2.2.0
     toml==0.10.2
   pylint-celery==0.3
-    astroid==2.4.1
-      lazy-object-proxy==1.4.3
-      six==1.16.0
+    astroid==2.7.2
+      lazy-object-proxy==1.6.0
+      setuptools==56.0.0
       wrapt==1.12.1
-    pylint==2.5.3
-      astroid==2.4.1
-        lazy-object-proxy==1.4.3
-        six==1.16.0
+    pylint==2.10.2
+      astroid==2.7.2
+        lazy-object-proxy==1.6.0
+        setuptools==56.0.0
         wrapt==1.12.1
-      isort==4.3.21
+      isort==5.9.3
       mccabe==0.6.1
+      platformdirs==2.2.0
       toml==0.10.2
     pylint-plugin-utils==0.6
-      pylint==2.5.3
-        astroid==2.4.1
-          lazy-object-proxy==1.4.3
-          six==1.16.0
+      pylint==2.10.2
+        astroid==2.7.2
+          lazy-object-proxy==1.6.0
+          setuptools==56.0.0
           wrapt==1.12.1
-        isort==4.3.21
+        isort==5.9.3
         mccabe==0.6.1
+        platformdirs==2.2.0
         toml==0.10.2
   pylint-django==2.1.0
-    pylint==2.5.3
-      astroid==2.4.1
-        lazy-object-proxy==1.4.3
-        six==1.16.0
+    pylint==2.10.2
+      astroid==2.7.2
+        lazy-object-proxy==1.6.0
+        setuptools==56.0.0
         wrapt==1.12.1
-      isort==4.3.21
+      isort==5.9.3
       mccabe==0.6.1
+      platformdirs==2.2.0
       toml==0.10.2
     pylint-plugin-utils==0.6
-      pylint==2.5.3
-        astroid==2.4.1
-          lazy-object-proxy==1.4.3
-          six==1.16.0
+      pylint==2.10.2
+        astroid==2.7.2
+          lazy-object-proxy==1.6.0
+          setuptools==56.0.0
           wrapt==1.12.1
-        isort==4.3.21
+        isort==5.9.3
         mccabe==0.6.1
+        platformdirs==2.2.0
         toml==0.10.2
   pylint-flask==0.6
-    astroid==2.4.1
-      lazy-object-proxy==1.4.3
-      six==1.16.0
+    astroid==2.7.2
+      lazy-object-proxy==1.6.0
+      setuptools==56.0.0
       wrapt==1.12.1
-    pylint==2.5.3
-      astroid==2.4.1
-        lazy-object-proxy==1.4.3
-        six==1.16.0
+    pylint==2.10.2
+      astroid==2.7.2
+        lazy-object-proxy==1.6.0
+        setuptools==56.0.0
         wrapt==1.12.1
-      isort==4.3.21
+      isort==5.9.3
       mccabe==0.6.1
+      platformdirs==2.2.0
       toml==0.10.2
     pylint-plugin-utils==0.6
-      pylint==2.5.3
-        astroid==2.4.1
-          lazy-object-proxy==1.4.3
-          six==1.16.0
+      pylint==2.10.2
+        astroid==2.7.2
+          lazy-object-proxy==1.6.0
+          setuptools==56.0.0
           wrapt==1.12.1
-        isort==4.3.21
+        isort==5.9.3
         mccabe==0.6.1
+        platformdirs==2.2.0
         toml==0.10.2
   pylint-plugin-utils==0.6
-    pylint==2.5.3
-      astroid==2.4.1
-        lazy-object-proxy==1.4.3
-        six==1.16.0
+    pylint==2.10.2
+      astroid==2.7.2
+        lazy-object-proxy==1.6.0
+        setuptools==56.0.0
         wrapt==1.12.1
-      isort==4.3.21
+      isort==5.9.3
       mccabe==0.6.1
+      platformdirs==2.2.0
       toml==0.10.2
   PyYAML==5.4.1
   requirements-detector==0.7
-    astroid==2.4.1
-      lazy-object-proxy==1.4.3
-      six==1.16.0
+    astroid==2.7.2
+      lazy-object-proxy==1.6.0
+      setuptools==56.0.0
       wrapt==1.12.1
   setoptconf==0.2.0
-pytesseract==0.3.7
-  Pillow==8.2.0
-pytest-cov==2.12.0
+pytesseract==0.3.8
+  Pillow==8.3.1
+pytest-cov==2.12.1
   coverage==5.5
   pytest==6.2.4
     attrs==21.2.0
     iniconfig==1.1.1
-    packaging==20.9
+    packaging==21.0
       pyparsing==2.4.7
     pluggy==0.13.1
     py==1.10.0
     toml==0.10.2
+  toml==0.10.2
 pytest-timeout==1.4.2
   pytest==6.2.4
     attrs==21.2.0
     iniconfig==1.1.1
-    packaging==20.9
+    packaging==21.0
       pyparsing==2.4.7
     pluggy==0.13.1
     py==1.10.0
     toml==0.10.2
-pytest-xdist==2.2.1
-  execnet==1.8.0
-    apipkg==1.5
+pytest-xdist==2.3.0
+  execnet==1.9.0
   pytest==6.2.4
     attrs==21.2.0
     iniconfig==1.1.1
-    packaging==20.9
+    packaging==21.0
       pyparsing==2.4.7
     pluggy==0.13.1
     py==1.10.0
@@ -168,29 +172,30 @@ pytest-xdist==2.2.1
     pytest==6.2.4
       attrs==21.2.0
       iniconfig==1.1.1
-      packaging==20.9
+      packaging==21.0
         pyparsing==2.4.7
       pluggy==0.13.1
       py==1.10.0
       toml==0.10.2
 safety==1.10.3
-  click==8.0.0
+  click==8.0.1
   dparse==0.5.1
-    packaging==20.9
+    packaging==21.0
       pyparsing==2.4.7
     PyYAML==5.4.1
     toml==0.10.2
-  packaging==20.9
+  packaging==21.0
     pyparsing==2.4.7
-  requests==2.25.1
-    certifi==2020.12.5
-    chardet==4.0.0
-    idna==2.10
-    urllib3==1.26.5
-  setuptools==47.1.0
-scipy==1.6.3
-  numpy==1.20.3
-wheel==0.36.2
-yamllint==1.26.1
-  pathspec==0.8.1
+  requests==2.26.0
+    certifi==2021.5.30
+    charset-normalizer==2.0.4
+    idna==3.2
+    urllib3==1.26.6
+  setuptools==56.0.0
+scipy==1.7.1
+  numpy==1.21.2
+wheel==0.37.0
+yamllint==1.26.3
+  pathspec==0.9.0
   PyYAML==5.4.1
+  setuptools==56.0.0

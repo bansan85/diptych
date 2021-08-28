@@ -489,7 +489,7 @@ def __best_candidates_split_line_with_line(
         int(
             np.ceil(
                 np.tan(epsilon_angle.get_rad())
-                * np.linalg.norm(np.array((width, height)))
+                * np.linalg.norm(np.array((width, height)))  # type: ignore
             )
         )
         + 1
@@ -513,8 +513,8 @@ def __best_candidates_split_line_with_line(
         angle, pos = compute.get_angle_0_180_posx_safe(
             (point1_x, point1_y), (point2_x, point2_y)
         )
-        angle_round = int(np.round(angle / epsilon_angle))
-        pos_round = int(np.round(pos / ecart))
+        angle_round = int(np.round(angle / epsilon_angle))  # type: ignore
+        pos_round = int(np.round(pos / ecart))  # type: ignore
 
         min_angle_round = max(angle_round - tolerance, 0)
         min_pos_round = max(pos_round - tolerance, 0)
@@ -818,7 +818,7 @@ def __found_best_split_line_with_wave_n_contours(  # noqa
                 lines,
                 key=lambda x: np.linalg.norm(
                     np.array((x[0][0], x[0][1])) - np.array((x[1][0], x[1][1]))
-                ),
+                ),  # type: ignore
                 reverse=True,
             )
             lines_two_longest = lines_sorted_by_length[0:2]

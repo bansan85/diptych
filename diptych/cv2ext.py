@@ -709,7 +709,7 @@ def insert_border_in_mask(
             lambda x: (
                 (x[0][0], x[1][0]),
                 compute.get_angle_0_180(x[0][0], x[1][0]),
-                np.linalg.norm(x[0][0] - x[1][0]),
+                np.linalg.norm(x[0][0] - x[1][0]),  # type: ignore
             ),
             all_pair_no_single_pixel,
         )
@@ -896,7 +896,7 @@ def threshold_from_gaussian_histogram_black(
 
 
 def gaussian_blur_wrap(histogram: np.ndarray, kernel_size: int) -> np.ndarray:
-    histogram_wrap = np.concatenate(
+    histogram_wrap = np.concatenate(  # type: ignore
         [
             histogram[-kernel_size:],
             histogram,
@@ -1051,7 +1051,7 @@ def remove_perpendicular_multiples_points(
             (c_x, c_y), (c_x + v_x, c_y + v_y), point_i[0]
         )
         length = int(
-            np.linalg.norm(
+            np.linalg.norm(  # type: ignore
                 np.array((c_x, c_y)) - np.array((projection[0], projection[1]))
             )
         )
@@ -1081,7 +1081,10 @@ def remove_perpendicular_multiples_points(
                 10,
                 flags,
             )
-            if np.linalg.norm(centers[1] - centers[0]) > __max_distance__:
+            if (
+                np.linalg.norm(centers[1] - centers[0])  # type: ignore
+                > __max_distance__
+            ):
                 del points_dict[key]
 
     list_new_points = []
@@ -1110,7 +1113,9 @@ def convert_polygon_with_fitline(
         if idx1 < idx2:
             points = contours[idx1 : idx2 + 1]
         else:
-            points = np.concatenate((contours[idx1:], contours[0 : idx2 + 1]))
+            points = np.concatenate(
+                (contours[idx1:], contours[0 : idx2 + 1])
+            )  # type: ignore
 
         new_points = points
         all_checksum: List[int] = []

@@ -74,7 +74,7 @@ def found_angle_unskew_page(
         i = int(round(angle / delta_angle.get_deg()))
         length = np.linalg.norm(
             np.array((line[0], line[1])) - np.array((line[2], line[3]))
-        )
+        )  # type: ignore
         histogram[i] = histogram[i] + length
 
     histogram_blur = cv2ext.gaussian_blur_wrap(histogram, 9)

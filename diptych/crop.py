@@ -586,14 +586,14 @@ def found_data_try2_remove_duplicated_edges(
     List[Tuple[Tuple[int, int], Tuple[int, int]]],
     List[Tuple[Tuple[int, int], Tuple[int, int]]],
 ]:
-    histogram_vertical: Dict[int, int] = dict()
-    histogram_horizontal: Dict[int, int] = dict()
+    histogram_vertical: Dict[int, int] = {}
+    histogram_horizontal: Dict[int, int] = {}
     histogram_vertical_points: Dict[
         int, Tuple[Tuple[int, int], Tuple[int, int]]
-    ] = dict()
+    ] = {}
     histogram_horizontal_points: Dict[
         int, Tuple[Tuple[int, int], Tuple[int, int]]
-    ] = dict()
+    ] = {}
 
     for line in lines_vertical_angle:
         pt1, pt2 = line

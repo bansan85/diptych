@@ -1,35 +1,35 @@
-opencv-python==4.5.2.52
-  numpy==1.20.3
-pipdeptree==2.0.0
-  pip==21.1.1
-pytesseract==0.3.7
-  Pillow==8.2.0
-pytest-cov==2.11.1
+opencv-python==4.5.3.56
+  numpy==1.21.2
+pipdeptree==2.1.0
+  pip==21.2.4
+pytesseract==0.3.8
+  Pillow==8.3.1
+pytest-cov==2.12.1
   coverage==5.5
   pytest==6.2.4
     attrs==21.2.0
     iniconfig==1.1.1
-    packaging==20.9
+    packaging==21.0
       pyparsing==2.4.7
     pluggy==0.13.1
     py==1.10.0
     toml==0.10.2
+  toml==0.10.2
 pytest-timeout==1.4.2
   pytest==6.2.4
     attrs==21.2.0
     iniconfig==1.1.1
-    packaging==20.9
+    packaging==21.0
       pyparsing==2.4.7
     pluggy==0.13.1
     py==1.10.0
     toml==0.10.2
-pytest-xdist==2.2.1
-  execnet==1.8.0
-    apipkg==1.5
+pytest-xdist==2.3.0
+  execnet==1.9.0
   pytest==6.2.4
     attrs==21.2.0
     iniconfig==1.1.1
-    packaging==20.9
+    packaging==21.0
       pyparsing==2.4.7
     pluggy==0.13.1
     py==1.10.0
@@ -39,26 +39,26 @@ pytest-xdist==2.2.1
     pytest==6.2.4
       attrs==21.2.0
       iniconfig==1.1.1
-      packaging==20.9
+      packaging==21.0
         pyparsing==2.4.7
       pluggy==0.13.1
       py==1.10.0
       toml==0.10.2
 safety==1.10.3
-  click==8.0.0
+  click==8.0.1
   dparse==0.5.1
-    packaging==20.9
+    packaging==21.0
       pyparsing==2.4.7
     PyYAML==5.4.1
     toml==0.10.2
-  packaging==20.9
+  packaging==21.0
     pyparsing==2.4.7
-  requests==2.25.1
-    certifi==2020.12.5
-    chardet==4.0.0
-    idna==2.10
-    urllib3==1.26.5
+  requests==2.26.0
+    certifi==2021.5.30
+    charset-normalizer==2.0.4
+    idna==3.2
+    urllib3==1.26.6
   setuptools==47.1.0
-scipy==1.6.3
-  numpy==1.20.3
-wheel==0.36.2
+scipy==1.7.1
+  numpy==1.21.2
+wheel==0.37.0
