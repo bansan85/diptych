@@ -46,7 +46,7 @@ pytest-xdist==2.3.0
       toml==0.10.2
 safety==1.10.3
   click==8.0.1
-  dparse==0.5.1
+  dparse==0.5.2
     packaging==21.0
       pyparsing==2.4.7
     PyYAML==5.4.1
